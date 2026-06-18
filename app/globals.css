@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Semantic theme tokens. Values swap on [data-theme]; components
+   reference the mapped Tailwind utilities (bg-surface, text-muted…)
+   so light/dark is one source of truth, no dark: variants needed.
+   Accent is LOCKED to one hue (orange) across the whole app.
+   ============================================================ */
+:root,
+[data-theme="light"] {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --text: #18181b;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --accent: #ea580c;
+  --accent-soft: #fff1e8;
+  --accent-contrast: #ffffff;
+  --shadow-sm: 0 1px 2px rgb(24 24 27 / 0.06);
+  --shadow-md: 0 1px 2px rgb(24 24 27 / 0.06), 0 10px 30px rgb(24 24 27 / 0.08);
+}
+
+[data-theme="dark"] {
+  --bg: #0a0a0b;
+  --surface: #141416;
+  --elevated: #1c1c20;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --accent: #fb7137;
+  --accent-soft: #2a1a10;
+  --accent-contrast: #18120c;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 36px rgb(0 0 0 / 0.5);
+}
+
+/* fallback when JS hasn't set data-theme yet (script normally sets it pre-paint) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0a0b;
+    --surface: #141416;
+    --elevated: #1c1c20;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --border: #27272a;
+    --accent: #fb7137;
+    --accent-soft: #2a1a10;
+    --accent-contrast: #18120c;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 36px rgb(0 0 0 / 0.5);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* iOS Safari zooms in when a focused form control is <16px. Force 16px on
+   small screens so checkout/login don't jump on tap. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* tabular numerals for prices/sizes so they align */
+.nums {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   View Transitions — gentle cross-fade for route changes,
+   plus shared-element morph for product images (name set inline).
+   ============================================================ */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* soft deceleration */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* route change: old fades, new fades + rises gently */
+  ::view-transition-old(root) {
+    animation: vt-fade-out 0.22s var(--ease-out) both;
+  }
+  ::view-transition-new(root) {
+    animation: vt-rise-in 0.42s var(--ease-out) both;
+  }
+  /* shared-element morph (product image) eased to match */
+  ::view-transition-group(*) {
+    animation-duration: 0.46s;
+    animation-timing-function: var(--ease-out);
+  }
+
+  /* first-paint content reveal */
+  .reveal {
+    animation: vt-rise-in 0.5s var(--ease-out) both;
+  }
+}
+
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .reveal { animation: none; }
+}

@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.env
+.env*.local
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+supabase/.branches
+supabase/.temp
+
+# local Claude Code config (records local commands/secrets)
+.claude/
+
+# stray local artifacts
+*.log
