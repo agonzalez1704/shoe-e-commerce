@@ -69,8 +69,14 @@ select jobname, schedule from cron.job;
 
 4. Deploy.
 
-> Cron: handled by `pg_cron` in Supabase — no Vercel Cron needed (`vercel.json`
-> intentionally absent). The `/api/cron/expire-orders` route stays for manual/uptime triggers.
+> **Scheduled jobs:**
+> - `expire_pending_orders` — pure SQL, runs via `pg_cron` (migration 0007). No setup.
+> - `/api/cron/review-requests` — sends review emails ~5 days post-fulfillment; needs an
+>   **HTTP** scheduler (sends mail, can't be pure SQL). Point a daily cron at
+>   `https://<domain>/api/cron/review-requests` with header `Authorization: Bearer <CRON_SECRET>`.
+>   Use Supabase `pg_cron` + `pg_net` (`net.http_get`), an external cron (cron-job.org), or a GitHub Action.
+> - `/api/cron/payment-reminders` — abandoned-checkout nudge (pending OXXO/SPEI, ~12h). Same HTTP-scheduler setup as review-requests; run hourly.
+> - `/api/cron/expire-orders` — optional HTTP twin of the pg_cron job (manual/uptime).
 
 ---
 

@@ -488,6 +488,9 @@ export type Database = {
           needs_invoice: boolean
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          reminder_sent_at: string | null
+          review_request_sent_at: string | null
+          review_token: string
           session_token: string | null
           shipping_address: Json | null
           shipping_cents: number
@@ -509,6 +512,9 @@ export type Database = {
           needs_invoice?: boolean
           order_number: string
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          reminder_sent_at?: string | null
+          review_request_sent_at?: string | null
+          review_token?: string
           session_token?: string | null
           shipping_address?: Json | null
           shipping_cents?: number
@@ -530,6 +536,9 @@ export type Database = {
           needs_invoice?: boolean
           order_number?: string
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          reminder_sent_at?: string | null
+          review_request_sent_at?: string | null
+          review_token?: string
           session_token?: string | null
           shipping_address?: Json | null
           shipping_cents?: number
@@ -885,6 +894,7 @@ export type Database = {
           customer_id: string | null
           fit_feedback: Database["public"]["Enums"]["fit_feedback"] | null
           id: string
+          order_id: string | null
           product_id: string
           rating: number
           verified_purchase: boolean
@@ -895,6 +905,7 @@ export type Database = {
           customer_id?: string | null
           fit_feedback?: Database["public"]["Enums"]["fit_feedback"] | null
           id?: string
+          order_id?: string | null
           product_id: string
           rating: number
           verified_purchase?: boolean
@@ -905,6 +916,7 @@ export type Database = {
           customer_id?: string | null
           fit_feedback?: Database["public"]["Enums"]["fit_feedback"] | null
           id?: string
+          order_id?: string | null
           product_id?: string
           rating?: number
           verified_purchase?: boolean
@@ -915,6 +927,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {

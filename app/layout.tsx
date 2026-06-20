@@ -86,7 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <ThemeToggle />
               <Link
-                href="/account"
+                href="/cuenta"
                 aria-label="Cuenta"
                 className="grid h-10 w-10 place-items-center rounded-full text-muted transition-colors hover:text-text"
               >
@@ -125,6 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/products" className="text-muted transition-colors hover:text-text">Todo el calzado</Link>
               <Link href="/products?gender=mens" className="text-muted transition-colors hover:text-text">Hombre</Link>
               <Link href="/products?gender=womens" className="text-muted transition-colors hover:text-text">Mujer</Link>
+              <Link href="/rastrear" className="text-muted transition-colors hover:text-text">Rastrear pedido</Link>
             </nav>
           </div>
         </footer>

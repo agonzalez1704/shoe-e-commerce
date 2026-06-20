@@ -26,22 +26,45 @@ export type BrandConfig = {
   description: string;   // SEO meta description
   emailFrom: string;     // "Name <pedidos@domain.mx>"
   logo?: { src: string; width: number; height: number; alt?: string }; // optional image; falls back to wordmark
+  mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
   theme: { light: ThemeMode; dark: ThemeMode };
 };
 
 const BRANDS: Record<string, BrandConfig> = {
-  // ---- Brand 1 (current) ----
-  soleco: {
-    key: "soleco",
-    name: "sole&co",
-    accentWord: "&",
-    tagline: "Calzado para cada paso.",
+  // ---- Brand 1 (live) — Blade · calzadoblade.com ----
+  // Identity: cool graphite monochrome + a razor crimson accent ("the edge").
+  blade: {
+    key: "blade",
+    name: "Blade",
+    tagline: "Filo en cada paso.",
     description:
-      "Calzado de piel hecho sobre pedido en México. Todas las tallas y anchos, envío a todo el país. Pago con tarjeta, OXXO o SPEI.",
-    emailFrom: "sole&co <pedidos@soleco.mx>",
+      "Calzado de piel hecho sobre pedido en México. Diseño afilado, todas las tallas y anchos, envío a todo el país. Pago con tarjeta, OXXO o SPEI.",
+    emailFrom: "Blade <pedidos@calzadoblade.com>",
+    // angular blade glyph: filled with the accent
+    mark: '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20 L17 4 L20 4 L9 20 Z" fill="var(--accent)"/></svg>',
     theme: {
-      light: { accent: "#ea580c", accentSoft: "#fff1e8", accentContrast: "#ffffff" },
-      dark: { accent: "#fb7137", accentSoft: "#2a1a10", accentContrast: "#18120c" },
+      light: {
+        accent: "#dc2626",
+        accentSoft: "#fef2f2",
+        accentContrast: "#ffffff",
+        bg: "#f7f7f8",
+        surface: "#ffffff",
+        elevated: "#f2f2f4",
+        text: "#0e0f13",
+        muted: "#5c6068",
+        border: "#e3e4e8",
+      },
+      dark: {
+        accent: "#f04a4c",
+        accentSoft: "#2a1315",
+        accentContrast: "#ffffff",
+        bg: "#0a0b0e",
+        surface: "#121317",
+        elevated: "#1a1c22",
+        text: "#f4f5f6",
+        muted: "#979ca6",
+        border: "#262932",
+      },
     },
   },
 
@@ -75,7 +98,7 @@ const BRANDS: Record<string, BrandConfig> = {
 };
 
 export const activeBrand: BrandConfig =
-  BRANDS[process.env.NEXT_PUBLIC_BRAND ?? "soleco"] ?? BRANDS.soleco;
+  BRANDS[process.env.NEXT_PUBLIC_BRAND ?? "blade"] ?? BRANDS.blade;
 
 // Build a <style> body that overrides the theme tokens for the active brand.
 function modeVars(m: ThemeMode): string {

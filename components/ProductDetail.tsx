@@ -6,11 +6,18 @@ import { Package, Truck } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { ProductImage } from "@/components/ProductImage";
 import { VariantPicker } from "@/components/VariantPicker";
+import { Stars } from "@/components/Stars";
 import type { ProductDetail as Product } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
-export function ProductDetail({ product }: { product: Product }) {
+export function ProductDetail({
+  product,
+  rating,
+}: {
+  product: Product;
+  rating?: { average: number; count: number };
+}) {
   const colors = useMemo(
     () => Array.from(new Set(product.variants.map((v) => v.color))),
     [product.variants],
@@ -57,6 +64,12 @@ export function ProductDetail({ product }: { product: Product }) {
       <div className="md:sticky md:top-24 md:h-fit">
         {product.brand && <p className="text-sm uppercase tracking-wide text-muted">{product.brand}</p>}
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">{product.name}</h1>
+        {rating && (
+          <p className="mt-2 flex items-center gap-2 text-sm text-muted">
+            <Stars value={rating.average} />
+            <span className="nums">{rating.average.toFixed(1)} · {rating.count} reseñas</span>
+          </p>
+        )}
         <p className="nums mt-3 text-2xl font-medium">{mxn(product.base_price_cents)}</p>
         <p className="mt-1 text-xs text-muted">Precio con IVA incluido</p>
         {product.description && (

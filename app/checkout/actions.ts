@@ -149,8 +149,20 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
   }
 
   // 8. notify the buyer (non-fatal). Skip card emails until payment confirms (webhook handles it).
+  const emailLines = (items ?? []).map((i) => ({
+    name: `${i.product_name} (${i.variant_label})`,
+    quantity: i.quantity,
+    lineTotalCents: i.unit_price_cents * i.quantity,
+  }));
+  const breakdown = {
+    subtotalCents: created.subtotal_cents,
+    discountCents: created.discount_cents,
+    shippingCents: shipping,
+    taxCents: Math.round((totalCents * 16) / 116), // IVA-inclusive of the final total
+  };
+
   if (cardPaid) {
-    await sendPaidEmail({ to: input.email, orderNumber: created.order_number, totalCents });
+    await sendPaidEmail({ to: input.email, orderNumber: created.order_number, totalCents, lines: emailLines, breakdown });
   } else if (input.method === "oxxo" || input.method === "spei") {
     await sendVoucherEmail({
       to: input.email,
@@ -159,8 +171,11 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
       method: input.method,
       reference: reference ?? undefined,
       clabe: clabe ?? undefined,
+      bank: bank ?? undefined,
       voucherUrl: voucherUrl ?? undefined,
       expiresAt: created.expires_at,
+      lines: emailLines,
+      breakdown,
     });
   }
 

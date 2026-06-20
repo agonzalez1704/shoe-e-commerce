@@ -67,11 +67,30 @@ export async function POST(req: NextRequest) {
   // confirmation email (non-fatal)
   const { data: order } = await admin
     .from("orders")
-    .select("email, order_number, total_cents, needs_invoice")
+    .select("email, order_number, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, needs_invoice")
     .eq("id", payment.order_id)
     .maybeSingle();
   if (order) {
-    await sendPaidEmail({ to: order.email, orderNumber: order.order_number, totalCents: order.total_cents });
+    const { data: items } = await admin
+      .from("order_items")
+      .select("product_name, variant_label, unit_price_cents, quantity")
+      .eq("order_id", payment.order_id);
+    await sendPaidEmail({
+      to: order.email,
+      orderNumber: order.order_number,
+      totalCents: order.total_cents,
+      lines: (items ?? []).map((i) => ({
+        name: `${i.product_name} (${i.variant_label})`,
+        quantity: i.quantity,
+        lineTotalCents: i.unit_price_cents * i.quantity,
+      })),
+      breakdown: {
+        subtotalCents: order.subtotal_cents,
+        discountCents: order.discount_cents,
+        shippingCents: order.shipping_cents,
+        taxCents: order.tax_cents,
+      },
+    });
     // stamp CFDI on payment if requested (non-fatal; records failure for admin retry)
     if (order.needs_invoice) await stampOrderCfdi(payment.order_id);
   }

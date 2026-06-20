@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin-guard";
+import { generateAngles } from "@/lib/autotoon";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -140,6 +142,35 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
 
   revalidatePath("/admin/products");
   redirect("/admin/products");
+}
+
+// Generate multi-angle images from one product photo (auto-toon), then re-host
+// the results into our own product-images bucket. Returns the new public URLs.
+export async function generateProductAngles(
+  sourceImageUrl: string,
+  productName: string,
+): Promise<{ urls: string[] } | { error: string }> {
+  await requireAdmin();
+  try {
+    const angleUrls = await generateAngles(sourceImageUrl, productName || "producto");
+    const admin = createAdminClient();
+    const rehosted: string[] = [];
+    for (const url of angleUrls) {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      const ct = res.headers.get("content-type") ?? "image/jpeg";
+      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+      const path = `ai/${crypto.randomUUID()}.${ext}`;
+      const { error } = await admin.storage.from("product-images").upload(path, buf, { contentType: ct });
+      if (error) continue;
+      rehosted.push(admin.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+    }
+    if (rehosted.length === 0) return { error: "No se generaron imágenes." };
+    return { urls: rehosted };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Error al generar ángulos" };
+  }
 }
 
 export async function deleteProduct(id: string): Promise<void> {

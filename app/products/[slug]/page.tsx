@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getProduct } from "@/lib/catalog";
+import { getProductReviews } from "@/lib/reviews";
 import { ProductDetail } from "@/components/ProductDetail";
+import { ProductReviews } from "@/components/ProductReviews";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
 export const revalidate = 60;
@@ -39,6 +41,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProduct(slug);
   if (!product) notFound();
 
+  const reviews = await getProductReviews(product.id);
+
   const url = `${SITE_URL}/products/${slug}`;
   const productJsonLd = {
     "@context": "https://schema.org",
@@ -47,6 +51,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     description: product.description ?? undefined,
     image: product.images.map((i) => i.url),
     ...(product.brand ? { brand: { "@type": "Brand", name: product.brand } } : {}),
+    // star ratings in Google results
+    ...(reviews.count > 0
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average.toFixed(1), reviewCount: reviews.count } }
+      : {}),
     offers: {
       "@type": "Offer",
       priceCurrency: "MXN",
@@ -75,7 +83,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <span className="text-text">{product.name}</span>
       </nav>
 
-      <ProductDetail product={product} />
+      <ProductDetail product={product} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
+      <ProductReviews summary={reviews} />
     </div>
   );
 }

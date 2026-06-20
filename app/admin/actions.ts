@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
+import { sendShippedEmail } from "@/lib/email";
 
 type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
@@ -12,6 +13,32 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
   if (error) throw new Error(error.message);
+
+  // notify the customer when the order ships (non-fatal)
+  if (status === "fulfilled") {
+    const { data: o } = await supabase
+      .from("orders")
+      .select("email, order_number, total_cents")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (o) {
+      const { data: items } = await supabase
+        .from("order_items")
+        .select("product_name, variant_label, unit_price_cents, quantity")
+        .eq("order_id", orderId);
+      await sendShippedEmail({
+        to: o.email,
+        orderNumber: o.order_number,
+        totalCents: o.total_cents,
+        lines: (items ?? []).map((i) => ({
+          name: `${i.product_name} (${i.variant_label})`,
+          quantity: i.quantity,
+          lineTotalCents: i.unit_price_cents * i.quantity,
+        })),
+      });
+    }
+  }
+
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/orders");
 }

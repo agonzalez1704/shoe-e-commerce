@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>sole&co — email mockups</title>
+<style>
+  body { margin:0; background:#e4e4e7; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .page { max-width:640px; margin:0 auto; padding:24px 12px; }
+  .label { margin:28px 8px 6px; font-size:12px; font-weight:600; color:#52525b; text-transform:uppercase; letter-spacing:.05em; }
+  .note { margin:0 8px 8px; font-size:12px; color:#71717a; }
+  /* ---- email shell (mirrors lib/email.ts) ---- */
+  .em { background:#f4f4f5; padding:24px 12px; }
+  .card { max-width:560px; margin:0 auto; background:#fff; border:1px solid #e4e4e7; border-radius:14px; overflow:hidden; }
+  .hd { padding:18px 24px; border-bottom:1px solid #eee; }
+  .hd b { font-size:18px; font-weight:600; color:#18181b; }
+  .bd { padding:24px; color:#27272a; font-size:14px; line-height:1.6; }
+  .bd h2 { margin:0 0 12px; font-size:18px; color:#ea580c; } /* brand accent */
+  .ft { padding:14px 24px; border-top:1px solid #eee; color:#a1a1aa; font-size:12px; }
+  table.sum { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
+  table.sum td { padding:6px 0; }
+  .muted { color:#71717a; } .qty { color:#a1a1aa; } .right { text-align:right; }
+  .rule td { border-top:1px solid #eee; padding-top:8px; }
+  .tot td { font-weight:600; color:#18181b; }
+  .box { background:#fff; border:1px solid #e4e4e7; border-radius:10px; padding:16px; text-align:center; }
+  .mono { font-family:monospace; }
+  .clabe { background:#f4f4f5; border-radius:10px; padding:14px; font-family:monospace; font-size:18px; color:#18181b; }
+  .btn { display:inline-block; background:#ea580c; color:#fff; text-decoration:none; padding:11px 20px; border-radius:999px; font-weight:500; font-size:14px; }
+  .pill { display:inline-block; background:#fff1e8; color:#ea580c; border-radius:999px; padding:4px 12px; font-size:13px; font-weight:600; }
+  .barcode { height:64px; width:240px; background:repeating-linear-gradient(90deg,#18181b 0 2px,#fff 2px 4px,#18181b 4px 7px,#fff 7px 9px); margin:0 auto; }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="note">Mockups de correos — diseño real (shell de <code>lib/email.ts</code>), datos de ejemplo. Marca: sole&amp;co (acento naranja).</p>
+
+  <!-- 2. Order confirmed -->
+  <div class="label">2 · Pedido confirmado (pago acreditado)</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>¡Pago confirmado!</h2>
+      <p>Tu pedido <strong>BL-001007</strong> está confirmado y en preparación.</p>
+      <table class="sum">
+        <tr><td>Lumen Air Max (MX 27 / medium / black) <span class="qty">× 1</span></td><td class="right">$2,999.00</td></tr>
+        <tr class="rule"><td colspan="2"></td></tr>
+        <tr><td class="muted">Subtotal</td><td class="right muted">$2,999.00</td></tr>
+        <tr><td class="muted">Envío</td><td class="right muted">Gratis</td></tr>
+        <tr><td class="muted">IVA incluido</td><td class="right muted">$413.66</td></tr>
+        <tr class="tot"><td>Total</td><td class="right">$2,999.00</td></tr>
+      </table>
+      <p class="muted">Se fabrica sobre pedido; te avisaremos cuando se envíe (3 a 5 días hábiles).</p>
+    </div>
+    <div class="ft">Calzado de piel hecho sobre pedido en México. Envío a todo el país.</div>
+  </div></div>
+
+  <!-- 1. OXXO -->
+  <div class="label">1 · Instrucciones de pago — OXXO</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>Pedido BL-001008 recibido</h2>
+      <p>Monto a pagar: <strong>$1,398.00</strong></p>
+      <p style="margin:0 0 8px">Paga en cualquier OXXO mostrando este código:</p>
+      <div class="box"><div class="barcode"></div><br/><span class="mono" style="font-size:15px">10001157599860598406</span></div>
+      <p class="muted" style="font-size:13px;margin-top:12px">Vence el 21/06/2026, 10:28 a.m.</p>
+      <p class="muted">Confirmaremos tu pedido en cuanto se reciba el pago. Envío en 3 a 5 días hábiles.</p>
+    </div>
+    <div class="ft">Calzado de piel hecho sobre pedido en México. Envío a todo el país.</div>
+  </div></div>
+
+  <!-- 1b. SPEI -->
+  <div class="label">1 · Instrucciones de pago — SPEI</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>Pedido BL-001009 recibido</h2>
+      <p>Monto a pagar: <strong>$1,749.00</strong></p>
+      <p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE (STP):</p>
+      <div class="clabe">646180111812345678</div>
+      <p class="muted" style="font-size:13px;margin-top:12px">Vence el 20/06/2026, 10:28 a.m.</p>
+    </div>
+    <div class="ft">Calzado de piel hecho sobre pedido en México. Envío a todo el país.</div>
+  </div></div>
+
+  <!-- 3. Shipped -->
+  <div class="label">3 · Pedido enviado</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>Tu pedido va en camino</h2>
+      <p>Tu pedido <strong>BL-001007</strong> fue enviado.</p>
+      <p style="margin-top:8px">Guía: <strong>Estafeta 1234567890</strong></p>
+      <table class="sum">
+        <tr><td>Lumen Air Max (MX 27 / medium / black) <span class="qty">× 1</span></td><td class="right">$2,999.00</td></tr>
+        <tr class="tot rule"><td>Total</td><td class="right">$2,999.00</td></tr>
+      </table>
+      <p class="muted">Gracias por tu compra.</p>
+    </div>
+    <div class="ft">Calzado de piel hecho sobre pedido en México. Envío a todo el país.</div>
+  </div></div>
+
+  <!-- 4. Payment failed -->
+  <div class="label">4 · Pago rechazado (tarjeta) — NUEVO</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>No pudimos procesar tu pago</h2>
+      <p>El pago de tu pedido <strong>BL-001010</strong> fue rechazado por el banco.</p>
+      <p class="muted">Tu pedido sigue apartado por tiempo limitado. Intenta de nuevo con otra tarjeta o paga en OXXO/SPEI.</p>
+      <p style="margin-top:16px"><a class="btn" href="#">Reintentar el pago</a></p>
+    </div>
+    <div class="ft">Calzado de piel hecho sobre pedido en México. Envío a todo el país.</div>
+  </div></div>
+
+  <!-- 7. CFDI ready -->
+  <div class="label">7 · Factura CFDI lista — NUEVO</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>Tu factura está lista</h2>
+      <p>Adjuntamos la factura (CFDI 4.0) de tu pedido <strong>BL-001007</strong>.</p>
+      <p class="muted">Folio fiscal (UUID):<br/><span class="mono">a1b2c3d4-5678-90ab-cdef-1234567890ab</span></p>
+      <p style="margin-top:16px"><a class="btn" href="#">Descargar PDF</a> &nbsp; <a href="#" style="color:#ea580c">XML</a></p>
+    </div>
+    <div class="ft">RFC del emisor · Calzado hecho en México.</div>
+  </div></div>
+
+  <!-- 16. Back in stock -->
+  <div class="label">16 · De vuelta en existencia — NUEVO (retención)</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>Volvió tu talla</h2>
+      <p>El modelo <strong>Vanta Court Low — MX 26 / blanco</strong> que esperabas ya está disponible.</p>
+      <p style="margin-top:16px"><a class="btn" href="#">Ver producto</a></p>
+    </div>
+    <div class="ft">Te escribimos porque pediste que te avisáramos. </div>
+  </div></div>
+
+  <!-- 17. Review request -->
+  <div class="label">17 · Solicitud de reseña — NUEVO (retención)</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <h2>¿Qué te parecieron?</h2>
+      <p>Esperamos que estés disfrutando tus <strong>Lumen Air Max</strong>. Tu opinión ayuda a otros compradores.</p>
+      <p style="margin-top:16px"><a class="btn" href="#">Dejar una reseña</a></p>
+    </div>
+    <div class="ft">Calzado de piel hecho sobre pedido en México.</div>
+  </div></div>
+
+  <!-- 20/21. Marketing broadcast -->
+  <div class="label">20-21 · Promoción / Venta — MARKETING (Resend Broadcasts, con opt-in + baja)</div>
+  <div class="em"><div class="card">
+    <div class="hd"><b>sole&amp;co</b></div>
+    <div class="bd">
+      <p><span class="pill">El Buen Fin</span></p>
+      <h2 style="font-size:26px;margin-top:10px">20% en todo el calzado de piel</h2>
+      <p>Solo este fin de semana. Usa el código <strong>BUENFIN20</strong> al pagar.</p>
+      <p style="margin-top:16px"><a class="btn" href="#">Comprar ahora</a></p>
+      <div style="margin-top:20px;display:flex;gap:8px">
+        <div style="flex:1;height:90px;border-radius:8px;background:#f4f4f5"></div>
+        <div style="flex:1;height:90px;border-radius:8px;background:#f4f4f5"></div>
+        <div style="flex:1;height:90px;border-radius:8px;background:#f4f4f5"></div>
+      </div>
+    </div>
+    <div class="ft">Recibes esto porque te suscribiste. <a href="#" style="color:#a1a1aa">Cancelar suscripción</a>.</div>
+  </div></div>
+
+</div>
+</body>
+</html>

@@ -1,24 +1,41 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UploadSimple, X, Spinner } from "@phosphor-icons/react";
+import { UploadSimple, X, Spinner, MagicWand } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import type { ProductImageInput } from "@/app/admin/product-actions";
+import { generateProductAngles, type ProductImageInput } from "@/app/admin/product-actions";
 
 const BUCKET = "product-images";
 
 export function ImageUploader({
   images,
   colors,
+  productName,
   onChange,
 }: {
   images: ProductImageInput[];
   colors: string[];
+  productName: string;
   onChange: (images: ProductImageInput[]) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function generateAngles() {
+    const source = images[0]?.url;
+    if (!source) return;
+    setError(null);
+    setGenerating(true);
+    try {
+      const res = await generateProductAngles(source, productName);
+      if ("error" in res) setError(res.error);
+      else onChange([...images, ...res.urls.map((url) => ({ url, color: colors[0] ?? null }))]);
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -104,9 +121,22 @@ export function ImageUploader({
         onChange={(e) => handleFiles(e.target.files)}
         className="hidden"
       />
+      {images.length > 0 && (
+        <button
+          type="button"
+          onClick={generateAngles}
+          disabled={generating}
+          className="inline-flex items-center gap-2 rounded-full border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-soft disabled:opacity-60"
+        >
+          {generating ? <Spinner size={16} className="animate-spin" /> : <MagicWand size={16} weight="bold" />}
+          {generating ? "Generando ángulos…" : "Generar ángulos con IA"}
+        </button>
+      )}
+
       {error && <p className="text-sm text-accent">{error}</p>}
       <p className="text-xs text-muted">
         Asigna cada imagen a un color (o General). La primera es la portada. JPG/PNG/WebP/AVIF · máx 5MB.
+        Genera más ángulos a partir de la primera imagen con IA (auto-toon).
       </p>
     </div>
   );
