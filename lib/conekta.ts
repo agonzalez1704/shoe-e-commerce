@@ -28,7 +28,7 @@ async function conekta<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export type ConektaMethod = "card" | "oxxo" | "spei";
+export type ConektaMethod = "card" | "oxxo" | "spei" | "aplazo";
 
 type LineItem = { name: string; unit_price: number; quantity: number };
 
@@ -40,7 +40,8 @@ type CreateArgs = {
   cardTokenId?: string;      // required for card (from Conekta.js on the client)
   orderNumber: string;       // our reference -> Conekta metadata
   expiresAt?: number;        // unix seconds, for oxxo/spei voucher expiry
-  returnUrl?: string;        // 3DS return URL (card)
+  returnUrl?: string;        // 3DS return URL (card) / success URL (aplazo)
+  cancelUrl?: string;        // aplazo cancel/failure URL
 };
 
 export type ConektaCharge = {
@@ -76,6 +77,14 @@ function paymentMethodBlock(a: CreateArgs) {
       return { type: "cash", expires_at: a.expiresAt }; // OXXO = cash
     case "spei":
       return { type: "spei", expires_at: a.expiresAt };
+    case "aplazo": // BNPL — redirect to Aplazo to approve installments
+      return {
+        type: "bnpl",
+        product_type: "aplazo_bnpl",
+        success_url: a.returnUrl,
+        failure_url: a.cancelUrl,
+        cancel_url: a.cancelUrl,
+      };
   }
 }
 

@@ -2,11 +2,11 @@
 
 import Script from "next/script";
 import { useState } from "react";
-import { CreditCard, Storefront, Bank, CheckCircle } from "@phosphor-icons/react";
+import { CreditCard, Storefront, Bank, Coins, CheckCircle } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { checkout, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 
-type Method = "card" | "oxxo" | "spei";
+type Method = "card" | "oxxo" | "spei" | "aplazo";
 
 declare global {
   interface Window {
@@ -31,6 +31,7 @@ const METHODS: { id: Method; label: string; icon: typeof CreditCard }[] = [
   { id: "card", label: "Tarjeta", icon: CreditCard },
   { id: "oxxo", label: "OXXO", icon: Storefront },
   { id: "spei", label: "SPEI", icon: Bank },
+  { id: "aplazo", label: "Aplazo", icon: Coins },
 ];
 
 export function CheckoutForm({
@@ -98,9 +99,9 @@ export function CheckoutForm({
       };
 
       const res = await checkout(input);
-      // card 3DS: send the buyer to Conekta's challenge; the webhook commits after
-      if (res.card?.redirectUrl) {
-        window.location.href = res.card.redirectUrl;
+      // redirect to provider — card 3DS challenge or Aplazo approval; webhook commits after
+      if (res.redirectUrl) {
+        window.location.href = res.redirectUrl;
         return;
       }
       setResult(res);
@@ -169,6 +170,11 @@ export function CheckoutForm({
             {method === "spei" && (
               <p className="rounded-lg bg-accent-soft px-3 py-2.5 text-xs text-muted">
                 Se generará una CLABE para transferencia. El pedido se confirma al recibir el pago.
+              </p>
+            )}
+            {method === "aplazo" && (
+              <p className="rounded-lg bg-accent-soft px-3 py-2.5 text-xs text-muted">
+                Paga en quincenas sin tarjeta. Te llevaremos a Aplazo para aprobar tu compra; al volver, tu pedido queda confirmado.
               </p>
             )}
           </section>

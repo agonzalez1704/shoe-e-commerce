@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     p_order_id: payment.order_id,
     p_charge_id: conektaOrderId,
     p_amount_cents: payment.amount_cents,
-    p_method: payment.method as "card" | "oxxo" | "spei",
+    p_method: payment.method as "card" | "oxxo" | "spei" | "aplazo",
   });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

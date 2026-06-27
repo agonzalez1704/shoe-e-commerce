@@ -271,6 +271,27 @@ export type Database = {
           },
         ]
       }
+      conversaciones: {
+        Row: {
+          estado: string
+          motivo: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          estado?: string
+          motivo?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          estado?: string
+          motivo?: string | null
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           created_at: string
@@ -1030,6 +1051,30 @@ export type Database = {
           },
         ]
       }
+      wa_mensajes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          phone: string
+          role: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          phone: string
+          role: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          phone?: string
+          role?: string
+        }
+        Relationships: []
+      }
       wishlist_items: {
         Row: {
           id: string
@@ -1202,7 +1247,7 @@ export type Database = {
       discount_type: "percent" | "fixed"
       fit_feedback: "runs_small" | "true_to_size" | "runs_large"
       order_status: "pending" | "paid" | "fulfilled" | "cancelled" | "refunded"
-      payment_method: "card" | "oxxo" | "spei"
+      payment_method: "card" | "oxxo" | "spei" | "aplazo"
       product_status: "draft" | "active" | "archived"
       return_status:
         | "requested"
@@ -1348,7 +1393,7 @@ export const Constants = {
       discount_type: ["percent", "fixed"],
       fit_feedback: ["runs_small", "true_to_size", "runs_large"],
       order_status: ["pending", "paid", "fulfilled", "cancelled", "refunded"],
-      payment_method: ["card", "oxxo", "spei"],
+      payment_method: ["card", "oxxo", "spei", "aplazo"],
       product_status: ["draft", "active", "archived"],
       return_status: [
         "requested",

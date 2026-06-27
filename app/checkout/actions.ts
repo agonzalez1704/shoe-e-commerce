@@ -42,7 +42,8 @@ export type CheckoutResult = {
   // method-specific instructions for the confirmation screen:
   oxxo?: { reference: string; voucherUrl?: string };
   spei?: { clabe: string; bank?: string };
-  card?: { paid: boolean; redirectUrl?: string };
+  card?: { paid: boolean };
+  redirectUrl?: string; // card 3DS or Aplazo BNPL approval
 };
 
 export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
@@ -113,6 +114,7 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
     orderNumber: created.order_number,
     expiresAt: expiresUnix,
     returnUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,
+    cancelUrl: `${SITE_URL}/checkout?pago=cancelado`,
   });
 
   const charge = co.charges.data[0];
@@ -121,7 +123,8 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
   const voucherUrl = pm.barcode_url;              // OXXO barcode image
   const clabe = pm.receiving_account_number;      // SPEI
   const bank = pm.receiving_account_bank;         // SPEI
-  const threeDsUrl = co.next_action?.redirect_to_url?.url; // card 3DS challenge
+  // redirect to provider — card 3DS challenge OR Aplazo approval
+  const redirectUrl = co.next_action?.redirect_to_url?.url;
 
   // 6. record the pending payment + voucher details (service role)
   await admin.rpc("record_payment", {
@@ -138,7 +141,7 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
   // 7. card without 3DS (risk-free smart mode) may already be paid — commit now
   //    (webhook also fires, idempotent). With 3DS, the webhook commits after the challenge.
   let cardPaid = false;
-  if (input.method === "card" && co.payment_status === "paid" && !threeDsUrl) {
+  if (input.method === "card" && co.payment_status === "paid" && !redirectUrl) {
     await admin.rpc("commit_order", {
       p_order_id: orderId,
       p_charge_id: co.id,
@@ -184,8 +187,9 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
     method: input.method,
     totalCents,
     expiresAt: created.expires_at,
+    redirectUrl, // card 3DS / Aplazo — client redirects here if present
     oxxo: input.method === "oxxo" ? { reference: reference ?? "", voucherUrl } : undefined,
     spei: input.method === "spei" ? { clabe: clabe ?? "", bank } : undefined,
-    card: input.method === "card" ? { paid: cardPaid, redirectUrl: threeDsUrl } : undefined,
+    card: input.method === "card" ? { paid: cardPaid } : undefined,
   };
 }
