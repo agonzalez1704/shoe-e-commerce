@@ -15,6 +15,7 @@
     "db:migrate": "supabase migration up && pnpm gen:types",
     "db:reset": "supabase db reset && pnpm gen:types && pnpm seed:images",
     "seed:images": "node --env-file=.env.local scripts/seed-images.mjs",
+    "kapso:register": "node --env-file=.env.local scripts/register-kapso-webhook.mjs",
     "setup": "supabase start && supabase db reset && pnpm gen:types && pnpm seed:images"
   },
   "dependencies": {

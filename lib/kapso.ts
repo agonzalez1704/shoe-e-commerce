@@ -24,11 +24,29 @@ export async function enviarTexto(phoneNumberId: string, to: string, body: strin
   });
 }
 
-// One-time onboarding: register the inbound-message webhook for a number.
-// Returns the signing secret to store as KAPSO_WEBHOOK_SECRET.
-export async function crearWebhookMensajes(phoneNumberId: string, webhookUrl: string) {
-  return kapso<{ secret: string }>(`/whatsapp/${phoneNumberId}/webhooks`, {
-    method: "POST",
-    body: JSON.stringify({ url: webhookUrl, event: "whatsapp.message.received" }),
-  });
+// One-time onboarding: register the inbound-message webhook for a connected
+// number. Returns the signing secret to store as KAPSO_WEBHOOK_SECRET.
+// buffer_enabled batches rapid messages (payload.batch + data[]) — our webhook handles it.
+export async function crearWebhookMensajes(
+  phoneNumberId: string,
+  webhookUrl: string,
+): Promise<{ id: string; secret: string }> {
+  const r = await kapso<{ data: { id: string; secret_key?: string; secret?: string } }>(
+    `/platform/v1/whatsapp/phone_numbers/${phoneNumberId}/webhooks`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        webhook: {
+          url: webhookUrl,
+          events: ["whatsapp.message.received"],
+          kind: "kapso",
+          payload_version: "v2",
+          buffer_enabled: true,
+          buffer_window_seconds: 5,
+          active: true,
+        },
+      }),
+    },
+  );
+  return { id: r.data.id, secret: r.data.secret_key ?? r.data.secret ?? "" };
 }
