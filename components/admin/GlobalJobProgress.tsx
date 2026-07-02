@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle, WarningCircle, Spinner, X, MagicWand } from "@phosphor-icons/react";
 import { useAngleJobList, useAngleJobsStore, type AngleJob } from "@/lib/stores/angle-jobs";
+import { dismissAngleJob } from "@/app/admin/angle-actions";
 
 // Global, app-wide progress for async auto-toon jobs. Reads only the store, so
 // it's agnostic of how jobs are produced (OCP): a top indeterminate bar while
@@ -10,6 +12,12 @@ import { useAngleJobList, useAngleJobsStore, type AngleJob } from "@/lib/stores/
 export function GlobalJobProgress() {
   const jobs = useAngleJobList();
   const remove = useAngleJobsStore((s) => s.remove);
+
+  // dismiss = remove locally + delete the row so it can't re-hydrate
+  const dismiss = (id: string) => {
+    remove(id);
+    void dismissAngleJob(id);
+  };
 
   const processing = jobs.some((j) => j.status === "processing");
 
@@ -23,7 +31,7 @@ export function GlobalJobProgress() {
 
       <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
         {jobs.map((job) => (
-          <Toast key={job.id} job={job} onClose={() => remove(job.id)} />
+          <Toast key={job.id} job={job} onClose={() => dismiss(job.id)} />
         ))}
       </div>
     </>
@@ -32,6 +40,13 @@ export function GlobalJobProgress() {
 
 function Toast({ job, onClose }: { job: AngleJob; onClose: () => void }) {
   const name = job.productName || "producto";
+
+  // success is self-clearing; failures stay until the user dismisses them
+  useEffect(() => {
+    if (job.status !== "ready") return;
+    const t = setTimeout(onClose, 10_000);
+    return () => clearTimeout(t);
+  }, [job.status, onClose]);
   return (
     <div className="pointer-events-auto overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--shadow-md)]">
       <div className="flex items-start gap-3 p-3.5">

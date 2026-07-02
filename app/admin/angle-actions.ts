@@ -44,6 +44,13 @@ export async function startAngleJob(
   }
 }
 
+// Dismiss a finished job: delete the row so it doesn't reappear on the next
+// hydrate/Realtime tick. Only terminal jobs should be dismissed from the UI.
+export async function dismissAngleJob(jobId: string): Promise<void> {
+  const supabase = await requireAdmin();
+  await supabase.from("angle_jobs").delete().eq("id", jobId);
+}
+
 // Fallback if a webhook is ever missed: pull the set state from auto-toon and
 // finalize the job ourselves. Safe to call repeatedly (idempotent on terminal).
 export async function reconcileJob(jobId: string): Promise<void> {
