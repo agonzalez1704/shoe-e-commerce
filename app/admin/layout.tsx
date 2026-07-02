@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
+import { AngleJobsProvider } from "@/components/providers/AngleJobsProvider";
+import { GlobalJobProgress } from "@/components/admin/GlobalJobProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!isAdmin) redirect("/login");
 
   return (
-    <div className="py-8">
+    <AngleJobsProvider>
+      <GlobalJobProgress />
+      <div className="py-8">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <nav className="flex items-center gap-1 text-sm">
           <span className="mr-3 font-semibold tracking-tight">Admin</span>
@@ -38,6 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </div>
       {children}
-    </div>
+      </div>
+    </AngleJobsProvider>
   );
 }

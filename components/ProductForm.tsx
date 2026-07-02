@@ -167,7 +167,7 @@ export function ProductForm({
       {/* images */}
       <section>
         <h2 className="mb-2 text-sm font-medium uppercase tracking-wide text-muted">Imágenes</h2>
-        <ImageUploader images={images} colors={variantColors} productName={name} onChange={setImages} />
+        <ImageUploader images={images} colors={variantColors} productName={name} productId={initial?.id} onChange={setImages} />
       </section>
 
       {error && <p className="text-sm text-accent">{error}</p>}

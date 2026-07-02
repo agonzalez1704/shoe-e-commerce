@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UploadSimple, X, Spinner, MagicWand } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { startProductAngles, pollProductAngles, type ProductImageInput } from "@/app/admin/product-actions";
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+import type { ProductImageInput } from "@/app/admin/product-actions";
+import { startAngleJob } from "@/app/admin/angle-actions";
+import { useAngleJob, useAngleJobsStore } from "@/lib/stores/angle-jobs";
 
 const BUCKET = "product-images";
 
@@ -13,44 +13,55 @@ export function ImageUploader({
   images,
   colors,
   productName,
+  productId,
   onChange,
 }: {
   images: ProductImageInput[];
   colors: string[];
   productName: string;
+  productId?: string;
   onChange: (images: ProductImageInput[]) => void;
 }) {
   const [uploading, setUploading] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // this uploader's in-flight job (started here); status comes from the global
+  // store, fed by Realtime -> the webhook. No polling.
+  const [jobId, setJobId] = useState<string | null>(null);
+  const job = useAngleJob(jobId ?? undefined);
+  const seed = useAngleJobsStore((s) => s.upsert);
+  const generating = job?.status === "processing";
+
+  // keep the freshest images/colors for the completion callback
+  const latest = useRef({ images, colors });
+  latest.current = { images, colors };
+  const consumedRef = useRef(false);
+
+  // when our job completes, fold the generated angles into the form (once)
+  useEffect(() => {
+    if (!job) return;
+    if (job.status === "ready" && job.resultUrls.length && !consumedRef.current) {
+      consumedRef.current = true;
+      const { images: imgs, colors: cols } = latest.current;
+      onChange([...imgs, ...job.resultUrls.map((url) => ({ url, color: cols[0] ?? null }))]);
+      setJobId(null);
+    } else if (job.status === "failed") {
+      setError(job.error ?? "No se pudieron generar los ángulos.");
+      setJobId(null);
+    }
+  }, [job, onChange]);
 
   async function generateAngles() {
     const source = images[0]?.url;
     if (!source) return;
     setError(null);
-    setGenerating(true);
-    try {
-      const start = await startProductAngles(source, productName);
-      if ("error" in start) { setError(start.error); return; }
-
-      // poll from the browser so no single server call hits the function timeout.
-      // gpt-image-2 renders each angle sequentially (~2.5 min each) -> ~7-8 min
-      // for 3, so give it generous headroom.
-      const deadline = Date.now() + 12 * 60 * 1000;
-      while (Date.now() < deadline) {
-        await sleep(3500);
-        const res = await pollProductAngles(start.angleSetId);
-        if ("error" in res) { setError(res.error); return; }
-        if (res.status === "ready") {
-          onChange([...images, ...res.urls.map((url) => ({ url, color: colors[0] ?? null }))]);
-          return;
-        }
-      }
-      setError("La generación sigue en proceso en auto-toon. Espera un momento y vuelve a intentar para recuperar las imágenes.");
-    } finally {
-      setGenerating(false);
-    }
+    consumedRef.current = false;
+    const res = await startAngleJob(source, productName, productId);
+    if ("error" in res) { setError(res.error); return; }
+    setJobId(res.jobId);
+    // reflect immediately in the global bar/toast
+    seed({ id: res.jobId, productId: productId ?? null, productName, status: "processing", resultUrls: [], error: null });
   }
 
   async function handleFiles(files: FileList | null) {

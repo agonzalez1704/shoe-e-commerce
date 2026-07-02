@@ -1,10 +1,8 @@
 import "server-only";
 
-// Client for the auto-toon (toon-converter) product-angles API: one product
-// photo -> multiple generated angles. Generation is SLOW (each image ~60-90s),
-// so we expose granular calls (start / poll / confirm) and let the browser do
-// the waiting — a single synchronous server action would blow Vercel's 300s
-// function limit (it did: FUNCTION_INVOCATION_TIMEOUT at 5m).
+// Client for the auto-toon (toon-converter) product-angles API. We kick off a
+// job with a completion webhook + autoConfirm and return immediately — no
+// waiting, no polling. auto-toon calls our webhook when the angles are ready.
 const BASE = process.env.TOON_API_URL?.replace(/\/$/, "");
 const KEY = process.env.TOON_API_KEY;
 
@@ -25,8 +23,7 @@ async function toon<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // auto-toon runs remotely and downloads the source itself, so a localhost /
-// private URL (e.g. the local Supabase stack) is unreachable and the job fails
-// with a vague error. Reject up front with an actionable message.
+// private URL (e.g. the local Supabase stack) is unreachable. Reject up front.
 function assertPublicUrl(u: string): void {
   let parsed: URL;
   try { parsed = new URL(u); } catch { throw new Error("La URL de la imagen no es válida."); }
@@ -45,32 +42,31 @@ function assertPublicUrl(u: string): void {
   }
 }
 
-// Phase 0: kick off generation. Returns the set id immediately (fast).
+export type StartOpts = { webhookUrl: string; webhookSecret: string; angles?: string[] };
+
+// Fire-and-forget: returns the auto-toon set id. Completion arrives via webhook.
 export async function startAngleGeneration(
   sourceImageUrl: string,
   productName: string,
-  angles: string[] = DEFAULT_ANGLES,
+  opts: StartOpts,
 ): Promise<string> {
   assertPublicUrl(sourceImageUrl);
   const { angleSetId } = await toon<{ angleSetId: string }>("/api/product-angles/generate", {
     method: "POST",
-    body: JSON.stringify({ sourceImageUrl, productName, selectedAngles: angles }),
+    body: JSON.stringify({
+      sourceImageUrl,
+      productName,
+      selectedAngles: opts.angles ?? DEFAULT_ANGLES,
+      webhookUrl: opts.webhookUrl,
+      webhookSecret: opts.webhookSecret,
+      autoConfirm: true,
+    }),
   });
   return angleSetId;
 }
 
-// Fetch current state of one set (fast, single request).
-export async function getAngleSet(angleSetId: string): Promise<AngleSet> {
+// Fallback reconciliation if a webhook is ever missed (single fast request).
+export async function getAngleSet(angleSetId: string): Promise<AngleSet | null> {
   const { sets } = await toon<{ sets: AngleSet[] }>("/api/product-angles");
-  const set = sets.find((s) => s.id === angleSetId);
-  if (!set) throw new Error("auto-toon: conjunto de ángulos no encontrado");
-  return set;
-}
-
-// Approve the hero so the remaining angles start rendering (fast).
-export async function confirmAngleSet(angleSetId: string): Promise<void> {
-  await toon("/api/product-angles/confirm", {
-    method: "POST",
-    body: JSON.stringify({ angleSetId, confirmed: true }),
-  });
+  return sets.find((s) => s.id === angleSetId) ?? null;
 }

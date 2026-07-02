@@ -1,21 +1,11 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { responderMensaje } from "@/lib/agent/sales-agent";
 import { cargarHistorial, guardarMensaje } from "@/lib/agent/memoria";
 import { estadoConversacion, marcarAsesor, getAsesores } from "@/lib/agent/handoff";
 import { enviarTexto } from "@/lib/kapso";
+import { verifySignature } from "@/lib/webhook-sig";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-function firmaValida(secret: string, raw: string, firma: string | null): boolean {
-  if (!secret || !firma) return false;
-  const esperado = createHmac("sha256", secret).update(raw).digest("hex");
-  try {
-    return timingSafeEqual(Buffer.from(esperado), Buffer.from(firma));
-  } catch {
-    return false;
-  }
-}
 
 // Kapso verification handshake
 export async function GET(req: Request) {
@@ -37,7 +27,7 @@ export async function POST(req: Request) {
   if (req.headers.get("x-webhook-event") !== "whatsapp.message.received") {
     return new Response(null, { status: 200 }); // ignore other events
   }
-  if (!firmaValida(secret, raw, req.headers.get("x-webhook-signature"))) {
+  if (!verifySignature(secret, raw, req.headers.get("x-webhook-signature"))) {
     return new Response(JSON.stringify({ error: "bad signature" }), { status: 401 });
   }
 

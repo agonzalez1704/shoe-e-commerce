@@ -99,6 +99,56 @@ export type Database = {
         }
         Relationships: []
       }
+      angle_jobs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          product_id: string | null
+          product_name: string | null
+          result_urls: string[]
+          source_url: string
+          status: string
+          toon_set_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          product_id?: string | null
+          product_name?: string | null
+          result_urls?: string[]
+          source_url: string
+          status?: string
+          toon_set_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          product_id?: string | null
+          product_name?: string | null
+          result_urls?: string[]
+          source_url?: string
+          status?: string
+          toon_set_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "angle_jobs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           id: string
