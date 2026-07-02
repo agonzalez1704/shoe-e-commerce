@@ -6,11 +6,12 @@ import "server-only";
 const BASE = process.env.TOON_API_URL?.replace(/\/$/, "");
 const KEY = process.env.TOON_API_KEY;
 
-// shoe-appropriate angles; "front" is the required hero.
-// API enum: front | back | left | right | top | bottom.
-// Reliable for N angles: toon's /run renders ONE angle per invocation and
+// shoe-appropriate angles. API enum: front | back | left | right | top | bottom.
+// left+right (the two lateral profiles) + top (overhead) are the most visually
+// distinct views for footwear. front is no longer forced; the hero anchor is the
+// first selected angle (left). toon's /run renders one angle per invocation and
 // self-chains, so no single call approaches the 300s function limit.
-export const DEFAULT_ANGLES = ["front", "left", "right"];
+export const DEFAULT_ANGLES = ["left", "right", "top"];
 
 export type AngleSet = { id: string; status: string; angleUrls?: string[]; errorMessage?: string };
 
