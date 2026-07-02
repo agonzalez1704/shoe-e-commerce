@@ -34,8 +34,10 @@ export function ImageUploader({
       const start = await startProductAngles(source, productName);
       if ("error" in start) { setError(start.error); return; }
 
-      // poll from the browser so no single server call hits the function timeout
-      const deadline = Date.now() + 6 * 60 * 1000; // generation takes a few minutes
+      // poll from the browser so no single server call hits the function timeout.
+      // gpt-image-2 renders each angle sequentially (~2.5 min each) -> ~7-8 min
+      // for 3, so give it generous headroom.
+      const deadline = Date.now() + 12 * 60 * 1000;
       while (Date.now() < deadline) {
         await sleep(3500);
         const res = await pollProductAngles(start.angleSetId);
@@ -45,7 +47,7 @@ export function ImageUploader({
           return;
         }
       }
-      setError("auto-toon tardó demasiado. Intenta de nuevo.");
+      setError("La generación sigue en proceso en auto-toon. Espera un momento y vuelve a intentar para recuperar las imágenes.");
     } finally {
       setGenerating(false);
     }
