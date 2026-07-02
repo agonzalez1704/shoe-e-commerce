@@ -3,7 +3,9 @@
 import { useRef, useState } from "react";
 import { UploadSimple, X, Spinner, MagicWand } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { generateProductAngles, type ProductImageInput } from "@/app/admin/product-actions";
+import { startProductAngles, pollProductAngles, type ProductImageInput } from "@/app/admin/product-actions";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const BUCKET = "product-images";
 
@@ -29,9 +31,21 @@ export function ImageUploader({
     setError(null);
     setGenerating(true);
     try {
-      const res = await generateProductAngles(source, productName);
-      if ("error" in res) setError(res.error);
-      else onChange([...images, ...res.urls.map((url) => ({ url, color: colors[0] ?? null }))]);
+      const start = await startProductAngles(source, productName);
+      if ("error" in start) { setError(start.error); return; }
+
+      // poll from the browser so no single server call hits the function timeout
+      const deadline = Date.now() + 6 * 60 * 1000; // generation takes a few minutes
+      while (Date.now() < deadline) {
+        await sleep(3500);
+        const res = await pollProductAngles(start.angleSetId);
+        if ("error" in res) { setError(res.error); return; }
+        if (res.status === "ready") {
+          onChange([...images, ...res.urls.map((url) => ({ url, color: colors[0] ?? null }))]);
+          return;
+        }
+      }
+      setError("auto-toon tardó demasiado. Intenta de nuevo.");
     } finally {
       setGenerating(false);
     }

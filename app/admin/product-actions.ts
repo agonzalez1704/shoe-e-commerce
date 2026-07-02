@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin-guard";
-import { generateAngles } from "@/lib/autotoon";
+import { startAngleGeneration, getAngleSet, confirmAngleSet } from "@/lib/autotoon";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -144,32 +144,65 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
   redirect("/admin/products");
 }
 
-// Generate multi-angle images from one product photo (auto-toon), then re-host
-// the results into our own product-images bucket. Returns the new public URLs.
-export async function generateProductAngles(
+// Auto-toon generation is slow (each image ~60-90s), so it's split so the
+// browser drives the waiting and every server action stays well under the
+// function timeout. 1) startProductAngles kicks it off. 2) the client polls
+// pollProductAngles until "ready" (auto-approving the hero along the way).
+
+export async function startProductAngles(
   sourceImageUrl: string,
   productName: string,
-): Promise<{ urls: string[] } | { error: string }> {
+): Promise<{ angleSetId: string } | { error: string }> {
   await requireAdmin();
   try {
-    const angleUrls = await generateAngles(sourceImageUrl, productName || "producto");
-    const admin = createAdminClient();
-    const rehosted: string[] = [];
-    for (const url of angleUrls) {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const buf = Buffer.from(await res.arrayBuffer());
-      const ct = res.headers.get("content-type") ?? "image/jpeg";
-      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-      const path = `ai/${crypto.randomUUID()}.${ext}`;
-      const { error } = await admin.storage.from("product-images").upload(path, buf, { contentType: ct });
-      if (error) continue;
-      rehosted.push(admin.storage.from("product-images").getPublicUrl(path).data.publicUrl);
-    }
-    if (rehosted.length === 0) return { error: "No se generaron imágenes." };
-    return { urls: rehosted };
+    const angleSetId = await startAngleGeneration(sourceImageUrl, productName || "producto");
+    return { angleSetId };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error al generar ángulos" };
+    return { error: e instanceof Error ? e.message : "Error al iniciar la generación" };
+  }
+}
+
+// re-host toon's images into our own bucket so they survive + serve from us
+async function rehost(urls: string[]): Promise<string[]> {
+  const admin = createAdminClient();
+  const out: string[] = [];
+  for (const url of urls) {
+    const res = await fetch(url);
+    if (!res.ok) continue;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const ct = res.headers.get("content-type") ?? "image/jpeg";
+    const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+    const path = `ai/${crypto.randomUUID()}.${ext}`;
+    const { error } = await admin.storage.from("product-images").upload(path, buf, { contentType: ct });
+    if (error) continue;
+    out.push(admin.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+  }
+  return out;
+}
+
+export type AnglePoll =
+  | { status: "processing" }
+  | { status: "ready"; urls: string[] }
+  | { error: string };
+
+export async function pollProductAngles(angleSetId: string): Promise<AnglePoll> {
+  await requireAdmin();
+  try {
+    const set = await getAngleSet(angleSetId);
+    if (set.status === "failed") return { error: set.errorMessage ?? "auto-toon falló" };
+    // hero is ready for review -> auto-approve so the rest render
+    if (set.status === "awaiting_confirmation") {
+      await confirmAngleSet(angleSetId);
+      return { status: "processing" };
+    }
+    if (set.status === "ready") {
+      const urls = await rehost(set.angleUrls ?? []);
+      if (urls.length === 0) return { error: "No se generaron imágenes." };
+      return { status: "ready", urls };
+    }
+    return { status: "processing" };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Error al consultar los ángulos" };
   }
 }
 
