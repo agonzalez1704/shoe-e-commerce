@@ -15,10 +15,17 @@ export function AngleJobsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = createClient();
     let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {
+      // postgres_changes is RLS-filtered: the Realtime socket must carry the
+      // admin's JWT or is_admin() denies every row and no events arrive. This
+      // is why completions only showed after a manual refresh.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) supabase.realtime.setAuth(session.access_token);
+      if (!active) return;
+
       // only in-flight jobs seed the UI; finished ones are transient toasts
-      // surfaced live via Realtime, not resurrected on every load
       const { data } = await supabase
         .from("angle_jobs")
         .select("id, product_id, product_name, status, result_urls, error")
@@ -26,24 +33,24 @@ export function AngleJobsProvider({ children }: { children: React.ReactNode }) {
         .order("created_at", { ascending: false })
         .limit(20);
       if (active && data) hydrate(data as AngleJobRow[]);
-    })();
 
-    const channel = supabase
-      .channel("angle_jobs")
-      .on("postgres_changes", { event: "*", schema: "public", table: "angle_jobs" }, (payload) => {
-        if (payload.eventType === "DELETE") {
-          const old = payload.old as { id?: string };
-          if (old?.id) remove(old.id);
-          return;
-        }
-        const row = payload.new as AngleJobRow;
-        if (row?.id) upsertFromRow(row);
-      })
-      .subscribe();
+      channel = supabase
+        .channel("angle_jobs")
+        .on("postgres_changes", { event: "*", schema: "public", table: "angle_jobs" }, (payload) => {
+          if (payload.eventType === "DELETE") {
+            const old = payload.old as { id?: string };
+            if (old?.id) remove(old.id);
+            return;
+          }
+          const row = payload.new as AngleJobRow;
+          if (row?.id) upsertFromRow(row);
+        })
+        .subscribe();
+    })();
 
     return () => {
       active = false;
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [hydrate, upsertFromRow, remove]);
 
