@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { UploadSimple, X, Spinner, MagicWand, Stamp } from "@phosphor-icons/react";
+import { UploadSimple, X, Spinner, MagicWand, Stamp, Star, DotsSixVertical } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import type { ProductImageInput } from "@/app/admin/product-actions";
 import { startAngleJob, refineImageLogo } from "@/app/admin/angle-actions";
@@ -97,6 +97,16 @@ export function ImageUploader({
     onChange(images.map((img, idx) => (idx === i ? { ...img, color } : img)));
   }
 
+  // reorder: array order == carousel order, index 0 == portada
+  function move(from: number, to: number) {
+    if (from === to || to < 0 || to >= images.length) return;
+    const next = [...images];
+    const [it] = next.splice(from, 1);
+    next.splice(to, 0, it);
+    onChange(next);
+  }
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
   // auto-toon logo correction on one image using the brand logo (~60-90s)
   const [refiningIdx, setRefiningIdx] = useState<number | null>(null);
   async function refineLogoAt(i: number) {
@@ -116,9 +126,25 @@ export function ImageUploader({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {images.map((img, i) => (
           <div key={img.url} className="space-y-1.5">
-            <div className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-elevated">
+            <div
+              draggable
+              onDragStart={() => setDragIdx(i)}
+              onDragEnter={() => {
+                if (dragIdx === null || dragIdx === i) return;
+                move(dragIdx, i);
+                setDragIdx(i);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnd={() => setDragIdx(null)}
+              className={`group relative aspect-square cursor-grab overflow-hidden rounded-xl border bg-elevated active:cursor-grabbing ${
+                dragIdx === i ? "border-accent opacity-60" : "border-border"
+              }`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.url} alt="" className="h-full w-full object-cover" />
+              <img src={img.url} alt="" draggable={false} className="h-full w-full object-cover" />
+              <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 text-text/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <DotsSixVertical size={16} weight="bold" />
+              </span>
               <button
                 type="button"
                 onClick={() => onChange(images.filter((_, idx) => idx !== i))}
@@ -139,10 +165,19 @@ export function ImageUploader({
               >
                 {refiningIdx === i ? <Spinner size={12} className="animate-spin" /> : <Stamp size={13} weight="bold" />}
               </button>
-              {i === 0 && (
-                <span className="absolute bottom-1 left-1 rounded-full bg-bg/80 px-2 py-0.5 text-[10px] text-muted backdrop-blur">
-                  portada
+              {i === 0 ? (
+                <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded-full bg-accent/90 px-2 py-0.5 text-[10px] font-medium text-accent-contrast backdrop-blur">
+                  <Star size={10} weight="fill" /> portada
                 </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => move(i, 0)}
+                  title="Hacer portada"
+                  className="absolute bottom-1 left-1 flex items-center gap-1 rounded-full bg-bg/80 px-2 py-0.5 text-[10px] text-muted opacity-0 backdrop-blur transition-opacity hover:text-text group-hover:opacity-100"
+                >
+                  <Star size={10} /> portada
+                </button>
               )}
             </div>
             <select
