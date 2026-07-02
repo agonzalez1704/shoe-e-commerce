@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAngleJobsStore, type AngleJobRow } from "@/lib/stores/angle-jobs";
+import { reconcileJob } from "@/app/admin/angle-actions";
 
 // Wires Supabase Realtime -> the angle-jobs store. Mounted once in the admin
 // layout: seeds recent jobs on mount (so state survives reloads/navigation) and
@@ -63,9 +64,19 @@ export function AngleJobsProvider({ children }: { children: React.ReactNode }) {
       if (active && data) (data as AngleJobRow[]).forEach(upsertFromRow);
     }, 5000);
 
+    // Reliability net: the webhook is fire-and-forget with no retry, so every
+    // 15s ask the server to reconcile any in-flight job against auto-toon and
+    // finalize it if the set is ready/failed. Makes completion webhook-optional.
+    const reconcile = setInterval(() => {
+      Object.values(useAngleJobsStore.getState().jobs)
+        .filter((j) => j.status === "processing")
+        .forEach((j) => void reconcileJob(j.id));
+    }, 15000);
+
     return () => {
       active = false;
       clearInterval(poll);
+      clearInterval(reconcile);
       if (channel) supabase.removeChannel(channel);
     };
   }, [hydrate, upsertFromRow, remove]);

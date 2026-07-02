@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySignature } from "@/lib/webhook-sig";
-import { rehostImages } from "@/lib/rehost";
+import { completeReadyJob, failJob } from "@/lib/angle-complete";
 
 // auto-toon completion webhook. HMAC-verified; the heavy work (download + re-host
 // 3 images, attach to the product) runs in after() so the response is instant —
@@ -42,32 +42,8 @@ export async function POST(req: Request) {
 
   // Respond instantly; do the download/re-host/attach in the background.
   after(async () => {
-    if (body.status === "ready") {
-      const urls = await rehostImages(body.angleUrls ?? []);
-      await admin
-        .from("angle_jobs")
-        .update(urls.length ? { status: "ready", result_urls: urls } : { status: "failed", error: "No se pudieron alojar las imágenes." })
-        .eq("id", job.id);
-
-      // attach to the product so the images land in the UI regardless of whether
-      // the edit form is still open (the form-append path is a live bonus only).
-      const productId = job.product_id;
-      if (urls.length && productId) {
-        const { count } = await admin
-          .from("product_images")
-          .select("id", { count: "exact", head: true })
-          .eq("product_id", productId);
-        const base = count ?? 0;
-        await admin.from("product_images").insert(
-          urls.map((url, i) => ({ product_id: productId, url, alt: job.product_name, position: base + i })),
-        );
-      }
-    } else {
-      await admin
-        .from("angle_jobs")
-        .update({ status: "failed", error: body.errorMessage ?? "auto-toon falló" })
-        .eq("id", job.id);
-    }
+    if (body.status === "ready") await completeReadyJob(admin, job, body.angleUrls ?? []);
+    else await failJob(admin, job.id, body.errorMessage ?? "auto-toon falló");
   });
 
   return NextResponse.json({ ok: true });

@@ -2,7 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin-guard";
 import { startAngleGeneration, getAngleSet } from "@/lib/autotoon";
-import { rehostImages } from "@/lib/rehost";
+import { completeReadyJob, failJob } from "@/lib/angle-complete";
 import { SITE_URL } from "@/lib/site";
 
 const WEBHOOK_URL = `${SITE_URL}/api/webhooks/auto-toon`;
@@ -51,23 +51,22 @@ export async function dismissAngleJob(jobId: string): Promise<void> {
   await supabase.from("angle_jobs").delete().eq("id", jobId);
 }
 
-// Fallback if a webhook is ever missed: pull the set state from auto-toon and
-// finalize the job ourselves. Safe to call repeatedly (idempotent on terminal).
+// The webhook is fire-and-forget with no retry, so the client reconciles: while
+// a job is processing it periodically pulls the set state from auto-toon and
+// finalizes the job itself. This makes completion reliable even if the webhook
+// is lost. The atomic claim in completeReadyJob prevents a double-attach if the
+// webhook and a reconcile land together. Idempotent — safe to call repeatedly.
 export async function reconcileJob(jobId: string): Promise<void> {
   const supabase = await requireAdmin();
   const { data: job } = await supabase
     .from("angle_jobs")
-    .select("id, toon_set_id, status")
+    .select("id, toon_set_id, status, product_id, product_name")
     .eq("id", jobId)
     .single();
   if (!job || job.status !== "processing") return;
 
   const set = await getAngleSet(job.toon_set_id);
   if (!set) return;
-  if (set.status === "ready") {
-    const urls = await rehostImages(set.angleUrls ?? []);
-    await supabase.from("angle_jobs").update({ status: "ready", result_urls: urls }).eq("id", jobId);
-  } else if (set.status === "failed") {
-    await supabase.from("angle_jobs").update({ status: "failed", error: set.errorMessage ?? "auto-toon falló" }).eq("id", jobId);
-  }
+  if (set.status === "ready") await completeReadyJob(supabase, job, set.angleUrls ?? []);
+  else if (set.status === "failed") await failJob(supabase, job.id, set.errorMessage ?? "auto-toon falló");
 }
