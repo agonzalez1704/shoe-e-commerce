@@ -73,3 +73,15 @@ export async function getAngleSet(angleSetId: string): Promise<AngleSet | null> 
   const { sets } = await toon<{ sets: AngleSet[] }>("/api/product-angles");
   return sets.find((s) => s.id === angleSetId) ?? null;
 }
+
+// Logo correction: place/fix the brand logo on a generated image, respecting all
+// product detail. Synchronous (single image). Returns the refined image url.
+export async function refineLogo(resultImageUrl: string, logoImageUrl: string): Promise<string> {
+  assertPublicUrl(resultImageUrl);
+  assertPublicUrl(logoImageUrl);
+  const { url } = await toon<{ url: string }>("/api/product-angles/refine-logo", {
+    method: "POST",
+    body: JSON.stringify({ resultImageUrl, logoImageUrl }),
+  });
+  return url;
+}

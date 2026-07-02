@@ -1,8 +1,10 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-guard";
-import { startAngleGeneration, getAngleSet } from "@/lib/autotoon";
+import { startAngleGeneration, getAngleSet, refineLogo } from "@/lib/autotoon";
 import { completeReadyJob, failJob } from "@/lib/angle-complete";
+import { rehostImages } from "@/lib/rehost";
+import { activeBrand } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 
 const WEBHOOK_URL = `${SITE_URL}/api/webhooks/auto-toon`;
@@ -49,6 +51,23 @@ export async function startAngleJob(
 export async function dismissAngleJob(jobId: string): Promise<void> {
   const supabase = await requireAdmin();
   await supabase.from("angle_jobs").delete().eq("id", jobId);
+}
+
+// Logo correction on a single image using the active brand's logo (auto-toon).
+// Synchronous (~60-90s); returns the re-hosted refined image url.
+export async function refineImageLogo(imageUrl: string): Promise<{ url: string } | { error: string }> {
+  await requireAdmin();
+  const logoPath = activeBrand.refineLogoUrl;
+  if (!logoPath) return { error: "La marca no tiene un logo configurado para la corrección." };
+  const logoUrl = logoPath.startsWith("http") ? logoPath : `${SITE_URL}${logoPath}`;
+  try {
+    const refined = await refineLogo(imageUrl, logoUrl);
+    const [hosted] = await rehostImages([refined]);
+    if (!hosted) return { error: "No se pudo alojar la imagen refinada." };
+    return { url: hosted };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Error al corregir el logo" };
+  }
 }
 
 // The webhook is fire-and-forget with no retry, so the client reconciles: while

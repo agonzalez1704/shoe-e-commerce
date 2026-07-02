@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { UploadSimple, X, Spinner, MagicWand } from "@phosphor-icons/react";
+import { UploadSimple, X, Spinner, MagicWand, Stamp } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import type { ProductImageInput } from "@/app/admin/product-actions";
-import { startAngleJob } from "@/app/admin/angle-actions";
+import { startAngleJob, refineImageLogo } from "@/app/admin/angle-actions";
 import { useAngleJob, useAngleJobsStore } from "@/lib/stores/angle-jobs";
 
 const BUCKET = "product-images";
@@ -97,6 +97,20 @@ export function ImageUploader({
     onChange(images.map((img, idx) => (idx === i ? { ...img, color } : img)));
   }
 
+  // auto-toon logo correction on one image using the brand logo (~60-90s)
+  const [refiningIdx, setRefiningIdx] = useState<number | null>(null);
+  async function refineLogoAt(i: number) {
+    setError(null);
+    setRefiningIdx(i);
+    try {
+      const res = await refineImageLogo(images[i].url);
+      if ("error" in res) setError(res.error);
+      else onChange(images.map((img, idx) => (idx === i ? { ...img, url: res.url } : img)));
+    } finally {
+      setRefiningIdx(null);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -112,6 +126,18 @@ export function ImageUploader({
                 className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-bg/80 text-text opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
               >
                 <X size={13} weight="bold" />
+              </button>
+              <button
+                type="button"
+                onClick={() => refineLogoAt(i)}
+                disabled={refiningIdx !== null}
+                aria-label="Corregir logo con IA"
+                title="Corregir logo con IA (auto-toon)"
+                className={`absolute left-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-bg/80 text-accent backdrop-blur transition-opacity disabled:opacity-100 ${
+                  refiningIdx === i ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                {refiningIdx === i ? <Spinner size={12} className="animate-spin" /> : <Stamp size={13} weight="bold" />}
               </button>
               {i === 0 && (
                 <span className="absolute bottom-1 left-1 rounded-full bg-bg/80 px-2 py-0.5 text-[10px] text-muted backdrop-blur">

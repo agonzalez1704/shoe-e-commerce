@@ -30,6 +30,7 @@ export type BrandConfig = {
   mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
   announcement?: string; // top bar text
   seoSuffix?: string;    // appended to <title> default + OG, e.g. "calzado de piel hecho en México"
+  refineLogoUrl?: string; // brand logo (public path) applied by auto-toon logo correction
   theme: { light: ThemeMode; dark: ThemeMode };
 };
 
@@ -85,6 +86,8 @@ const BRANDS: Record<string, BrandConfig> = {
     seoSuffix: "calzado infantil de moda en México",
     // distinctive red mark from shoesart.com.mx (keeps its red in both themes) + text wordmark
     markSrc: { src: "/shoesart-mark.png", width: 26, height: 26 },
+    // logo applied by auto-toon logo correction (swap for a clean dark/transparent shoe logo for best results)
+    refineLogoUrl: "/shoesart-mark.png",
     theme: {
       light: {
         accent: "#D4252A", accentSoft: "#fdecec", accentContrast: "#ffffff",
