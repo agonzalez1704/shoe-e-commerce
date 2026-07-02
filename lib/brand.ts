@@ -86,8 +86,9 @@ const BRANDS: Record<string, BrandConfig> = {
     seoSuffix: "calzado infantil de moda en México",
     // distinctive red mark from shoesart.com.mx (keeps its red in both themes) + text wordmark
     markSrc: { src: "/shoesart-mark.png", width: 26, height: 26 },
-    // logo applied by auto-toon logo correction (swap for a clean dark/transparent shoe logo for best results)
-    refineLogoUrl: "/shoesart-mark.png",
+    // fallback logo for auto-toon logo correction (full wordmark); the admin can
+    // override it by uploading one in /admin/ajustes
+    refineLogoUrl: "/shoesart-logo.png",
     theme: {
       light: {
         accent: "#D4252A", accentSoft: "#fdecec", accentContrast: "#ffffff",

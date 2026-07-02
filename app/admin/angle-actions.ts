@@ -56,10 +56,12 @@ export async function dismissAngleJob(jobId: string): Promise<void> {
 // Logo correction on a single image using the active brand's logo (auto-toon).
 // Synchronous (~60-90s); returns the re-hosted refined image url.
 export async function refineImageLogo(imageUrl: string): Promise<{ url: string } | { error: string }> {
-  await requireAdmin();
-  const logoPath = activeBrand.refineLogoUrl;
-  if (!logoPath) return { error: "La marca no tiene un logo configurado para la corrección." };
-  const logoUrl = logoPath.startsWith("http") ? logoPath : `${SITE_URL}${logoPath}`;
+  const supabase = await requireAdmin();
+  // prefer the logo uploaded in admin settings; fall back to the brand asset
+  const { data: cfg } = await supabase.from("settings").select("value").eq("key", "refine_logo_url").maybeSingle();
+  const configured = cfg?.value ?? activeBrand.refineLogoUrl ?? null;
+  if (!configured) return { error: "No hay logo configurado. Súbelo en Ajustes." };
+  const logoUrl = configured.startsWith("http") ? configured : `${SITE_URL}${configured}`;
   try {
     const refined = await refineLogo(imageUrl, logoUrl);
     const [hosted] = await rehostImages([refined]);
