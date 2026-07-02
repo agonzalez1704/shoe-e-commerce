@@ -48,8 +48,24 @@ export function AngleJobsProvider({ children }: { children: React.ReactNode }) {
         .subscribe();
     })();
 
+    // Reliable backstop: Realtime can be blocked by project config / RLS on the
+    // socket, so while any job is in flight we poll our own table every 5s. The
+    // webhook is still the server-side source of truth; this just reflects it.
+    const poll = setInterval(async () => {
+      const ids = Object.values(useAngleJobsStore.getState().jobs)
+        .filter((j) => j.status === "processing")
+        .map((j) => j.id);
+      if (!ids.length) return;
+      const { data } = await supabase
+        .from("angle_jobs")
+        .select("id, product_id, product_name, status, result_urls, error")
+        .in("id", ids);
+      if (active && data) (data as AngleJobRow[]).forEach(upsertFromRow);
+    }, 5000);
+
     return () => {
       active = false;
+      clearInterval(poll);
       if (channel) supabase.removeChannel(channel);
     };
   }, [hydrate, upsertFromRow, remove]);
