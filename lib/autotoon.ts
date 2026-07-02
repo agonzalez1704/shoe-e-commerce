@@ -8,7 +8,11 @@ const KEY = process.env.TOON_API_KEY;
 
 // shoe-appropriate angles; "front" is the required hero.
 // API enum: front | back | left | right | top | bottom.
-export const DEFAULT_ANGLES = ["front", "left", "right"];
+// Kept to 2 (front + one side) so phase-2 (/run) renders a SINGLE remaining
+// angle per invocation — two angles in one call brushes Vercel's 300s limit and
+// the last one gets killed mid-render. For 3+ angles, /run must self-chain
+// one-angle-per-invocation.
+export const DEFAULT_ANGLES = ["front", "left"];
 
 export type AngleSet = { id: string; status: string; angleUrls?: string[]; errorMessage?: string };
 
