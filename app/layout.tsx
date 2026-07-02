@@ -12,9 +12,11 @@ import "./globals.css";
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", weight: ["400", "500", "600", "700"] });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", weight: ["400", "500"] });
 
+const SEO_TITLE = `${SITE_NAME} — ${activeBrand.seoSuffix ?? "calzado hecho en México"}`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: `${SITE_NAME} — calzado de piel hecho en México`, template: `%s · ${SITE_NAME}` },
+  title: { default: SEO_TITLE, template: `%s · ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   alternates: { canonical: "/" },
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
     locale: "es_MX",
     siteName: SITE_NAME,
     url: SITE_URL,
-    title: `${SITE_NAME} — calzado de piel hecho en México`,
+    title: SEO_TITLE,
     description: SITE_DESCRIPTION,
   },
   twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
@@ -69,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="bg-text text-bg">
           <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs">
-            Hecho sobre pedido · Envío en 3-5 días hábiles · Envíos a todo México
+            {activeBrand.announcement ?? "Envíos a todo México"}
           </p>
         </div>
         <header className="sticky top-0 z-50 border-b border-border bg-bg/80 backdrop-blur-md">

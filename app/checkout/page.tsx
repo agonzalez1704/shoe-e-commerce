@@ -10,9 +10,9 @@ export default async function CheckoutPage() {
 
   return (
     <div className="py-6">
-      <h1 className="mb-8 text-3xl font-semibold tracking-tight">Pago</h1>
       <CheckoutForm
         cartId={cart.cartId}
+        lines={cart.lines}
         subtotalCents={cart.subtotalCents}
         conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
       />

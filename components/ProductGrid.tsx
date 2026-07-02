@@ -11,7 +11,7 @@ export function ProductGrid({ products }: { products: ProductCard[] }) {
       {products.map((p, i) => (
         <li key={p.id}>
           <Link href={`/products/${p.slug}`} className="group block">
-            <div className="relative aspect-square overflow-hidden rounded-xl bg-elevated">
+            <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-elevated transition-colors group-hover:border-accent/40">
               {p.image && (
                 <ProductImage
                   src={p.image}

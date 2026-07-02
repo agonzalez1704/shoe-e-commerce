@@ -143,3 +143,23 @@ body {
   }
   .reveal { animation: none; }
 }
+
+/* white monochrome brand logo: black in light mode, white in dark */
+.brand-logo-invert { filter: invert(1); }
+[data-theme="dark"] .brand-logo-invert { filter: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo-invert { filter: none; }
+}
+
+/* keep browser-autofilled inputs on-theme (Chrome paints them with its own bg) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  box-shadow: 0 0 0 1000px var(--surface) inset;
+  caret-color: var(--text);
+  border-color: var(--border);
+  transition: background-color 9999s ease-out 0s;
+}

@@ -36,7 +36,7 @@ export function ProductDetail({
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">
       <div className="grid grid-cols-2 gap-3">
         {hero && (
-          <div className="col-span-2 aspect-square overflow-hidden rounded-2xl bg-elevated">
+          <div className="col-span-2 aspect-square overflow-hidden rounded-2xl border border-border bg-elevated">
             <ProductImage
               src={hero.url}
               alt={hero.alt ?? product.name}
@@ -49,7 +49,7 @@ export function ProductDetail({
           </div>
         )}
         {rest.map((img, i) => (
-          <div key={i} className="aspect-square overflow-hidden rounded-xl bg-elevated">
+          <div key={i} className="aspect-square overflow-hidden rounded-xl border border-border bg-elevated">
             <Image
               src={img.url}
               alt={img.alt ?? product.name}

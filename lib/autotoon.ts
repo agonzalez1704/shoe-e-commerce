@@ -9,7 +9,8 @@ const KEY = process.env.TOON_API_KEY;
 // shoe-appropriate angles; "front" is the required hero. Kept to 3 so the
 // synchronous server action stays under Vercel's 300s function limit
 // (each image ~60-90s). More angles -> move to an async/polling flow.
-export const DEFAULT_ANGLES = ["front", "three-quarter-left", "three-quarter-right"];
+// API enum: front | back | left | right | top | bottom.
+export const DEFAULT_ANGLES = ["front", "left", "right"];
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 270_000;
@@ -40,12 +41,34 @@ async function pollUntil(angleSetId: string, targets: string[]): Promise<AngleSe
   throw new Error("auto-toon agotó el tiempo de espera");
 }
 
+// auto-toon runs remotely and downloads the source itself, so a localhost /
+// private URL (e.g. the local Supabase stack) is unreachable and the job fails
+// with a vague error. Reject up front with an actionable message.
+function assertPublicUrl(u: string): void {
+  let parsed: URL;
+  try { parsed = new URL(u); } catch { throw new Error("La URL de la imagen no es válida."); }
+  const h = parsed.hostname;
+  const isPrivate =
+    parsed.protocol !== "https:" && parsed.protocol !== "http:"
+      ? true
+      : h === "localhost" || h === "0.0.0.0" || h === "::1" || h.endsWith(".local") ||
+        /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+  if (isPrivate) {
+    throw new Error(
+      `auto-toon necesita una imagen con URL pública, pero la tuya apunta a "${h}" (local/privada). ` +
+        "Genera los ángulos en producción, donde el almacenamiento es público y accesible.",
+    );
+  }
+}
+
 // Returns the generated angle image URLs (hosted on toon's storage).
 export async function generateAngles(
   sourceImageUrl: string,
   productName: string,
   angles: string[] = DEFAULT_ANGLES,
 ): Promise<string[]> {
+  assertPublicUrl(sourceImageUrl);
   const { angleSetId } = await toon<{ angleSetId: string }>("/api/product-angles/generate", {
     method: "POST",
     body: JSON.stringify({ sourceImageUrl, productName, selectedAngles: angles }),

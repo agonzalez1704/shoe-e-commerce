@@ -7,7 +7,16 @@ export function Logo() {
   const b = activeBrand;
 
   if (b.logo) {
-    return <Image src={b.logo.src} alt={b.logo.alt ?? b.name} width={b.logo.width} height={b.logo.height} priority />;
+    return (
+      <Image
+        src={b.logo.src}
+        alt={b.logo.alt ?? b.name}
+        width={b.logo.width}
+        height={b.logo.height}
+        priority
+        className={b.logo.invertOnLight ? "brand-logo-invert" : undefined}
+      />
+    );
   }
 
   let wordmark: React.ReactNode = b.name;
@@ -23,7 +32,10 @@ export function Logo() {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-lg font-semibold tracking-tight text-text">
+    <span className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-text">
+      {b.markSrc && (
+        <Image src={b.markSrc.src} alt="" aria-hidden width={b.markSrc.width} height={b.markSrc.height} priority />
+      )}
       {b.mark && <span className="inline-flex" aria-hidden dangerouslySetInnerHTML={{ __html: b.mark }} />}
       {wordmark}
     </span>

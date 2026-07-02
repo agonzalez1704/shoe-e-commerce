@@ -1,8 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { listProducts } from "@/lib/catalog";
 
-export default function Home() {
+export default async function Home() {
+  const products = await listProducts({ sort: "newest" });
+  const hero = products.find((p) => p.image);
+  const heroSrc = hero?.image ?? "https://picsum.photos/seed/hero-sneaker/900/1125";
+  const heroHref = hero ? `/products/${hero.slug}` : "/products";
   return (
     <section className="reveal grid items-center gap-10 py-12 md:grid-cols-2 md:gap-16 md:py-20">
       <div>
@@ -24,24 +29,27 @@ export default function Home() {
             <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
-            href="/products?gender=mens"
+            href="/products?sort=newest"
             className="rounded-full border border-border px-6 py-3 text-sm font-medium text-text transition-colors hover:bg-elevated"
           >
-            Hombre
+            Lo nuevo
           </Link>
         </div>
       </div>
 
-      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-elevated shadow-[var(--shadow-md)]">
+      <Link
+        href={heroHref}
+        className="relative block aspect-[4/5] overflow-hidden rounded-2xl bg-elevated shadow-[var(--shadow-md)]"
+      >
         <Image
-          src="https://picsum.photos/seed/soleco-hero-sneaker/900/1125"
-          alt="Calzado destacado de la temporada"
+          src={heroSrc}
+          alt={hero?.name ?? "Calzado destacado de la temporada"}
           fill
           priority
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
         />
-      </div>
+      </Link>
     </section>
   );
 }
