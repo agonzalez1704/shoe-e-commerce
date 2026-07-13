@@ -21,6 +21,8 @@ const MAP: Record<string, string> = {
   cognac: "#8a4a2a",
   tan: "#a9703f",
   chocolate: "#5b3520",
+  oxido: "#9c4a28",
+  óxido: "#9c4a28",
 };
 
 export function colorHex(name: string): string {
@@ -29,4 +31,15 @@ export function colorHex(name: string): string {
   // multi-tone like "blanco/negro/gris" — use the first tone
   const first = key.split(/[/,-]/)[0].trim();
   return MAP[first] ?? "#9aa0a6";
+}
+
+// Swatch background: solid for one tone, a hard-stop split gradient for
+// multi-tone names like "hueso/óxido".
+export function swatchBg(name: string): string {
+  const tones = name.split("/").map((t) => colorHex(t));
+  if (tones.length === 1) return tones[0];
+  const stops = tones
+    .map((c, i) => `${c} ${Math.round((i / tones.length) * 100)}% ${Math.round(((i + 1) / tones.length) * 100)}%`)
+    .join(", ");
+  return `linear-gradient(135deg, ${stops})`;
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatCents } from "@/lib/money";
 import { ProductImage } from "@/components/ProductImage";
-import { colorHex } from "@/lib/colors";
+import { swatchBg } from "@/lib/colors";
 import type { ProductCard } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -56,7 +56,7 @@ export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: bo
               className={`h-4 w-4 rounded-full border transition-transform hover:scale-110 ${
                 active === c ? "border-text ring-1 ring-text/30" : "border-border"
               }`}
-              style={{ backgroundColor: colorHex(c) }}
+              style={{ background: swatchBg(c) }}
             />
           ))}
         </div>
