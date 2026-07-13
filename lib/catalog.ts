@@ -15,6 +15,8 @@ export type ProductCard = {
   base_price_cents: number;
   brand: string | null;
   image: string | null;
+  colors: string[];                 // distinct variant colors
+  colorImages: Record<string, string>; // color -> first image for that color
 };
 
 // PLP: active products, optional filters. RLS already hides non-active.
@@ -23,7 +25,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   let q = supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, gender, brands(name, slug), product_images(url, position)")
+    .select("id, name, slug, base_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(color, status)")
     .eq("status", "active");
 
   if (filters.gender) q = q.eq("gender", filters.gender);
@@ -40,6 +42,17 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   return (data ?? []).map((p) => {
     const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
+    // distinct colors from active variants, in first-seen order
+    const colors: string[] = [];
+    for (const v of p.variants ?? []) {
+      if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
+    }
+    // first image per color (fallback: default first image)
+    const colorImages: Record<string, string> = {};
+    for (const c of colors) {
+      const match = imgs.find((i) => i.color === c);
+      if (match) colorImages[c] = match.url;
+    }
     return {
       id: p.id,
       name: p.name,
@@ -47,6 +60,8 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
       base_price_cents: p.base_price_cents,
       brand: p.brands?.name ?? null,
       image: imgs[0]?.url ?? null,
+      colors,
+      colorImages,
     };
   });
 }
@@ -69,7 +84,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price_cents, brands(name), product_images(url, position), " +
+      "id, name, slug, base_price_cents, brands(name), product_images(url, position, color), variants(color, status), " +
         "product_categories!inner(categories!inner(slug))",
     )
     .eq("status", "active")
@@ -80,13 +95,24 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   type Row = {
     id: string; name: string; slug: string; base_price_cents: number;
     brands: { name: string } | null;
-    product_images: { url: string; position: number }[];
+    product_images: { url: string; position: number; color: string | null }[];
+    variants: { color: string | null; status: string }[];
   };
   return ((data ?? []) as unknown as Row[]).map((p) => {
     const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
+    const colors: string[] = [];
+    for (const v of p.variants ?? []) {
+      if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
+    }
+    const colorImages: Record<string, string> = {};
+    for (const c of colors) {
+      const match = imgs.find((i) => i.color === c);
+      if (match) colorImages[c] = match.url;
+    }
     return {
       id: p.id, name: p.name, slug: p.slug, base_price_cents: p.base_price_cents,
       brand: p.brands?.name ?? null, image: imgs[0]?.url ?? null,
+      colors, colorImages,
     };
   });
 }
