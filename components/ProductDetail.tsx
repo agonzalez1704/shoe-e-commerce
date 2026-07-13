@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { Package, Truck } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { ProductImage } from "@/components/ProductImage";
+import { ZoomImage } from "@/components/ZoomImage";
+import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
 import { Stars } from "@/components/Stars";
 import type { ProductDetail as Product } from "@/lib/catalog";
@@ -31,35 +31,32 @@ export function ProductDetail({
   }, [product.images, color]);
 
   const [hero, ...rest] = gallery;
+  const [lightbox, setLightbox] = useState<number | null>(null);
 
   return (
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">
       <div className="grid grid-cols-2 gap-3">
         {hero && (
           <div className="col-span-2 aspect-square overflow-hidden rounded-2xl border border-border bg-elevated">
-            <ProductImage
-              src={hero.url}
-              alt={hero.alt ?? product.name}
-              slug={product.slug}
-              width={800}
-              height={800}
-              priority
-              className="h-full w-full object-cover"
-            />
+            <ZoomImage src={hero.url} alt={hero.alt ?? product.name} priority onClick={() => setLightbox(0)} />
           </div>
         )}
         {rest.map((img, i) => (
           <div key={i} className="aspect-square overflow-hidden rounded-xl border border-border bg-elevated">
-            <Image
-              src={img.url}
-              alt={img.alt ?? product.name}
-              width={400}
-              height={400}
-              className="h-full w-full object-cover"
-            />
+            <ZoomImage src={img.url} alt={img.alt ?? product.name} onClick={() => setLightbox(i + 1)} />
           </div>
         ))}
       </div>
+
+      {lightbox !== null && (
+        <Lightbox
+          images={gallery}
+          index={lightbox}
+          name={product.name}
+          onClose={() => setLightbox(null)}
+          onIndex={setLightbox}
+        />
+      )}
 
       <div className="md:sticky md:top-24 md:h-fit">
         {product.brand && <p className="text-sm uppercase tracking-wide text-muted">{product.brand}</p>}
