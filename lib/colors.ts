@@ -17,9 +17,10 @@ const MAP: Record<string, string> = {
   beige: "#e3d5bf",
   tinto: "#5e2130",
   hueso: "#efe9dc",
-  shedron: "#8a4a2a",
+  shedron: "#a9612e",
   cognac: "#8a4a2a",
   tan: "#a9703f",
+  chocolate: "#5b3520",
 };
 
 export function colorHex(name: string): string {
