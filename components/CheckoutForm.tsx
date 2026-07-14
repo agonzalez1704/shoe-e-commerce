@@ -3,10 +3,11 @@
 import Script from "next/script";
 import Image from "next/image";
 import { useState } from "react";
-import {
-  CreditCard, Storefront, Bank, Coins, CheckCircle, Lock, ShieldCheck, Truck, Tag, CaretDown,
-} from "@phosphor-icons/react";
+import Cards, { type Focused } from "react-credit-cards-2";
+import "react-credit-cards-2/dist/es/styles-compiled.css";
+import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
+import { OxxoMark, SpeiMark, AplazoMark, VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
 import { checkout, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
 
@@ -29,12 +30,24 @@ declare global {
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
-const METHODS: { id: Method; label: string; icon: typeof CreditCard; hint: string }[] = [
-  { id: "card", label: "Tarjeta", icon: CreditCard, hint: "Crédito o débito" },
-  { id: "oxxo", label: "OXXO", icon: Storefront, hint: "Paga en efectivo" },
-  { id: "spei", label: "SPEI", icon: Bank, hint: "Transferencia" },
-  { id: "aplazo", label: "Aplazo", icon: Coins, hint: "Págalo en quincenas" },
+const METHODS: { id: Method; label: string; hint: string }[] = [
+  { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
+  { id: "oxxo", label: "OXXO", hint: "Paga en efectivo" },
+  { id: "spei", label: "SPEI", hint: "Transferencia" },
+  { id: "aplazo", label: "Aplazo", hint: "Págalo en quincenas" },
 ];
+
+function MethodMark({ id }: { id: Method }) {
+  if (id === "oxxo") return <OxxoMark />;
+  if (id === "spei") return <SpeiMark />;
+  if (id === "aplazo") return <AplazoMark />;
+  return (
+    <span className="flex gap-1">
+      <VisaMark />
+      <MastercardMark />
+    </span>
+  );
+}
 
 // floating-label field — label rides up on focus/fill; no separate label clutter
 function Field({
@@ -85,19 +98,23 @@ export function CheckoutForm({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckoutResult | null>(null);
 
-  function tokenizeCard(form: HTMLFormElement): Promise<string> {
+  // controlled card state drives the react-credit-cards-2 live preview
+  const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
+  const [focus, setFocus] = useState<Focused | undefined>(undefined);
+
+  function tokenizeCard(): Promise<string> {
     return new Promise((resolve, reject) => {
       if (!window.Conekta) return reject(new Error("Conekta.js no cargó"));
       window.Conekta.setPublicKey(conektaPublicKey);
-      const f = (n: string) => (form.elements.namedItem(n) as HTMLInputElement)?.value ?? "";
+      const [mm, yy] = card.expiry.split("/");
       window.Conekta.Token.create(
         {
           card: {
-            number: f("card_number").replace(/\s/g, ""),
-            name: f("card_name"),
-            exp_year: f("card_exp_year"),
-            exp_month: f("card_exp_month"),
-            cvc: f("card_cvc"),
+            number: card.number.replace(/\s/g, ""),
+            name: card.name,
+            exp_month: mm ?? "",
+            exp_year: yy ? (yy.length === 2 ? `20${yy}` : yy) : "",
+            cvc: card.cvc,
           },
         },
         (res) => resolve(res.id),
@@ -115,7 +132,7 @@ export function CheckoutForm({
 
     try {
       let cardTokenId: string | undefined;
-      if (method === "card") cardTokenId = await tokenizeCard(form);
+      if (method === "card") cardTokenId = await tokenizeCard();
 
       const input: CheckoutInput = {
         cartId,
@@ -149,11 +166,14 @@ export function CheckoutForm({
 
   if (result) return <Confirmation result={result} />;
 
-  // auto-space card number as the user types: 1234 5678 9012 3456
-  const spaceCard: React.FormEventHandler<HTMLInputElement> = (e) => {
-    const el = e.currentTarget;
-    el.value = el.value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+  const fmtNumber = (v: string) => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+  const fmtExpiry = (v: string) => {
+    const d = v.replace(/\D/g, "").slice(0, 4);
+    return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
   };
+  const setCardField = (k: "number" | "name" | "expiry" | "cvc", v: string) => setCard((c) => ({ ...c, [k]: v }));
+
+  const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/10";
 
   const cta = method === "card" ? `Pagar ${mxn(subtotalCents)}` : "Confirmar pedido";
 
@@ -195,17 +215,17 @@ export function CheckoutForm({
           <section className={CARD}>
             <StepHeader n={2} title="Pago" />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {METHODS.map(({ id, label, icon: Icon, hint }) => (
+              {METHODS.map(({ id, label, hint }) => (
                 <button
                   type="button" key={id} onClick={() => setMethod(id)}
                   aria-pressed={method === id}
-                  className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all ${
+                  className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all ${
                     method === id
                       ? "border-accent bg-accent-soft ring-1 ring-accent"
                       : "border-border hover:border-muted"
                   }`}
                 >
-                  <Icon size={20} weight={method === id ? "fill" : "regular"} className={method === id ? "text-accent" : "text-muted"} />
+                  <MethodMark id={id} />
                   <span className="text-sm font-medium">{label}</span>
                   <span className="text-[11px] leading-tight text-muted">{hint}</span>
                 </button>
@@ -214,15 +234,36 @@ export function CheckoutForm({
 
             {method === "card" && (
               <div className="mt-4 space-y-3">
-                <Field name="card_name" label="Nombre en la tarjeta" autoComplete="cc-name" />
-                <div className="relative">
-                  <Field name="card_number" label="Número de tarjeta" autoComplete="cc-number" inputMode="numeric" maxLength={19} onInput={spaceCard} />
-                  <CreditCard size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted" />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <Field name="card_exp_month" label="Mes (MM)" autoComplete="cc-exp-month" inputMode="numeric" maxLength={2} />
-                  <Field name="card_exp_year" label="Año (AAAA)" autoComplete="cc-exp-year" inputMode="numeric" maxLength={4} />
-                  <Field name="card_cvc" label="CVC" autoComplete="cc-csc" inputMode="numeric" maxLength={4} />
+                <Cards
+                  number={card.number}
+                  name={card.name}
+                  expiry={card.expiry}
+                  cvc={card.cvc}
+                  focused={focus}
+                  placeholders={{ name: "TU NOMBRE" }}
+                  locale={{ valid: "válida hasta" }}
+                />
+                <input
+                  value={card.number} onChange={(e) => setCardField("number", fmtNumber(e.target.value))}
+                  onFocus={() => setFocus("number")} onBlur={() => setFocus(undefined)}
+                  placeholder="Número de tarjeta" inputMode="numeric" autoComplete="cc-number" maxLength={19} className={CI}
+                />
+                <input
+                  value={card.name} onChange={(e) => setCardField("name", e.target.value)}
+                  onFocus={() => setFocus("name")} onBlur={() => setFocus(undefined)}
+                  placeholder="Nombre en la tarjeta" autoComplete="cc-name" className={CI}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    value={card.expiry} onChange={(e) => setCardField("expiry", fmtExpiry(e.target.value))}
+                    onFocus={() => setFocus("expiry")} onBlur={() => setFocus(undefined)}
+                    placeholder="MM/AA" inputMode="numeric" autoComplete="cc-exp" maxLength={5} className={CI}
+                  />
+                  <input
+                    value={card.cvc} onChange={(e) => setCardField("cvc", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    onFocus={() => setFocus("cvc")} onBlur={() => setFocus(undefined)}
+                    placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={4} className={CI}
+                  />
                 </div>
                 <p className="flex items-center gap-1.5 text-xs text-muted">
                   <ShieldCheck size={14} weight="fill" className="text-accent" />
@@ -325,10 +366,17 @@ export function CheckoutForm({
             {loading ? "Procesando…" : <><Lock size={15} weight="fill" /> {cta}</>}
           </button>
 
-          <div className="flex items-center justify-center gap-4 text-[11px] text-muted">
-            <span className="flex items-center gap-1"><ShieldCheck size={13} weight="fill" /> Compra protegida</span>
-            <span className="flex items-center gap-1"><CreditCard size={13} /> Conekta</span>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            <VisaMark />
+            <MastercardMark />
+            <AmexMark />
+            <OxxoMark />
+            <SpeiMark />
+            <AplazoMark />
           </div>
+          <p className="flex items-center justify-center gap-1 text-[11px] text-muted">
+            <ShieldCheck size={13} weight="fill" /> Compra protegida · procesado por Conekta
+          </p>
         </aside>
       </form>
     </>
