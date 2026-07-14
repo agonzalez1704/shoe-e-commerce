@@ -8,17 +8,43 @@ export type ProductFilters = {
   sort?: "newest" | "price_asc" | "price_desc";
 };
 
+// One card PER variant colour (limited inventory → each colour sold as its own
+// listing). Links to the product detail with that colour preselected.
 export type ProductCard = {
-  id: string;
+  key: string;              // product id + colour
   name: string;
   slug: string;
+  color: string | null;     // the specific variant colour
   base_price_cents: number;
   brand: string | null;
   image: string | null;
-  imageAlt: string | null;          // 2nd image of the default color (hover crossfade)
-  colors: string[];                 // distinct variant colors
-  colorImages: Record<string, string>; // color -> first image for that color
+  imageAlt: string | null;  // that colour's 2nd image (hover crossfade)
 };
+
+// Expand a product row into one card per active variant colour.
+function toVariantCards(p: {
+  id: string; name: string; slug: string; base_price_cents: number;
+  brands: { name: string } | null;
+  product_images: { url: string; position: number; color: string | null }[];
+  variants: { color: string | null; status: string }[];
+}): ProductCard[] {
+  const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
+  const brand = p.brands?.name ?? null;
+  const colors: string[] = [];
+  for (const v of p.variants ?? []) {
+    if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
+  }
+  const base = { name: p.name, slug: p.slug, base_price_cents: p.base_price_cents, brand };
+
+  if (colors.length === 0) {
+    return [{ key: p.id, color: null, image: imgs[0]?.url ?? null, imageAlt: imgs[1]?.url ?? null, ...base }];
+  }
+  return colors.map((c) => {
+    const ci = imgs.filter((i) => i.color === c);
+    const use = ci.length ? ci : imgs; // fall back to all images if none tagged
+    return { key: `${p.id}:${c}`, color: c, image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, ...base };
+  });
+}
 
 // PLP: active products, optional filters. RLS already hides non-active.
 export async function listProducts(filters: ProductFilters = {}): Promise<ProductCard[]> {
@@ -41,34 +67,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   const { data, error } = await q;
   if (error) throw error;
 
-  return (data ?? []).map((p) => {
-    const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
-    // distinct colors from active variants, in first-seen order
-    const colors: string[] = [];
-    for (const v of p.variants ?? []) {
-      if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
-    }
-    // first image per color (fallback: default first image)
-    const colorImages: Record<string, string> = {};
-    for (const c of colors) {
-      const match = imgs.find((i) => i.color === c);
-      if (match) colorImages[c] = match.url;
-    }
-    // default view = first color's images (portada + an alt for hover crossfade)
-    const firstColor = colors[0];
-    const firstImgs = firstColor ? imgs.filter((i) => i.color === firstColor || i.color == null) : imgs;
-    return {
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      base_price_cents: p.base_price_cents,
-      brand: p.brands?.name ?? null,
-      image: firstImgs[0]?.url ?? imgs[0]?.url ?? null,
-      imageAlt: firstImgs[1]?.url ?? null,
-      colors,
-      colorImages,
-    };
-  });
+  return (data ?? []).flatMap((p) => toVariantCards(p as Parameters<typeof toVariantCards>[0]));
 }
 
 export type Category = { id: string; name: string; slug: string; description: string | null };
@@ -97,32 +96,8 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
     .order("created_at", { ascending: false });
   if (error) throw error;
 
-  type Row = {
-    id: string; name: string; slug: string; base_price_cents: number;
-    brands: { name: string } | null;
-    product_images: { url: string; position: number; color: string | null }[];
-    variants: { color: string | null; status: string }[];
-  };
-  return ((data ?? []) as unknown as Row[]).map((p) => {
-    const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
-    const colors: string[] = [];
-    for (const v of p.variants ?? []) {
-      if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
-    }
-    const colorImages: Record<string, string> = {};
-    for (const c of colors) {
-      const match = imgs.find((i) => i.color === c);
-      if (match) colorImages[c] = match.url;
-    }
-    const firstColor = colors[0];
-    const firstImgs = firstColor ? imgs.filter((i) => i.color === firstColor || i.color == null) : imgs;
-    return {
-      id: p.id, name: p.name, slug: p.slug, base_price_cents: p.base_price_cents,
-      brand: p.brands?.name ?? null, image: firstImgs[0]?.url ?? imgs[0]?.url ?? null,
-      imageAlt: firstImgs[1]?.url ?? null,
-      colors, colorImages,
-    };
-  });
+  type Row = Parameters<typeof toVariantCards>[0];
+  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p));
 }
 
 export type ProductDetail = {

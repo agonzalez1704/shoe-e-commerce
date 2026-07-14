@@ -36,8 +36,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ color?: string }>;
+}) {
   const { slug } = await params;
+  const { color } = await searchParams;
   const product = await getProduct(slug);
   if (!product) notFound();
 
@@ -83,7 +90,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <span className="text-text">{product.name}</span>
       </nav>
 
-      <ProductDetail product={product} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
+      <ProductDetail product={product} initialColor={color} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
       <ProductReviews summary={reviews} />
     </div>
   );

@@ -28,7 +28,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
         <div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Tienda</h1>
           <p className="mt-1.5 text-sm text-muted">
-            {products.length} {products.length === 1 ? "modelo" : "modelos"} · hechos sobre pedido · envío gratis
+            {products.length} {products.length === 1 ? "producto" : "productos"} · hechos sobre pedido · envío gratis
           </p>
         </div>
         <SortLinks current={filters.sort} />

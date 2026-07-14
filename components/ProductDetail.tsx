@@ -14,15 +14,19 @@ const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 export function ProductDetail({
   product,
   rating,
+  initialColor,
 }: {
   product: Product;
   rating?: { average: number; count: number };
+  initialColor?: string;
 }) {
   const colors = useMemo(
     () => Array.from(new Set(product.variants.map((v) => v.color))),
     [product.variants],
   );
-  const [color, setColor] = useState(colors[0] ?? "");
+  const [color, setColor] = useState(
+    () => (initialColor && colors.includes(initialColor) ? initialColor : colors[0]) ?? "",
+  );
 
   // images for the chosen color + any general (null-color) shots; fallback to all
   const gallery = useMemo(() => {
