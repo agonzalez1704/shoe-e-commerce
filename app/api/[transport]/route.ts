@@ -60,7 +60,7 @@ const handler = createMcpHandler(
       "Busca productos por SKU o nombre. Devuelve marca, precio, stock, color, talla, " +
         "`disponible` y `entrega`. IMPORTANTE: los productos hecho sobre pedido (`disponible: true`, " +
         "`stock: \"sobre pedido\"`) SIEMPRE se pueden vender aunque el stock sea 0 — nunca digas que están agotados; " +
-        "ofrécelos con entrega en 3-5 días hábiles.",
+        "ofrécelos con entrega en 4-7 días hábiles.",
       { q: z.string().describe("SKU o nombre a buscar") },
       async ({ q }) => json(await buscarProducto(q)),
     );

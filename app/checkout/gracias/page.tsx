@@ -14,7 +14,7 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
       {o && <p className="nums mt-2 text-sm text-muted">Pedido {o}</p>}
       <p className="mt-4 text-sm text-muted">
         Estamos confirmando tu pago. Te enviaremos un correo en cuanto se acredite. Tu calzado se fabrica sobre pedido
-        y se envía en 3 a 5 días hábiles.
+        y se envía en 4 a 7 días hábiles.
       </p>
       <Link href="/products" className="mt-8 inline-block rounded-full bg-accent px-6 py-3 text-sm font-medium text-accent-contrast">
         Seguir comprando

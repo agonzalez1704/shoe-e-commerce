@@ -81,7 +81,7 @@ export function ProductDetail({
             </p>
             <p className="flex items-center gap-2 text-sm text-muted">
               <Truck size={18} className="shrink-0" />
-              Se fabrica para ti. Envío en 3-5 días hábiles a todo México.
+              Se fabrica para ti. Envío en 4-7 días hábiles a todo México.
             </p>
           </div>
         )}

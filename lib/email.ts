@@ -105,7 +105,7 @@ export async function sendVoucherEmail(
        ${instructions}
        ${expires ? `<p style="color:#a1a1aa;font-size:13px;margin-top:12px">Vence el ${expires}.</p>` : ""}
        ${summary(a.lines, a.breakdown, a.totalCents)}
-       <p style="color:#71717a">Confirmaremos tu pedido en cuanto se reciba el pago. Tu calzado se fabrica sobre pedido y se envía en 3 a 5 días hábiles.</p>`),
+       <p style="color:#71717a">Confirmaremos tu pedido en cuanto se reciba el pago. Tu calzado se fabrica sobre pedido y se envía en 4 a 7 días hábiles.</p>`),
   );
 }
 
@@ -139,7 +139,7 @@ export async function sendPaidEmail(a: Base) {
     shell(`¡Pago confirmado!`,
       `<p>Tu pedido <strong>${a.orderNumber}</strong> está confirmado y en preparación.</p>
        ${summary(a.lines, a.breakdown, a.totalCents)}
-       <p style="color:#71717a">Se fabrica sobre pedido; te avisaremos cuando se envíe (3 a 5 días hábiles).</p>`),
+       <p style="color:#71717a">Se fabrica sobre pedido; te avisaremos cuando se envíe (4 a 7 días hábiles).</p>`),
   );
 }
 

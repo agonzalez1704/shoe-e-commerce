@@ -213,7 +213,7 @@ export async function buscarProducto(q: string) {
       stock: r.madeToOrder ? "sobre pedido" : r.available,
       // made-to-order: SIEMPRE se puede vender aunque stock sea 0 (on-demand)
       disponible: r.madeToOrder ? true : r.available > 0,
-      entrega: r.madeToOrder ? "Sobre pedido · 3-5 días hábiles" : r.available > 0 ? "En existencia" : "Sin stock",
+      entrega: r.madeToOrder ? "Sobre pedido · 4-7 días hábiles" : r.available > 0 ? "En existencia" : "Sin stock",
       link: `${SITE_URL}/products/${r.slug}`,
       activo: true,
     }));
