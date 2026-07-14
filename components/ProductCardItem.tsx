@@ -55,17 +55,17 @@ export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: bo
           </div>
         </div>
 
-        <div className="mt-3 flex items-start justify-between gap-2">
+        <div className="mt-3.5 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {p.brand && <p className="text-[11px] uppercase tracking-[0.12em] text-muted">{p.brand}</p>}
-            <p className="truncate text-sm font-medium transition-colors group-hover:text-accent">{p.name}</p>
+            {p.brand && <p className="text-[10px] uppercase tracking-[0.16em] text-muted">{p.brand}</p>}
+            <p className="mt-0.5 truncate text-[15px] font-medium leading-tight transition-colors group-hover:text-accent">{p.name}</p>
           </div>
-          <p className="nums shrink-0 text-sm font-medium">{mxn(p.base_price_cents)}</p>
+          <p className="nums shrink-0 text-[15px] font-semibold tabular-nums">{mxn(p.base_price_cents)}</p>
         </div>
       </Link>
 
       {multi && (
-        <div className="mt-2 flex items-center gap-1.5">
+        <div className="mt-2.5 flex items-center gap-2">
           {p.colors.map((c) => (
             <Link
               key={c}
@@ -73,8 +73,8 @@ export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: bo
               aria-label={c}
               title={c}
               onMouseEnter={() => setActive(c)}
-              className={`h-4 w-4 rounded-full border transition-transform hover:scale-110 ${
-                active === c ? "border-text ring-1 ring-text/30" : "border-border"
+              className={`h-[18px] w-[18px] rounded-full ring-1 ring-inset transition-transform hover:scale-110 ${
+                active === c ? "ring-2 ring-text" : "ring-border"
               }`}
               style={{ background: swatchBg(c) }}
             />

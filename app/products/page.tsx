@@ -23,11 +23,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   const products = await listProducts(filters);
 
   return (
-    <div className="reveal py-10">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="reveal py-8 sm:py-10">
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Tienda</h1>
-          <p className="mt-1 text-sm text-muted">{products.length} modelos disponibles</p>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Tienda</h1>
+          <p className="mt-1.5 text-sm text-muted">
+            {products.length} {products.length === 1 ? "modelo" : "modelos"} · hechos sobre pedido · envío gratis
+          </p>
         </div>
         <SortLinks current={filters.sort} />
       </div>
