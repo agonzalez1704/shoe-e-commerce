@@ -233,42 +233,46 @@ export function CheckoutForm({
             </div>
 
             {method === "card" && (
-              <div className="mt-4 space-y-3">
-                <Cards
-                  number={card.number}
-                  name={card.name}
-                  expiry={card.expiry}
-                  cvc={card.cvc}
-                  focused={focus}
-                  placeholders={{ name: "TU NOMBRE" }}
-                  locale={{ valid: "válida hasta" }}
-                />
-                <input
-                  value={card.number} onChange={(e) => setCardField("number", fmtNumber(e.target.value))}
-                  onFocus={() => setFocus("number")} onBlur={() => setFocus(undefined)}
-                  placeholder="Número de tarjeta" inputMode="numeric" autoComplete="cc-number" maxLength={19} className={CI}
-                />
-                <input
-                  value={card.name} onChange={(e) => setCardField("name", e.target.value)}
-                  onFocus={() => setFocus("name")} onBlur={() => setFocus(undefined)}
-                  placeholder="Nombre en la tarjeta" autoComplete="cc-name" className={CI}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    value={card.expiry} onChange={(e) => setCardField("expiry", fmtExpiry(e.target.value))}
-                    onFocus={() => setFocus("expiry")} onBlur={() => setFocus(undefined)}
-                    placeholder="MM/AA" inputMode="numeric" autoComplete="cc-exp" maxLength={5} className={CI}
-                  />
-                  <input
-                    value={card.cvc} onChange={(e) => setCardField("cvc", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    onFocus={() => setFocus("cvc")} onBlur={() => setFocus(undefined)}
-                    placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={4} className={CI}
+              <div className="mt-5 grid gap-5 md:grid-cols-[290px_1fr] md:items-center">
+                <div className="mx-auto md:mx-0">
+                  <Cards
+                    number={card.number}
+                    name={card.name}
+                    expiry={card.expiry}
+                    cvc={card.cvc}
+                    focused={focus}
+                    placeholders={{ name: "TU NOMBRE" }}
+                    locale={{ valid: "válida hasta" }}
                   />
                 </div>
-                <p className="flex items-center gap-1.5 text-xs text-muted">
-                  <ShieldCheck size={14} weight="fill" className="text-accent" />
-                  Tus datos van directo a Conekta, nunca a nuestro servidor.
-                </p>
+                <div className="space-y-3">
+                  <input
+                    value={card.number} onChange={(e) => setCardField("number", fmtNumber(e.target.value))}
+                    onFocus={() => setFocus("number")} onBlur={() => setFocus(undefined)}
+                    placeholder="Número de tarjeta" inputMode="numeric" autoComplete="cc-number" maxLength={19} className={CI}
+                  />
+                  <input
+                    value={card.name} onChange={(e) => setCardField("name", e.target.value)}
+                    onFocus={() => setFocus("name")} onBlur={() => setFocus(undefined)}
+                    placeholder="Nombre en la tarjeta" autoComplete="cc-name" className={CI}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      value={card.expiry} onChange={(e) => setCardField("expiry", fmtExpiry(e.target.value))}
+                      onFocus={() => setFocus("expiry")} onBlur={() => setFocus(undefined)}
+                      placeholder="MM/AA" inputMode="numeric" autoComplete="cc-exp" maxLength={5} className={CI}
+                    />
+                    <input
+                      value={card.cvc} onChange={(e) => setCardField("cvc", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                      onFocus={() => setFocus("cvc")} onBlur={() => setFocus(undefined)}
+                      placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={4} className={CI}
+                    />
+                  </div>
+                  <p className="flex items-center gap-1.5 text-xs text-muted">
+                    <ShieldCheck size={14} weight="fill" className="text-accent" />
+                    Tus datos van directo a Conekta, nunca a nuestro servidor.
+                  </p>
+                </div>
               </div>
             )}
             {method === "oxxo" && (
