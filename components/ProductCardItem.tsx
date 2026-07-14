@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ArrowRight } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { ProductImage } from "@/components/ProductImage";
 import { swatchBg } from "@/lib/colors";
@@ -11,34 +12,53 @@ const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: boolean }) {
   const [active, setActive] = useState<string | null>(null);
-  const img = (active && p.colorImages[active]) || p.image;
+  const primary = (active && p.colorImages[active]) || p.image;
+  const alt = active ? null : p.imageAlt; // hover crossfade only on the default view
   const multi = p.colors.length > 1;
 
   return (
-    <li onMouseLeave={() => setActive(null)}>
-      <Link href={`/products/${p.slug}`} className="group block">
-        <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-elevated transition-colors group-hover:border-accent/40">
-          {img && (
+    <li onMouseLeave={() => setActive(null)} className="group">
+      <Link href={`/products/${p.slug}`} className="block">
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-elevated ring-1 ring-border/70 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[var(--shadow-md)] group-hover:ring-accent/30">
+          {primary && (
             <ProductImage
-              src={img}
+              src={primary}
               alt={p.name}
               slug={p.slug}
-              width={400}
-              height={400}
+              width={500}
+              height={500}
               priority={priority}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.05]"
             />
           )}
+          {alt && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={alt}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            />
+          )}
+
           {multi && (
-            <span className="absolute left-2 top-2 rounded-full bg-bg/85 px-2 py-0.5 text-[10px] font-medium text-text backdrop-blur">
+            <span className="absolute left-2.5 top-2.5 rounded-full bg-bg/85 px-2 py-0.5 text-[10px] font-medium text-text backdrop-blur">
               {p.colors.length} colores
             </span>
           )}
+
+          {/* hover reveal */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 transition-all duration-300 group-hover:opacity-100">
+            <span className="flex items-center gap-1 rounded-full bg-text px-3 py-1.5 text-[11px] font-medium text-bg shadow-[var(--shadow-md)]">
+              Ver producto <ArrowRight size={12} weight="bold" />
+            </span>
+          </div>
         </div>
+
         <div className="mt-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {p.brand && <p className="text-xs uppercase tracking-wide text-muted">{p.brand}</p>}
-            <p className="truncate text-sm font-medium">{p.name}</p>
+            {p.brand && <p className="text-[11px] uppercase tracking-[0.12em] text-muted">{p.brand}</p>}
+            <p className="truncate text-sm font-medium transition-colors group-hover:text-accent">{p.name}</p>
           </div>
           <p className="nums shrink-0 text-sm font-medium">{mxn(p.base_price_cents)}</p>
         </div>

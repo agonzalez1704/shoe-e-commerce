@@ -15,6 +15,7 @@ export type ProductCard = {
   base_price_cents: number;
   brand: string | null;
   image: string | null;
+  imageAlt: string | null;          // 2nd image of the default color (hover crossfade)
   colors: string[];                 // distinct variant colors
   colorImages: Record<string, string>; // color -> first image for that color
 };
@@ -53,13 +54,17 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
       const match = imgs.find((i) => i.color === c);
       if (match) colorImages[c] = match.url;
     }
+    // default view = first color's images (portada + an alt for hover crossfade)
+    const firstColor = colors[0];
+    const firstImgs = firstColor ? imgs.filter((i) => i.color === firstColor || i.color == null) : imgs;
     return {
       id: p.id,
       name: p.name,
       slug: p.slug,
       base_price_cents: p.base_price_cents,
       brand: p.brands?.name ?? null,
-      image: imgs[0]?.url ?? null,
+      image: firstImgs[0]?.url ?? imgs[0]?.url ?? null,
+      imageAlt: firstImgs[1]?.url ?? null,
       colors,
       colorImages,
     };
@@ -109,9 +114,12 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
       const match = imgs.find((i) => i.color === c);
       if (match) colorImages[c] = match.url;
     }
+    const firstColor = colors[0];
+    const firstImgs = firstColor ? imgs.filter((i) => i.color === firstColor || i.color == null) : imgs;
     return {
       id: p.id, name: p.name, slug: p.slug, base_price_cents: p.base_price_cents,
-      brand: p.brands?.name ?? null, image: imgs[0]?.url ?? null,
+      brand: p.brands?.name ?? null, image: firstImgs[0]?.url ?? imgs[0]?.url ?? null,
+      imageAlt: firstImgs[1]?.url ?? null,
       colors, colorImages,
     };
   });
