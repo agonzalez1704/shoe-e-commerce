@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Package, Truck, Tag } from "@phosphor-icons/react";
+import { Package, Truck } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { comboOf, comboLabel } from "@/lib/pricing";
+import { comboOf } from "@/lib/pricing";
+import { ComboBuilder } from "@/components/ComboBuilder";
 import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
@@ -82,11 +83,12 @@ export function ProductDetail({
         <p className="nums mt-3 text-2xl font-medium">{mxn(colorPriceCents)}</p>
         <p className="mt-1 text-xs text-muted">Precio con IVA incluido</p>
         {combo && (
-          <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent">
-            <Tag size={15} weight="fill" />
-            Llévate {combo.minQty} por {mxn(combo.priceCents)}
-            <span className="text-xs font-normal text-muted">({comboLabel(combo, mxn)})</span>
-          </p>
+          <ComboBuilder
+            product={product}
+            minQty={combo.minQty}
+            comboPriceCents={combo.priceCents}
+            initialColor={color}
+          />
         )}
         {product.description && (
           <p className="mt-5 max-w-prose text-sm leading-relaxed text-muted">{product.description}</p>
