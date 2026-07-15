@@ -15,7 +15,6 @@ import { listProducts, type ProductCard } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { comboOf, comboLabel } from "@/lib/pricing";
 import { formatCents } from "@/lib/money";
-import { activeBrand } from "@/lib/brand";
 
 export const revalidate = 60;
 
@@ -63,10 +62,18 @@ function Hero() {
 
         <div className="absolute inset-0 flex items-end md:items-center">
           <div className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-14 md:pb-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
-              {activeBrand.name} · Hecho sobre pedido
+            <Image
+              src="/blade-logo.png"
+              alt="Blade"
+              width={565}
+              height={220}
+              priority
+              className="h-9 w-auto drop-shadow-lg sm:h-11"
+            />
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
+              Hecho sobre pedido
             </p>
-            <h1 className="mt-4 max-w-2xl text-4xl font-semibold leading-[1.02] tracking-tight text-white drop-shadow-sm sm:text-6xl md:text-7xl">
+            <h1 className="mt-3 max-w-2xl text-4xl font-semibold leading-[1.02] tracking-tight text-white drop-shadow-sm sm:text-6xl md:text-7xl">
               Piel con filo,
               <br />
               hecha a tu paso.

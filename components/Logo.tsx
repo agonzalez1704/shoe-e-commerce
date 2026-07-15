@@ -14,7 +14,7 @@ export function Logo() {
         width={b.logo.width}
         height={b.logo.height}
         priority
-        className={b.logo.invertOnLight ? "brand-logo-invert" : undefined}
+        className={`h-6 w-auto sm:h-7${b.logo.invertOnLight ? " brand-logo-invert" : ""}`}
       />
     );
   }

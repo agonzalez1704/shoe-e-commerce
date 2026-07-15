@@ -46,7 +46,9 @@ const BRANDS: Record<string, BrandConfig> = {
     emailFrom: "Blade <pedidos@calzadoblade.com>",
     announcement: "Hecho sobre pedido · Envío en 4-7 días hábiles · Envíos a todo México",
     seoSuffix: "calzado de piel hecho en México",
-    // angular blade glyph: filled with the accent
+    // silver wordmark (transparent PNG); inverted to dark on light theme
+    logo: { src: "/blade-logo.png", width: 565, height: 220, alt: "Blade", invertOnLight: true },
+    // angular blade glyph fallback: filled with the accent
     mark: '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20 L17 4 L20 4 L9 20 Z" fill="var(--accent)"/></svg>',
     theme: {
       light: {
