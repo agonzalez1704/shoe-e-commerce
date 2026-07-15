@@ -28,9 +28,10 @@ const MAP: Record<string, string> = {
 export function colorHex(name: string): string {
   const key = name.trim().toLowerCase();
   if (MAP[key]) return MAP[key];
-  // multi-tone like "blanco/negro/gris" — use the first tone
-  const first = key.split(/[/,-]/)[0].trim();
-  return MAP[first] ?? "#9aa0a6";
+  // compound names — "blanco/negro/gris" (multi-tone) or "moka pitón"
+  // (colour + material): fall back to the first recognised tone word.
+  const first = key.split(/[/,\s-]+/).find((w) => MAP[w]);
+  return first ? MAP[first] : "#9aa0a6";
 }
 
 // Swatch background: solid for one tone, a hard-stop split gradient for
