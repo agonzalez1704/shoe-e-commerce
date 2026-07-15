@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }} />
       </head>
-      <body>
+      <body className="overflow-x-hidden">
         <div className="bg-text text-bg">
           <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs">
             {activeBrand.announcement ?? "Envíos a todo México"}

@@ -33,7 +33,7 @@ export default async function Home() {
   const comboPicks = combos.slice(0, 2);
 
   return (
-    <div className="reveal overflow-x-clip">
+    <div className="reveal">
       <Hero />
       <Benefits />
       {comboPicks.length > 0 && <ComboBand picks={comboPicks} />}
@@ -47,7 +47,7 @@ export default async function Home() {
 /* ---------------- hero (full-bleed) ---------------- */
 function Hero() {
   return (
-    <section className="relative left-1/2 w-screen -translate-x-1/2">
+    <section className="relative ml-[calc(50%-50vw)] w-screen">
       <div className="relative aspect-[4/3] w-full overflow-hidden sm:aspect-[16/9]">
         <Image
           src="/hero-sneakers.jpg"
