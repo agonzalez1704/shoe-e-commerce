@@ -48,14 +48,14 @@ export default async function Home() {
 function Hero() {
   return (
     <section className="relative left-1/2 w-screen -translate-x-1/2">
-      <div className="relative min-h-[86vh] w-full overflow-hidden">
+      <div className="relative aspect-[4/3] w-full overflow-hidden sm:aspect-[16/9]">
         <Image
           src="/hero-sneakers.jpg"
           alt="Sneakers de piel Blade en un patio mediterráneo al atardecer"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[center_65%]"
+          className="object-cover object-center"
         />
         {/* legibility scrim: darker toward the lower-left where the copy sits */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
