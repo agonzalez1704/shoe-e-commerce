@@ -52,7 +52,7 @@ export const PackageTrackerCard = ({
   return (
     <div
       className={cn(
-        "reveal w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-surface text-text shadow-[var(--shadow-md)]",
+        "w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-surface text-text shadow-[var(--shadow-md)]",
         className,
       )}
     >
@@ -86,9 +86,9 @@ export const PackageTrackerCard = ({
             <p className="text-xs text-muted">{date}</p>
           </div>
 
-          <div className="rounded-lg border border-border p-1">
+          <div className="rounded-lg border border-border bg-white p-1.5">
             {qrCodeValue ? (
-              <QRCodeCanvas value={qrCodeValue} size={64} bgColor="transparent" fgColor="var(--text)" />
+              <QRCodeCanvas value={qrCodeValue} size={64} bgColor="#ffffff" fgColor="#0e0f13" />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center bg-elevated">
                 <QrCode className="h-8 w-8 text-muted" />
