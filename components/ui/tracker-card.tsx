@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
 import { CheckCircle, QrCode } from "@phosphor-icons/react";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -51,12 +50,9 @@ export const PackageTrackerCard = ({
   className,
 }: PackageTrackerCardProps) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 15 }}
+    <div
       className={cn(
-        "w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-surface text-text shadow-[var(--shadow-md)]",
+        "reveal w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-surface text-text shadow-[var(--shadow-md)]",
         className,
       )}
     >
@@ -101,6 +97,6 @@ export const PackageTrackerCard = ({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
