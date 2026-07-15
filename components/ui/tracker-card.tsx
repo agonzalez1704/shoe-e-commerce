@@ -50,24 +50,11 @@ export const PackageTrackerCard = ({
   onTrackClick,
   className,
 }: PackageTrackerCardProps) => {
-  const cardVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: "spring" as const, stiffness: 100, damping: 15, staggerChildren: 0.1 },
-    },
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
-
   return (
     <motion.div
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 100, damping: 15 }}
       className={cn(
         "w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-surface text-text shadow-[var(--shadow-md)]",
         className,
@@ -75,40 +62,35 @@ export const PackageTrackerCard = ({
     >
       {/* Top button */}
       <div className="p-4">
-        <motion.button
-          variants={itemVariants}
+        <button
           onClick={onTrackClick}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm text-muted transition-colors hover:bg-border"
         >
           <CheckCircle weight="fill" className="h-4 w-4 text-green-500" />
           {trackLabel}
-        </motion.button>
+        </button>
       </div>
 
       {/* Package image */}
-      <motion.div variants={itemVariants}>
-        <PackageImageContainer>{packageImage}</PackageImageContainer>
-      </motion.div>
+      <PackageImageContainer>{packageImage}</PackageImageContainer>
 
       {/* Details */}
       <div className="p-6">
-        <motion.div variants={itemVariants} className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {destinationFlag}
           <span className="text-sm font-medium text-muted">{destination}</span>
-        </motion.div>
+        </div>
 
-        <motion.h2 variants={itemVariants} className="mt-2 text-3xl font-bold tracking-tight">
-          {status}
-        </motion.h2>
+        <h2 className="mt-2 text-3xl font-bold tracking-tight">{status}</h2>
 
         <div className="mt-6 flex items-end justify-between">
-          <motion.div variants={itemVariants} className="space-y-1">
+          <div className="space-y-1">
             <p className="text-xs text-muted">Número de pedido:</p>
             <p className="nums font-mono text-sm">{packageNumber}</p>
             <p className="text-xs text-muted">{date}</p>
-          </motion.div>
+          </div>
 
-          <motion.div variants={itemVariants} className="rounded-lg border border-border p-1">
+          <div className="rounded-lg border border-border p-1">
             {qrCodeValue ? (
               <QRCodeCanvas value={qrCodeValue} size={64} bgColor="transparent" fgColor="var(--text)" />
             ) : (
@@ -116,7 +98,7 @@ export const PackageTrackerCard = ({
                 <QrCode className="h-8 w-8 text-muted" />
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
     </motion.div>
