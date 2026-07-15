@@ -68,7 +68,7 @@ function Hero() {
               width={565}
               height={220}
               priority
-              className="h-9 w-auto drop-shadow-lg sm:h-11"
+              className="h-10 w-auto self-start object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)] sm:h-12"
             />
             <p className="mt-4 text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
               Hecho sobre pedido
