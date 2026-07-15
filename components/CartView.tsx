@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash, ShoppingBag, Package, Truck } from "@phosphor-icons/react";
+import { Trash, ShoppingBag, Package, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { updateCartItem, removeFromCart, type CartSummary } from "@/app/cart/actions";
 
@@ -114,13 +114,21 @@ export function CartView({ initial }: { initial: CartSummary }) {
             <span className="text-muted">Subtotal (IVA incl.)</span>
             <span className="nums font-medium">{mxn(initial.subtotalCents)}</span>
           </div>
+          {initial.comboDiscountCents > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="flex items-center gap-1 text-accent">
+                <Tag size={14} weight="fill" /> Descuento combo
+              </span>
+              <span className="nums font-medium text-accent">−{mxn(initial.comboDiscountCents)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-muted">Envío</span>
             <span className="font-medium text-accent">Gratis</span>
           </div>
           <div className="flex items-baseline justify-between border-t border-border pt-3">
             <span className="font-semibold">Total</span>
-            <span className="nums text-xl font-semibold">{mxn(initial.subtotalCents)}</span>
+            <span className="nums text-xl font-semibold">{mxn(initial.totalCents)}</span>
           </div>
 
           <p className="flex items-start gap-1.5 rounded-lg bg-elevated px-3 py-2 text-xs text-muted">

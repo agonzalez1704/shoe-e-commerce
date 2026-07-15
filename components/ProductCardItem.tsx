@@ -5,6 +5,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { ProductImage } from "@/components/ProductImage";
 import { swatchBg } from "@/lib/colors";
+import { comboOf, comboLabel } from "@/lib/pricing";
 import type { ProductCard } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -15,6 +16,7 @@ export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: bo
   const href = p.color ? `/products/${p.slug}?color=${encodeURIComponent(p.color)}` : `/products/${p.slug}`;
   // unique per colourway so view-transition names don't collide on the grid
   const vtName = p.key.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const combo = comboOf(p.comboMinQty, p.comboPriceCents);
 
   return (
     <li className="group">
@@ -39,6 +41,12 @@ export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: bo
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
             />
+          )}
+
+          {combo && (
+            <span className="absolute left-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold tracking-wide text-accent-contrast shadow-[var(--shadow-sm)]">
+              {comboLabel(combo, mxn)}
+            </span>
           )}
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 transition-all duration-300 group-hover:opacity-100">

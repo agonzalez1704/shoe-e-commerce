@@ -87,9 +87,10 @@ function StepHeader({ n, title, hint }: { n: number; title: string; hint?: strin
 const CARD = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 
 export function CheckoutForm({
-  cartId, lines, subtotalCents, conektaPublicKey,
+  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey,
 }: {
-  cartId: string; lines: CartLine[]; subtotalCents: number; conektaPublicKey: string;
+  cartId: string; lines: CartLine[]; subtotalCents: number;
+  comboDiscountCents: number; totalCents: number; conektaPublicKey: string;
 }) {
   const [method, setMethod] = useState<Method>("card");
   const [needsInvoice, setNeedsInvoice] = useState(false);
@@ -175,7 +176,7 @@ export function CheckoutForm({
 
   const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/10";
 
-  const cta = method === "card" ? `Pagar ${mxn(subtotalCents)}` : "Confirmar pedido";
+  const cta = method === "card" ? `Pagar ${mxn(totalCents)}` : "Confirmar pedido";
 
   return (
     <>
@@ -351,13 +352,19 @@ export function CheckoutForm({
               <span className="text-muted">Subtotal (IVA incl.)</span>
               <span className="nums">{mxn(subtotalCents)}</span>
             </div>
+            {comboDiscountCents > 0 && (
+              <div className="flex justify-between">
+                <span className="text-accent">Descuento combo</span>
+                <span className="nums font-medium text-accent">−{mxn(comboDiscountCents)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted">Envío</span>
               <span className="font-medium text-accent">Gratis</span>
             </div>
             <div className="flex items-baseline justify-between pt-1.5">
               <span className="font-semibold">Total</span>
-              <span className="nums text-xl font-semibold">{mxn(subtotalCents)}</span>
+              <span className="nums text-xl font-semibold">{mxn(totalCents)}</span>
             </div>
           </div>
 

@@ -14,6 +14,8 @@ export default async function CheckoutPage() {
         cartId={cart.cartId}
         lines={cart.lines}
         subtotalCents={cart.subtotalCents}
+        comboDiscountCents={cart.comboDiscountCents}
+        totalCents={cart.totalCents}
         conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
       />
     </div>

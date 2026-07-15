@@ -19,11 +19,14 @@ export type ProductCard = {
   brand: string | null;
   image: string | null;
   imageAlt: string | null;  // that colour's 2nd image (hover crossfade)
+  comboMinQty: number | null;
+  comboPriceCents: number | null;
 };
 
 // Expand a product row into one card per active variant colour.
 function toVariantCards(p: {
   id: string; name: string; slug: string; base_price_cents: number;
+  combo_min_qty?: number | null; combo_price_cents?: number | null;
   brands: { name: string } | null;
   product_images: { url: string; position: number; color: string | null }[];
   variants: { color: string | null; status: string }[];
@@ -34,7 +37,10 @@ function toVariantCards(p: {
   for (const v of p.variants ?? []) {
     if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
   }
-  const base = { name: p.name, slug: p.slug, base_price_cents: p.base_price_cents, brand };
+  const base = {
+    name: p.name, slug: p.slug, base_price_cents: p.base_price_cents, brand,
+    comboMinQty: p.combo_min_qty ?? null, comboPriceCents: p.combo_price_cents ?? null,
+  };
 
   if (colors.length === 0) {
     return [{ key: p.id, color: null, image: imgs[0]?.url ?? null, imageAlt: imgs[1]?.url ?? null, ...base }];
@@ -52,7 +58,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   let q = supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(color, status)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(color, status)")
     .eq("status", "active");
 
   if (filters.gender) q = q.eq("gender", filters.gender);
@@ -88,7 +94,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price_cents, brands(name), product_images(url, position, color), variants(color, status), " +
+      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status), " +
         "product_categories!inner(categories!inner(slug))",
     )
     .eq("status", "active")
@@ -119,6 +125,8 @@ export type ProductDetail = {
     qty_available: number;
   }[];
   made_to_order: boolean;
+  comboMinQty: number | null;
+  comboPriceCents: number | null;
 };
 
 // PDP: one product by slug, with variants joined to live availability.
@@ -129,7 +137,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, description, base_price_cents, made_to_order, " +
+      "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, " +
         "brands(name), " +
         "product_images(url, alt, color, position), " +
         "variants(id, sku, size_value, size_system, width, color, price_cents, status)",
@@ -144,7 +152,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
   // supabase-js can't infer deeply-nested embeds; assert the shape we selected.
   type ProductRow = {
     id: string; name: string; slug: string; description: string | null; base_price_cents: number;
-    made_to_order: boolean;
+    made_to_order: boolean; combo_min_qty: number | null; combo_price_cents: number | null;
     brands: { name: string } | null;
     product_images: { url: string; alt: string | null; color: string | null; position: number }[];
     variants: {
@@ -186,5 +194,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
       qty_available: availMap.get(v.id) ?? 0,
     })),
     made_to_order: p.made_to_order,
+    comboMinQty: p.combo_min_qty,
+    comboPriceCents: p.combo_price_cents,
   };
 });

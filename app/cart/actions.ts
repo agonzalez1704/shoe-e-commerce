@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { comboOf, cartComboDiscountCents, type ComboGroup } from "@/lib/pricing";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const COOKIE = "cart_token";
@@ -120,9 +121,11 @@ export async function removeFromCart(variantId: string) {
 
 export type CartLine = {
   variantId: string;
+  productId: string;
   productName: string;
   slug: string;
   label: string;
+  color: string;
   image: string | null;
   unitPriceCents: number;
   quantity: number;
@@ -134,18 +137,20 @@ export type CartSummary = {
   cartId: string | null;
   lines: CartLine[];
   subtotalCents: number;
+  comboDiscountCents: number;
+  totalCents: number;
 };
 
 export async function getCart(): Promise<CartSummary> {
   const { db, cartId } = await resolveCart(false);
-  if (!cartId) return { cartId: null, lines: [], subtotalCents: 0 };
+  if (!cartId) return { cartId: null, lines: [], subtotalCents: 0, comboDiscountCents: 0, totalCents: 0 };
 
   const { data: items } = await db
     .from("cart_items")
     .select(
       "quantity, variant_id, " +
         "variants(sku, size_value, size_system, width, color, price_cents, " +
-        "products(name, slug, base_price_cents, product_images(url, position)))",
+        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, product_images(url, position)))",
     )
     .eq("cart_id", cartId);
 
@@ -156,7 +161,11 @@ export async function getCart(): Promise<CartSummary> {
     variants: {
       size_system: string; size_value: string; width: string; color: string;
       price_cents: number | null;
-      products: { name: string; slug: string; base_price_cents: number; product_images: { url: string; position: number }[] };
+      products: {
+        id: string; name: string; slug: string; base_price_cents: number;
+        combo_min_qty: number | null; combo_price_cents: number | null;
+        product_images: { url: string; position: number }[];
+      };
     };
   };
   const rows = (items ?? []) as unknown as CartItemRow[];
@@ -177,9 +186,11 @@ export async function getCart(): Promise<CartSummary> {
     const img = [...(v.products.product_images ?? [])].sort((a, b) => a.position - b.position)[0];
     return {
       variantId: it.variant_id,
+      productId: v.products.id,
       productName: v.products.name,
       slug: v.products.slug,
       label: `${v.size_system} ${v.size_value} / ${v.width} / ${v.color}`,
+      color: v.color,
       image: img?.url ?? null,
       unitPriceCents: unit,
       quantity: it.quantity,
@@ -188,5 +199,26 @@ export async function getCart(): Promise<CartSummary> {
     };
   });
 
-  return { cartId, lines, subtotalCents: subtotal };
+  // combo discount, grouped per model (mirrors create_order in SQL)
+  const groups = new Map<string, ComboGroup>();
+  for (const it of rows) {
+    const p = it.variants.products;
+    const g = groups.get(p.id);
+    if (g) g.qty += it.quantity;
+    else groups.set(p.id, {
+      productId: p.id,
+      qty: it.quantity,
+      baseCents: p.base_price_cents,
+      combo: comboOf(p.combo_min_qty, p.combo_price_cents),
+    });
+  }
+  const comboDiscount = cartComboDiscountCents([...groups.values()]);
+
+  return {
+    cartId,
+    lines,
+    subtotalCents: subtotal,
+    comboDiscountCents: comboDiscount,
+    totalCents: subtotal - comboDiscount,
+  };
 }
