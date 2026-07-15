@@ -29,7 +29,7 @@ function toVariantCards(p: {
   combo_min_qty?: number | null; combo_price_cents?: number | null;
   brands: { name: string } | null;
   product_images: { url: string; position: number; color: string | null }[];
-  variants: { color: string | null; status: string }[];
+  variants: { color: string | null; status: string; price_cents?: number | null }[];
 }): ProductCard[] {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
   const brand = p.brands?.name ?? null;
@@ -37,18 +37,22 @@ function toVariantCards(p: {
   for (const v of p.variants ?? []) {
     if (v.status === "active" && v.color && !colors.includes(v.color)) colors.push(v.color);
   }
-  const base = {
-    name: p.name, slug: p.slug, base_price_cents: p.base_price_cents, brand,
+  // effective price for a colour = that colour's variant override, else base
+  const priceOf = (c: string) =>
+    p.variants?.find((v) => v.status === "active" && v.color === c && v.price_cents != null)?.price_cents
+    ?? p.base_price_cents;
+  const common = {
+    name: p.name, slug: p.slug, brand,
     comboMinQty: p.combo_min_qty ?? null, comboPriceCents: p.combo_price_cents ?? null,
   };
 
   if (colors.length === 0) {
-    return [{ key: p.id, color: null, image: imgs[0]?.url ?? null, imageAlt: imgs[1]?.url ?? null, ...base }];
+    return [{ key: p.id, color: null, base_price_cents: p.base_price_cents, image: imgs[0]?.url ?? null, imageAlt: imgs[1]?.url ?? null, ...common }];
   }
   return colors.map((c) => {
     const ci = imgs.filter((i) => i.color === c);
     const use = ci.length ? ci : imgs; // fall back to all images if none tagged
-    return { key: `${p.id}:${c}`, color: c, image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, ...base };
+    return { key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, ...common };
   });
 }
 
@@ -58,7 +62,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   let q = supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(color, status)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(color, status, price_cents)")
     .eq("status", "active");
 
   if (filters.gender) q = q.eq("gender", filters.gender);
@@ -94,7 +98,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status), " +
+      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents), " +
         "product_categories!inner(categories!inner(slug))",
     )
     .eq("status", "active")

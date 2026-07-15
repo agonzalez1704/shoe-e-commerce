@@ -39,6 +39,12 @@ export function ProductDetail({
   const [lightbox, setLightbox] = useState<number | null>(null);
   const combo = comboOf(product.comboMinQty, product.comboPriceCents);
 
+  // headline price follows the chosen colour (variant override, else base)
+  const colorPriceCents = useMemo(
+    () => product.variants.find((v) => v.color === color && v.price_cents != null)?.price_cents ?? product.base_price_cents,
+    [product.variants, product.base_price_cents, color],
+  );
+
   return (
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">
       <div className="grid grid-cols-2 gap-3">
@@ -73,7 +79,7 @@ export function ProductDetail({
             <span className="nums">{rating.average.toFixed(1)} · {rating.count} reseñas</span>
           </p>
         )}
-        <p className="nums mt-3 text-2xl font-medium">{mxn(product.base_price_cents)}</p>
+        <p className="nums mt-3 text-2xl font-medium">{mxn(colorPriceCents)}</p>
         <p className="mt-1 text-xs text-muted">Precio con IVA incluido</p>
         {combo && (
           <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent">
