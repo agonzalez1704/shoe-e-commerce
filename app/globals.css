@@ -151,6 +151,16 @@ body {
   :root:not([data-theme="light"]) .brand-logo-invert { filter: none; }
 }
 
+/* order tracker card: scrolling conveyor-belt backdrop */
+@keyframes conveyor-belt {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 71px 71px, -71px 71px; }
+}
+.animate-conveyor-belt { animation: conveyor-belt 2.5s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-conveyor-belt { animation: none; }
+}
+
 /* keep browser-autofilled inputs on-theme (Chrome paints them with its own bg) */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
