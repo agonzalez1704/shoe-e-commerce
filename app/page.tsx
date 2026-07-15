@@ -37,6 +37,7 @@ export default async function Home() {
       <Benefits />
       {comboPicks.length > 0 && <ComboBand picks={comboPicks} />}
       <Featured products={featured} total={products.length} />
+      <Editorial />
       <HowItWorks />
       <FinalCta />
     </div>
@@ -203,6 +204,54 @@ function Featured({ products, total }: { products: ProductCard[]; total: number 
         </Link>
       </div>
       <ProductGrid products={products} />
+    </section>
+  );
+}
+
+/* ---------------- editorial / lifestyle gallery ---------------- */
+function Editorial() {
+  const SB = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade";
+  const shots = [
+    { img: `${SB}/frosinone/frosinone-social-1.png`, name: "Frosinone", href: "/products/frosinone" },
+    { img: `${SB}/napoli/napoli-pitonmoka-social-1.png`, name: "Napoli", href: "/products/napoli?color=moka" },
+    { img: `${SB}/new-jersey/new-jersey-cafe-social-1.png`, name: "New Jersey", href: "/products/new-jersey?color=caf%C3%A9" },
+  ];
+  return (
+    <section className="border-t border-border py-14 sm:py-20">
+      <div className="mb-8 max-w-xl">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hechos para la vida diaria</h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          Piel que combina con todo — de la oficina al café. Así se ven en el día a día.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+        {shots.map((s, i) => (
+          <Link
+            key={s.name}
+            href={s.href}
+            className={`group relative overflow-hidden rounded-2xl bg-elevated ring-1 ring-border/60 transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
+              i === 0 ? "col-span-2 md:col-span-1" : ""
+            }`}
+          >
+            <div className={i === 0 ? "aspect-[16/10] md:aspect-[4/5]" : "aspect-[4/5]"}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={s.img}
+                alt={`Blade ${s.name} en uso`}
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-105"
+              />
+            </div>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-4">
+              <span className="text-sm font-semibold text-white drop-shadow">{s.name}</span>
+              <span className="flex items-center gap-1 text-xs font-medium text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+                Ver <ArrowRight size={12} weight="bold" />
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
     </section>
   );
 }
