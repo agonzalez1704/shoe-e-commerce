@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { comboOf, cartComboDiscountCents, type ComboGroup } from "@/lib/pricing";
+import { comboOf, cartComboDiscountCents, comboNudge, type ComboGroup } from "@/lib/pricing";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const COOKIE = "cart_token";
@@ -133,17 +133,27 @@ export type CartLine = {
   lineTotalCents: number;
 };
 
+/** "Add N more of this model and save $X" — drives AOV using the combo price. */
+export type ComboNudge = {
+  productId: string;
+  name: string;
+  slug: string;
+  needed: number;
+  savingsCents: number;
+};
+
 export type CartSummary = {
   cartId: string | null;
   lines: CartLine[];
   subtotalCents: number;
   comboDiscountCents: number;
   totalCents: number;
+  comboNudges: ComboNudge[];
 };
 
 export async function getCart(): Promise<CartSummary> {
   const { db, cartId } = await resolveCart(false);
-  if (!cartId) return { cartId: null, lines: [], subtotalCents: 0, comboDiscountCents: 0, totalCents: 0 };
+  if (!cartId) return { cartId: null, lines: [], subtotalCents: 0, comboDiscountCents: 0, totalCents: 0, comboNudges: [] };
 
   const { data: items } = await db
     .from("cart_items")
@@ -214,11 +224,21 @@ export async function getCart(): Promise<CartSummary> {
   }
   const comboDiscount = cartComboDiscountCents([...groups.values()]);
 
+  // AOV nudges: models one (or more) pairs away from a combo price
+  const nudges: ComboNudge[] = [];
+  for (const g of groups.values()) {
+    const n = comboNudge(g.qty, g.baseCents, g.combo);
+    if (!n) continue;
+    const line = lines.find((l) => l.productId === g.productId);
+    if (line) nudges.push({ productId: g.productId, name: line.productName, slug: line.slug, ...n });
+  }
+
   return {
     cartId,
     lines,
     subtotalCents: subtotal,
     comboDiscountCents: comboDiscount,
     totalCents: subtotal - comboDiscount,
+    comboNudges: nudges,
   };
 }

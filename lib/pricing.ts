@@ -29,6 +29,24 @@ export function comboLabel(combo: ComboConfig, fmt: (cents: number) => string): 
   return `${combo.minQty}x ${fmt(combo.priceCents)}`;
 }
 
+/**
+ * How close this model is to unlocking (another) combo group.
+ * Returns how many more units are needed and what that would save, or null when
+ * there's no combo or the quantity already sits on a complete group.
+ */
+export function comboNudge(
+  qty: number,
+  baseCents: number,
+  combo: ComboConfig | null,
+): { needed: number; savingsCents: number } | null {
+  if (!combo || qty <= 0) return null;
+  const remainder = qty % combo.minQty;
+  if (remainder === 0) return null; // already a whole group (or groups)
+  const needed = combo.minQty - remainder;
+  const savingsCents = comboDiscountCents(qty + needed, baseCents, combo) - comboDiscountCents(qty, baseCents, combo);
+  return savingsCents > 0 ? { needed, savingsCents } : null;
+}
+
 /** Per-model quantity + combo config, used to total a whole cart. */
 export type ComboGroup = { productId: string; qty: number; baseCents: number; combo: ComboConfig | null };
 

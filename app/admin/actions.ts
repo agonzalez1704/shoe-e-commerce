@@ -11,7 +11,15 @@ type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 // admin action verifies is_admin() — UI gating is not access control.
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   const supabase = await requireAdmin();
-  const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+  // keep the fulfillment pipeline in sync: 'fulfilled' means it shipped, and
+  // shipped_at is what drives the review-request cron.
+  const patch: { status: OrderStatus; fulfillment_stage?: string; shipped_at?: string } = { status };
+  if (status === "fulfilled") {
+    patch.fulfillment_stage = "shipped";
+    const { data: cur } = await supabase.from("orders").select("shipped_at").eq("id", orderId).maybeSingle();
+    if (!cur?.shipped_at) patch.shipped_at = new Date().toISOString(); // don't reset an existing ship date
+  }
+  const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
   if (error) throw new Error(error.message);
 
   // notify the customer when the order ships (non-fatal)
