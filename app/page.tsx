@@ -212,8 +212,8 @@ function Featured({ products, total }: { products: ProductCard[]; total: number 
 function Editorial() {
   const SB = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade";
   const shots = [
-    { img: `${SB}/frosinone/frosinone-social-1.png`, name: "Frosinone", href: "/products/frosinone" },
-    { img: `${SB}/napoli/napoli-pitonmoka-social-1.png`, name: "Napoli", href: "/products/napoli?color=moka" },
+    { img: `${SB}/new-york/new-york-lifestyle-1.jpg`, name: "New York", href: "/products/new-york?color=moka" },
+    { img: `${SB}/londres/londres-lifestyle-1.jpg`, name: "Londres", href: "/products/londres?color=negro" },
     { img: `${SB}/new-jersey/new-jersey-cafe-social-1.png`, name: "New Jersey", href: "/products/new-jersey?color=caf%C3%A9" },
   ];
   return (
