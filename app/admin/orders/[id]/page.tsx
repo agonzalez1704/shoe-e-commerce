@@ -6,6 +6,7 @@ import { formatCents } from "@/lib/money";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderStatusActions } from "@/components/OrderStatusActions";
 import { CfdiActions } from "@/components/CfdiActions";
+import { FulfillmentPanel } from "@/components/admin/FulfillmentPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address")
+    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at")
     .eq("id", id)
     .maybeSingle();
   if (!order) notFound();
@@ -44,6 +45,20 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         </div>
         <OrderStatusActions orderId={order.id} status={order.status as Status} />
       </div>
+
+      <FulfillmentPanel
+        order={{
+          id: order.id,
+          paymentStatus: order.status,
+          fulfillment_stage: order.fulfillment_stage,
+          carrier: order.carrier,
+          tracking_number: order.tracking_number,
+          tracking_url: order.tracking_url,
+          estimated_delivery: order.estimated_delivery,
+          shipped_at: order.shipped_at,
+          delivered_at: order.delivered_at,
+        }}
+      />
 
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
         <div className="overflow-x-auto rounded-2xl border border-border">

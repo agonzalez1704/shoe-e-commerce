@@ -554,12 +554,16 @@ export type Database = {
       orders: {
         Row: {
           billing_address: Json | null
+          carrier: string | null
           created_at: string
           currency: string
           customer_id: string | null
+          delivered_at: string | null
           discount_cents: number
           email: string
+          estimated_delivery: string | null
           expires_at: string | null
+          fulfillment_stage: string
           id: string
           needs_invoice: boolean
           order_number: string
@@ -568,22 +572,29 @@ export type Database = {
           review_request_sent_at: string | null
           review_token: string
           session_token: string | null
+          shipped_at: string | null
           shipping_address: Json | null
           shipping_cents: number
           status: Database["public"]["Enums"]["order_status"]
           subtotal_cents: number
           tax_cents: number
           total_cents: number
+          tracking_number: string | null
+          tracking_url: string | null
           updated_at: string
         }
         Insert: {
           billing_address?: Json | null
+          carrier?: string | null
           created_at?: string
           currency?: string
           customer_id?: string | null
+          delivered_at?: string | null
           discount_cents?: number
           email: string
+          estimated_delivery?: string | null
           expires_at?: string | null
+          fulfillment_stage?: string
           id?: string
           needs_invoice?: boolean
           order_number: string
@@ -592,22 +603,29 @@ export type Database = {
           review_request_sent_at?: string | null
           review_token?: string
           session_token?: string | null
+          shipped_at?: string | null
           shipping_address?: Json | null
           shipping_cents?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_cents?: number
           tax_cents?: number
           total_cents?: number
+          tracking_number?: string | null
+          tracking_url?: string | null
           updated_at?: string
         }
         Update: {
           billing_address?: Json | null
+          carrier?: string | null
           created_at?: string
           currency?: string
           customer_id?: string | null
+          delivered_at?: string | null
           discount_cents?: number
           email?: string
+          estimated_delivery?: string | null
           expires_at?: string | null
+          fulfillment_stage?: string
           id?: string
           needs_invoice?: boolean
           order_number?: string
@@ -616,12 +634,15 @@ export type Database = {
           review_request_sent_at?: string | null
           review_token?: string
           session_token?: string | null
+          shipped_at?: string | null
           shipping_address?: Json | null
           shipping_cents?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_cents?: number
           tax_cents?: number
           total_cents?: number
+          tracking_number?: string | null
+          tracking_url?: string | null
           updated_at?: string
         }
         Relationships: [
