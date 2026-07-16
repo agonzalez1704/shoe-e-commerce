@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Package, Truck } from "@phosphor-icons/react";
+import { Package, Truck, ShieldCheck, ArrowsClockwise, Hammer, Sparkle } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { comboOf } from "@/lib/pricing";
 import { ComboBuilder } from "@/components/ComboBuilder";
@@ -12,6 +12,16 @@ import { Stars } from "@/components/Stars";
 import type { ProductDetail as Product } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
+
+// Aplazo installment anchor (approx). One place to tune.
+const APLAZO_PAYMENTS = 6;
+
+const VALUE_PROPS = [
+  { icon: Truck, label: "Envío gratis" },
+  { icon: ArrowsClockwise, label: "Primer cambio sin costo" },
+  { icon: ShieldCheck, label: "Garantía 6 meses" },
+  { icon: Hammer, label: "Hecho a mano" },
+] as const;
 
 export function ProductDetail({
   product,
@@ -81,7 +91,21 @@ export function ProductDetail({
           </p>
         )}
         <p className="nums mt-3 text-2xl font-medium">{mxn(colorPriceCents)}</p>
-        <p className="mt-1 text-xs text-muted">Precio con IVA incluido</p>
+        <p className="mt-1 text-xs text-muted">
+          Precio con IVA incluido · o {APLAZO_PAYMENTS} pagos de{" "}
+          <span className="font-medium text-text">{mxn(Math.round(colorPriceCents / APLAZO_PAYMENTS))}</span> con Aplazo
+        </p>
+
+        {/* value props (trust row) */}
+        <ul className="mt-4 grid grid-cols-2 gap-2">
+          {VALUE_PROPS.map(({ icon: Icon, label }) => (
+            <li key={label} className="flex items-center gap-2 rounded-lg border border-border bg-elevated/60 px-2.5 py-2 text-xs">
+              <Icon size={15} weight="bold" className="shrink-0 text-accent" />
+              {label}
+            </li>
+          ))}
+        </ul>
+
         {combo && (
           <ComboBuilder
             product={product}
@@ -95,14 +119,14 @@ export function ProductDetail({
         )}
 
         {product.made_to_order && (
-          <div className="mt-6 space-y-2 rounded-xl border border-border bg-elevated p-4">
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <Package size={18} weight="bold" className="text-accent" />
-              Hecho sobre pedido
+          <div className="mt-6 space-y-2 rounded-xl border border-accent/25 bg-accent-soft/60 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <Sparkle size={18} weight="fill" className="text-accent" />
+              Hecho solo para ti · edición limitada
             </p>
-            <p className="flex items-center gap-2 text-sm text-muted">
-              <Truck size={18} className="shrink-0" />
-              Se fabrica para ti. Envío en 4-7 días hábiles a todo México.
+            <p className="flex items-start gap-2 text-sm text-muted">
+              <Package size={17} className="mt-0.5 shrink-0" />
+              No producimos de más: tu par se fabrica a mano al ordenarlo. Piel genuina, listo en 4-7 días hábiles con envío gratis.
             </p>
           </div>
         )}

@@ -47,6 +47,18 @@ export function VariantPicker({
 
   const selected = variants.find((v) => v.id === variantId) ?? null;
   const price = selected?.price_cents ?? basePriceCents;
+  const canBuy = !!selected && !isPending && (madeToOrder || selected.qty_available > 0);
+
+  const add = () => {
+    if (!selected) {
+      document.getElementById("size-picker")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    startTransition(async () => {
+      await addToCart(selected.id, 1);
+      router.push("/cart");
+    });
+  };
 
   return (
     <div className="mt-8">
@@ -74,7 +86,7 @@ export function VariantPicker({
       </fieldset>
 
       {/* size + width */}
-      <fieldset className="mt-7">
+      <fieldset id="size-picker" className="mt-7 scroll-mt-24">
         <legend className="text-xs font-medium uppercase tracking-wide text-muted">Talla</legend>
         <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
           {sizes.map((v) => {
@@ -115,19 +127,29 @@ export function VariantPicker({
       </div>
 
       <button
-        disabled={!selected || isPending || (!madeToOrder && selected.qty_available <= 0)}
-        onClick={() => {
-          if (!selected) return;
-          startTransition(async () => {
-            await addToCart(selected.id, 1);
-            router.push("/cart");
-          });
-        }}
+        disabled={isPending || (!!selected && !madeToOrder && selected.qty_available <= 0)}
+        onClick={add}
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-medium text-accent-contrast transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
       >
         <ShoppingBag size={18} weight="bold" />
         {isPending ? "Agregando…" : selected ? "Agregar al carrito" : "Selecciona una talla"}
       </button>
+
+      {/* mobile sticky add-to-cart bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-border bg-bg/95 px-4 py-3 backdrop-blur-md md:hidden">
+        <div className="min-w-0">
+          <p className="nums text-base font-semibold leading-none">{mxn(price)}</p>
+          <p className="truncate text-[11px] text-muted">{selected ? `Talla ${selected.size_value}` : "Elige tu talla"}</p>
+        </div>
+        <button
+          disabled={isPending || (!!selected && !madeToOrder && selected.qty_available <= 0)}
+          onClick={add}
+          className="ml-auto inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98] disabled:opacity-60"
+        >
+          <ShoppingBag size={16} weight="bold" />
+          {isPending ? "Agregando…" : "Agregar"}
+        </button>
+      </div>
     </div>
   );
 }
