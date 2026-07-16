@@ -5,6 +5,7 @@ import { Package, Truck, ShieldCheck, ArrowsClockwise, Hammer, Sparkle } from "@
 import { formatCents } from "@/lib/money";
 import { comboOf } from "@/lib/pricing";
 import { ComboBuilder } from "@/components/ComboBuilder";
+import { PdpInfo } from "@/components/PdpInfo";
 import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
@@ -138,6 +139,8 @@ export function ProductDetail({
           onColorChange={setColor}
           madeToOrder={product.made_to_order}
         />
+
+        <PdpInfo />
       </div>
     </div>
   );

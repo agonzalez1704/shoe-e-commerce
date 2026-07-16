@@ -87,7 +87,11 @@ export function VariantPicker({
 
       {/* size + width */}
       <fieldset id="size-picker" className="mt-7 scroll-mt-24">
-        <legend className="text-xs font-medium uppercase tracking-wide text-muted">Talla</legend>
+        <div className="flex items-center justify-between">
+          <legend className="text-xs font-medium uppercase tracking-wide text-muted">Talla</legend>
+          <a href="#size-guide" className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline">Guía de tallas</a>
+        </div>
+        <p className="mt-1 text-xs text-muted">Queda fiel a tu talla — pide tu número habitual.</p>
         <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
           {sizes.map((v) => {
             // made-to-order: never out of stock, no availability shown
