@@ -80,6 +80,25 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   return (data ?? []).flatMap((p) => toVariantCards(p as Parameters<typeof toVariantCards>[0]));
 }
 
+// Cross-sell: other active models (one card per model, not per colourway).
+export async function listRelatedProducts(excludeSlug: string, limit = 4): Promise<ProductCard[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents)")
+    .eq("status", "active")
+    .neq("slug", excludeSlug)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  type Row = Parameters<typeof toVariantCards>[0];
+  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p));
+  // one card per model
+  const bySlug = new Map<string, ProductCard>();
+  for (const c of cards) if (!bySlug.has(c.slug)) bySlug.set(c.slug, c);
+  return [...bySlug.values()].slice(0, limit);
+}
+
 export type Category = { id: string; name: string; slug: string; description: string | null };
 
 export const getCategory = cache(async (slug: string): Promise<Category | null> => {

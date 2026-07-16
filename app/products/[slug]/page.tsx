@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
-import { getProduct } from "@/lib/catalog";
+import { getProduct, listRelatedProducts } from "@/lib/catalog";
 import { getProductReviews } from "@/lib/reviews";
 import { ProductDetail } from "@/components/ProductDetail";
+import { ProductGrid } from "@/components/ProductGrid";
 import { ProductReviews } from "@/components/ProductReviews";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
@@ -48,7 +49,10 @@ export default async function ProductPage({
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  const reviews = await getProductReviews(product.id);
+  const [reviews, related] = await Promise.all([
+    getProductReviews(product.id),
+    listRelatedProducts(slug, 3),
+  ]);
 
   const url = `${SITE_URL}/products/${slug}`;
   const productJsonLd = {
@@ -91,6 +95,20 @@ export default async function ProductPage({
       </nav>
 
       <ProductDetail product={product} initialColor={color} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
+
+      {related.length > 0 && (
+        <section className="mt-16 border-t border-border pt-10">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">Combínalo con</h2>
+              <p className="mt-1 text-sm text-muted">Otros modelos hechos a mano, mismo envío gratis.</p>
+            </div>
+            <Link href="/products" className="text-sm font-medium text-accent hover:underline">Ver todo</Link>
+          </div>
+          <ProductGrid products={related} />
+        </section>
+      )}
+
       <ProductReviews summary={reviews} />
     </div>
   );
