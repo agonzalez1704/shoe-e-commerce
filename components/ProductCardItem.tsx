@@ -12,7 +12,7 @@ const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 // One card = one variant colour (limited inventory). Links to the product with
 // that colour preselected.
-export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: boolean }) {
+export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priority?: boolean; badge?: string }) {
   const href = p.color ? `/products/${p.slug}?color=${encodeURIComponent(p.color)}` : `/products/${p.slug}`;
   // unique per colourway so view-transition names don't collide on the grid
   const vtName = p.key.replace(/[^a-zA-Z0-9_-]/g, "-");
@@ -46,6 +46,11 @@ export function ProductCardItem({ p, priority }: { p: ProductCard; priority?: bo
           {combo && (
             <span className="absolute left-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold tracking-wide text-accent-contrast shadow-[var(--shadow-sm)]">
               {comboLabel(combo, mxn)}
+            </span>
+          )}
+          {badge && (
+            <span className="absolute right-2.5 top-2.5 rounded-full bg-text px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-bg shadow-[var(--shadow-sm)]">
+              {badge}
             </span>
           )}
 

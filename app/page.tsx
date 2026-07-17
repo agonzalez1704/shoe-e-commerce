@@ -36,6 +36,7 @@ export default async function Home() {
       <Hero />
       <Benefits />
       {comboPicks.length > 0 && <ComboBand picks={comboPicks} />}
+      <EditorialFeature />
       <Featured products={featured} total={products.length} />
       <Editorial />
       <HowItWorks />
@@ -195,15 +196,65 @@ function Featured({ products, total }: { products: ProductCard[]; total: number 
     <section className="border-t border-border py-14 sm:py-20">
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Lo nuevo</h2>
-          <p className="mt-1 text-sm text-muted">{total} productos · hechos sobre pedido</p>
+          <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">Lo nuevo</h2>
+          <p className="mt-2 text-sm text-muted">{total} productos · hechos sobre pedido</p>
         </div>
         <Link href="/products" className="group inline-flex items-center gap-1.5 text-sm font-medium text-accent">
           Ver todo
           <ArrowRight size={15} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
-      <ProductGrid products={products} />
+      <ProductGrid products={products} newestCount={2} />
+    </section>
+  );
+}
+
+/* ---------------- editorial feature (split, Nuvé-style) ---------------- */
+function EditorialFeature() {
+  const img = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade/new-york/new-york-lifestyle-1.jpg";
+  const points = [
+    "Piel exótica grabada a mano",
+    "Suela Phylon ultra ligera",
+    "Se fabrica solo cuando lo ordenas",
+  ];
+  return (
+    <section className="py-14 sm:py-20">
+      <div className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
+        {/* framed image */}
+        <div className="relative">
+          <div className="absolute -inset-3 -z-10 rounded-3xl bg-accent-soft" aria-hidden />
+          <div className="overflow-hidden rounded-3xl ring-1 ring-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img} alt="New York en piel de cocodrilo, calzado a diario" loading="lazy" className="aspect-[4/5] w-full object-cover" />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">El detalle</p>
+          <h2 className="mt-3 text-4xl font-semibold uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
+            El lujo está<br />en la piel.
+          </h2>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">
+            Cada par nace de piel genuina trabajada a mano — texturas cocodrilo, pitón y lizard que se sienten
+            distintas al primer paso. Sin producción en masa: solo el par que pediste.
+          </p>
+          <ul className="mt-6 space-y-2.5">
+            {points.map((t) => (
+              <li key={t} className="flex items-center gap-3 text-sm">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                {t}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/products/new-york?color=moka"
+            className="group mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
+          >
+            Descubre New York
+            <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
@@ -219,8 +270,8 @@ function Editorial() {
   return (
     <section className="border-t border-border py-14 sm:py-20">
       <div className="mb-8 max-w-xl">
-        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hechos para la vida diaria</h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+        <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">Hechos para la vida diaria</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
           Piel que combina con todo — de la oficina al café. Así se ven en el día a día.
         </p>
       </div>
@@ -265,8 +316,8 @@ function HowItWorks() {
   ];
   return (
     <section className="border-t border-border py-14 sm:py-20">
-      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cómo funciona</h2>
-      <p className="mt-1 text-sm text-muted">Sin inventario muerto. Piel de verdad, hecha a pedido.</p>
+      <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">Cómo funciona</h2>
+      <p className="mt-2 text-sm text-muted">Sin inventario muerto. Piel de verdad, hecha a pedido.</p>
       <div className="mt-8 grid gap-5 sm:grid-cols-3">
         {steps.map(({ icon: Icon, title, sub }, i) => (
           <div key={title} className="rounded-2xl border border-border bg-surface p-6">
@@ -290,7 +341,7 @@ function FinalCta() {
   return (
     <section className="pb-16">
       <div className="flex flex-col items-center gap-5 rounded-3xl bg-text px-6 py-14 text-center text-bg">
-        <h2 className="max-w-xl text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h2 className="max-w-2xl text-3xl font-semibold uppercase tracking-tight sm:text-5xl md:text-6xl">
           Tu próximo par te está esperando.
         </h2>
         <p className="max-w-md text-sm text-bg/70">
