@@ -110,7 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </ViewTransition>
 
         <footer className="mt-24 border-t border-border">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 text-sm sm:grid-cols-3">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div className="text-muted">
               <p className="font-medium text-text">{SITE_NAME}</p>
               <p className="mt-2">{SITE_DESCRIPTION}</p>
@@ -128,6 +128,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/products?gender=mens" className="text-muted transition-colors hover:text-text">Hombre</Link>
               <Link href="/products?gender=womens" className="text-muted transition-colors hover:text-text">Mujer</Link>
               <Link href="/rastrear" className="text-muted transition-colors hover:text-text">Rastrear pedido</Link>
+            </nav>
+            <nav className="flex flex-col gap-2">
+              <p className="font-medium text-text">Legal</p>
+              <Link href="/envios" className="text-muted transition-colors hover:text-text">Envíos</Link>
+              <Link href="/devoluciones" className="text-muted transition-colors hover:text-text">Devoluciones y cambios</Link>
+              <Link href="/terminos" className="text-muted transition-colors hover:text-text">Términos y condiciones</Link>
+              <Link href="/privacidad" className="text-muted transition-colors hover:text-text">Aviso de privacidad</Link>
             </nav>
           </div>
         </footer>
