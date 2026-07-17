@@ -7,7 +7,7 @@ import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { OxxoMark, SpeiMark, AplazoMark, VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
+import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
 import { checkout, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
 
@@ -37,10 +37,20 @@ const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "aplazo", label: "Aplazo", hint: "Págalo en quincenas" },
 ];
 
+// Real brand logo on a white chip (keeps colour brands legible in both themes).
+function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }) {
+  return (
+    <span className="inline-flex items-center rounded-md bg-white px-1.5 py-1 ring-1 ring-black/5">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} style={{ height: h }} className="w-auto" />
+    </span>
+  );
+}
+
 function MethodMark({ id }: { id: Method }) {
-  if (id === "oxxo") return <OxxoMark />;
-  if (id === "spei") return <SpeiMark />;
-  if (id === "aplazo") return <AplazoMark />;
+  if (id === "oxxo") return <LogoChip src="/pay/oxxo.svg" alt="OXXO" />;
+  if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
+  if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
   return (
     <span className="flex gap-1">
       <VisaMark />
@@ -381,9 +391,9 @@ export function CheckoutForm({
             <VisaMark />
             <MastercardMark />
             <AmexMark />
-            <OxxoMark />
-            <SpeiMark />
-            <AplazoMark />
+            <LogoChip src="/pay/oxxo.svg" alt="OXXO" h={16} />
+            <LogoChip src="/pay/spei.svg" alt="SPEI" h={12} />
+            <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={14} />
           </div>
           <p className="flex items-center justify-center gap-1 text-[11px] text-muted">
             <ShieldCheck size={13} weight="fill" /> Compra protegida · procesado por Conekta
