@@ -36,8 +36,9 @@ export default async function Home() {
       <Hero />
       <Benefits />
       {comboPicks.length > 0 && <ComboBand picks={comboPicks} />}
-      <EditorialFeature />
+      <EditorialFeature f={FEATURES[0]} />
       <Featured products={featured} total={products.length} />
+      <EditorialFeature f={FEATURES[1]} />
       <Editorial />
       <HowItWorks />
       <FinalCta />
@@ -209,55 +210,90 @@ function Featured({ products, total }: { products: ProductCard[]; total: number 
   );
 }
 
-/* ---------------- editorial feature (split, Nuvé-style) ---------------- */
-function EditorialFeature() {
-  const img = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade/new-york/new-york-lifestyle-1.jpg";
-  const points = [
-    "Piel exótica grabada a mano",
-    "Suela Phylon ultra ligera",
-    "Se fabrica solo cuando lo ordenas",
-  ];
+/* ---------------- editorial feature (diptych split, Nuvé-style) ---------------- */
+const LANDING = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade/landing";
+
+type Feature = {
+  eyebrow: string;
+  title: React.ReactNode;
+  body: string;
+  points: string[];
+  cta: { label: string; href: string };
+  main: string;
+  macro: string;
+  alt: string;
+  flip?: boolean; // image on the right
+};
+
+function EditorialFeature({ f }: { f: Feature }) {
+  const media = (
+    <div className="relative">
+      <div className="absolute -inset-3 -z-10 rounded-3xl bg-accent-soft" aria-hidden />
+      <div className="overflow-hidden rounded-3xl ring-1 ring-border">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={f.main} alt={f.alt} loading="lazy" className="aspect-[4/5] w-full object-cover" />
+      </div>
+      {/* framed macro-detail accent, overlapping the corner */}
+      <div className={`absolute -bottom-6 w-28 overflow-hidden rounded-2xl shadow-[var(--shadow-md)] ring-4 ring-bg sm:w-36 ${f.flip ? "-left-4" : "-right-4"}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={f.macro} alt="" loading="lazy" className="aspect-square w-full object-cover" />
+      </div>
+    </div>
+  );
+  const copy = (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">{f.eyebrow}</p>
+      <h2 className="mt-3 text-4xl font-semibold uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">{f.title}</h2>
+      <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">{f.body}</p>
+      <ul className="mt-6 space-y-2.5">
+        {f.points.map((t) => (
+          <li key={t} className="flex items-center gap-3 text-sm">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+            {t}
+          </li>
+        ))}
+      </ul>
+      <Link
+        href={f.cta.href}
+        className="group mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
+      >
+        {f.cta.label}
+        <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
+      </Link>
+    </div>
+  );
   return (
     <section className="py-14 sm:py-20">
       <div className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
-        {/* framed image */}
-        <div className="relative">
-          <div className="absolute -inset-3 -z-10 rounded-3xl bg-accent-soft" aria-hidden />
-          <div className="overflow-hidden rounded-3xl ring-1 ring-border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img} alt="New York en piel de cocodrilo, calzado a diario" loading="lazy" className="aspect-[4/5] w-full object-cover" />
-          </div>
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">El detalle</p>
-          <h2 className="mt-3 text-4xl font-semibold uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
-            El lujo está<br />en la piel.
-          </h2>
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">
-            Cada par nace de piel genuina trabajada a mano — texturas cocodrilo, pitón y lizard que se sienten
-            distintas al primer paso. Sin producción en masa: solo el par que pediste.
-          </p>
-          <ul className="mt-6 space-y-2.5">
-            {points.map((t) => (
-              <li key={t} className="flex items-center gap-3 text-sm">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                {t}
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/products/new-york?color=moka"
-            className="group mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
-          >
-            Descubre New York
-            <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </div>
+        {f.flip ? <>{copy}{media}</> : <>{media}{copy}</>}
       </div>
     </section>
   );
 }
+
+const FEATURES: Feature[] = [
+  {
+    eyebrow: "El detalle",
+    title: <>El lujo está<br />en la piel.</>,
+    body: "Cada par nace de piel genuina trabajada a mano — texturas cocodrilo, pitón y lizard que se sienten distintas al primer paso. Sin producción en masa: solo el par que pediste.",
+    points: ["Piel exótica grabada a mano", "Suela Phylon ultra ligera", "Se fabrica solo cuando lo ordenas"],
+    cta: { label: "Descubre New York", href: "/products/new-york?color=moka" },
+    main: `${LANDING}/new-york-still.jpg`,
+    macro: `${LANDING}/croc-macro.jpg`,
+    alt: "New York en piel de cocodrilo café",
+  },
+  {
+    eyebrow: "Ligereza",
+    title: <>Perforado.<br />Ligero. Diario.</>,
+    body: "Piel perforada que respira y una suela Phylon ultra ligera: la comodidad de un sneaker con el acabado de la piel fina. Hecho para caminar todo el día.",
+    points: ["Piel perforada que respira", "Suela ultra ligera", "Silueta limpia, todos los días"],
+    cta: { label: "Descubre Manhattan", href: "/products/manhattan?color=blanco" },
+    main: `${LANDING}/manhattan-water.jpg`,
+    macro: `${LANDING}/perforado-macro.jpg`,
+    alt: "Manhattan blanco perforado",
+    flip: true,
+  },
+];
 
 /* ---------------- editorial / lifestyle gallery ---------------- */
 function Editorial() {
