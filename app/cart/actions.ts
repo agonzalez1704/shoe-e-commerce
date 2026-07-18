@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { comboOf, cartComboDiscountCents, comboNudge, type ComboGroup } from "@/lib/pricing";
+import { comboOf, cartComboDiscountCents, poolNudge, type ComboPool } from "@/lib/pricing";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const COOKIE = "cart_token";
@@ -133,11 +133,9 @@ export type CartLine = {
   lineTotalCents: number;
 };
 
-/** "Add N more of this model and save $X" — drives AOV using the combo price. */
+/** "Add N more from the combo and save $X" — drives AOV using the pool price. */
 export type ComboNudge = {
-  productId: string;
-  name: string;
-  slug: string;
+  href: string;
   needed: number;
   savingsCents: number;
 };
@@ -160,7 +158,7 @@ export async function getCart(): Promise<CartSummary> {
     .select(
       "quantity, variant_id, " +
         "variants(sku, size_value, size_system, width, color, price_cents, " +
-        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, product_images(url, position)))",
+        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_group, product_images(url, position)))",
     )
     .eq("cart_id", cartId);
 
@@ -173,7 +171,7 @@ export async function getCart(): Promise<CartSummary> {
       price_cents: number | null;
       products: {
         id: string; name: string; slug: string; base_price_cents: number;
-        combo_min_qty: number | null; combo_price_cents: number | null;
+        combo_min_qty: number | null; combo_price_cents: number | null; combo_group: string | null;
         product_images: { url: string; position: number }[];
       };
     };
@@ -209,28 +207,27 @@ export async function getCart(): Promise<CartSummary> {
     };
   });
 
-  // combo discount, grouped per model (mirrors create_order in SQL)
-  const groups = new Map<string, ComboGroup>();
+  // combo POOL: products sharing combo_group pool together (mix models).
+  // Collect each pool's config + individual unit prices (mirrors create_order).
+  const pools = new Map<string, ComboPool & { minPrice: number }>();
   for (const it of rows) {
     const p = it.variants.products;
-    const g = groups.get(p.id);
-    if (g) g.qty += it.quantity;
-    else groups.set(p.id, {
-      productId: p.id,
-      qty: it.quantity,
-      baseCents: p.base_price_cents,
-      combo: comboOf(p.combo_min_qty, p.combo_price_cents),
-    });
+    const combo = comboOf(p.combo_min_qty, p.combo_price_cents);
+    if (!p.combo_group || !combo) continue;
+    const unit = it.variants.price_cents ?? p.base_price_cents;
+    const pool = pools.get(p.combo_group);
+    const units = Array(it.quantity).fill(unit);
+    if (pool) { pool.unitPrices.push(...units); pool.minPrice = Math.min(pool.minPrice, unit); }
+    else pools.set(p.combo_group, { group: p.combo_group, combo, unitPrices: units, minPrice: unit });
   }
-  const comboDiscount = cartComboDiscountCents([...groups.values()]);
+  const poolList = [...pools.values()];
+  const comboDiscount = cartComboDiscountCents(poolList);
 
-  // AOV nudges: models one (or more) pairs away from a combo price
+  // AOV nudge: pool one unit away from another pair
   const nudges: ComboNudge[] = [];
-  for (const g of groups.values()) {
-    const n = comboNudge(g.qty, g.baseCents, g.combo);
-    if (!n) continue;
-    const line = lines.find((l) => l.productId === g.productId);
-    if (line) nudges.push({ productId: g.productId, name: line.productName, slug: line.slug, ...n });
+  for (const pool of poolList) {
+    const n = poolNudge(pool.unitPrices, pool.combo, pool.minPrice);
+    if (n) nudges.push({ href: "/products", ...n });
   }
 
   return {

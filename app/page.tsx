@@ -148,8 +148,8 @@ function ComboBand({ picks }: { picks: ProductCard[] }) {
               {combo && <> por <span className="text-accent">{mxn(combo.priceCents)}</span></>}
             </h2>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-              Arma tu combo con cualquier color del mismo modelo y ahorra. Disponible en Londres y
-              Manhattan — el descuento se aplica solo al agregar 2 al carrito.
+              Combina 2 pares de los modelos del combo — mismo o distinto modelo, cualquier color.
+              El descuento se aplica solo al agregar 2 al carrito.
             </p>
             <Link
               href={`/products/${picks[0].slug}`}

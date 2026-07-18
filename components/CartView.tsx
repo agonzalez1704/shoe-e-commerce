@@ -50,17 +50,16 @@ export function CartView({ initial }: { initial: CartSummary }) {
     <div className="space-y-6">
       <MadeToOrderNotice />
 
-      {initial.comboNudges.map((n) => (
+      {initial.comboNudges.map((n, i) => (
         <Link
-          key={n.productId}
-          href={`/products/${n.slug}`}
+          key={i}
+          href={n.href}
           className="group flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent-soft px-4 py-3.5 transition-colors hover:border-accent"
         >
           <Tag size={20} weight="fill" className="shrink-0 text-accent" />
           <p className="text-sm">
-            Agrega {n.needed} par{n.needed > 1 ? "es" : ""} más de{" "}
-            <span className="font-semibold">{n.name}</span> y ahorra{" "}
-            <span className="font-semibold text-accent">{mxn(n.savingsCents)}</span> con el combo.
+            Agrega {n.needed} par{n.needed > 1 ? "es" : ""} más del combo y ahorra{" "}
+            <span className="font-semibold text-accent">{mxn(n.savingsCents)}</span>.
           </p>
           <span className="ml-auto hidden shrink-0 text-xs font-medium text-accent group-hover:underline sm:block">
             Elegir →

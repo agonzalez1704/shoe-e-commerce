@@ -780,6 +780,7 @@ export type Database = {
         Row: {
           base_price_cents: number
           brand_id: string | null
+          combo_group: string | null
           combo_min_qty: number | null
           combo_price_cents: number | null
           created_at: string
@@ -795,6 +796,7 @@ export type Database = {
         Insert: {
           base_price_cents: number
           brand_id?: string | null
+          combo_group?: string | null
           combo_min_qty?: number | null
           combo_price_cents?: number | null
           created_at?: string
@@ -810,6 +812,7 @@ export type Database = {
         Update: {
           base_price_cents?: number
           brand_id?: string | null
+          combo_group?: string | null
           combo_min_qty?: number | null
           combo_price_cents?: number | null
           created_at?: string
