@@ -47,7 +47,7 @@ export default function DevolucionesPage() {
       <h2>Cómo iniciar</h2>
       <p>
         Escríbenos a <a href="mailto:pedidos@calzadoblade.com">pedidos@calzadoblade.com</a> o por WhatsApp{" "}
-        <strong>[TELÉFONO]</strong> con tu número de pedido. Te guiamos en el proceso y te compartimos la guía de
+        <strong>477 379 1352</strong> con tu número de pedido. Te guiamos en el proceso y te compartimos la guía de
         retorno cuando aplique.
       </p>
 

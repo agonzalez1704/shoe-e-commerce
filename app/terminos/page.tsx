@@ -7,15 +7,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/terminos" },
 };
 
-// NOTE: plantilla base. Reemplaza los [CAMPOS] con los datos reales y valida
-// el contenido con tu asesor legal antes de operar con clientes reales.
+// NOTE: valida el contenido con tu asesor legal antes de operar en vivo.
 export default function TerminosPage() {
   return (
     <LegalPage title="Términos y Condiciones" updated="16 de julio de 2026">
       <p>
         Estos Términos y Condiciones regulan el uso del sitio calzadoblade.com (el “Sitio”) y la compra de
-        productos de la marca Blade, operada por <strong>[RAZÓN SOCIAL]</strong>, con RFC{" "}
-        <strong>[RFC]</strong> y domicilio en <strong>[DOMICILIO FISCAL]</strong> (“nosotros”). Al realizar una
+        productos de la marca Blade, operada por <strong>Ma. de Lourdes Cifuentes Huerta</strong>, con RFC{" "}
+        <strong>CIHL580621SK1</strong> y domicilio en <strong>Blvd. Mariano Escobedo Ote. 221-A, Col. San Juan de Dios, C.P. 37004, León, Guanajuato</strong> (“nosotros”). Al realizar una
         compra aceptas estos términos en su totalidad.
       </p>
 
@@ -61,7 +60,7 @@ export default function TerminosPage() {
       <h2>7. Propiedad intelectual</h2>
       <p>
         Todo el contenido del Sitio (marca, logotipos, imágenes, textos y diseño) es propiedad de{" "}
-        <strong>[RAZÓN SOCIAL]</strong> y no puede reproducirse sin autorización.
+        <strong>Ma. de Lourdes Cifuentes Huerta</strong> y no puede reproducirse sin autorización.
       </p>
 
       <h2>8. Responsabilidad</h2>
@@ -78,14 +77,14 @@ export default function TerminosPage() {
       <h2>10. Ley aplicable</h2>
       <p>
         Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Para cualquier controversia, las
-        partes se someten a los tribunales competentes de <strong>[CIUDAD, ESTADO]</strong>, sin perjuicio de los
+        partes se someten a los tribunales competentes de <strong>León, Guanajuato</strong>, sin perjuicio de los
         derechos que la Procuraduría Federal del Consumidor (PROFECO) reconoce a los consumidores.
       </p>
 
       <h2>11. Contacto</h2>
       <p>
         Dudas o aclaraciones: <a href="mailto:pedidos@calzadoblade.com">pedidos@calzadoblade.com</a>{" "}
-        · WhatsApp <strong>[TELÉFONO]</strong>.
+        · WhatsApp <strong>477 379 1352</strong>.
       </p>
     </LegalPage>
   );

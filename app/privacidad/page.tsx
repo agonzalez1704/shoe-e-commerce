@@ -7,13 +7,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacidad" },
 };
 
-// NOTE: plantilla base conforme a la Ley Federal de Protección de Datos
-// Personales en Posesión de los Particulares. Valida con tu asesor legal.
+// NOTE: valida con tu asesor legal antes de operar en vivo.
 export default function PrivacidadPage() {
   return (
     <LegalPage title="Aviso de Privacidad" updated="16 de julio de 2026">
       <p>
-        <strong>[RAZÓN SOCIAL]</strong> (“Blade”), con domicilio en <strong>[DOMICILIO FISCAL]</strong>, es
+        <strong>Ma. de Lourdes Cifuentes Huerta</strong> (“Blade”), con domicilio en <strong>Blvd. Mariano Escobedo Ote. 221-A, Col. San Juan de Dios, C.P. 37004, León, Guanajuato</strong>, es
         responsable del tratamiento y protección de tus datos personales conforme a la Ley Federal de Protección de
         Datos Personales en Posesión de los Particulares (LFPDPPP).
       </p>
