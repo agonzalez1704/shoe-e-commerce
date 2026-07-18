@@ -24,6 +24,7 @@ export const CARRIERS: { key: string; name: string; url?: (n: string) => string 
   { key: "99minutos", name: "99minutos", url: (n) => `https://tracker.99minutos.com/${n}` },
   { key: "paquetexpress", name: "Paquetexpress", url: (n) => `https://www.paquetexpress.com.mx/rastreo?guia=${n}` },
   { key: "correos", name: "Correos de México", url: (n) => `https://www.correosdemexico.gob.mx/SSLServicios/Rastreo/rastreo.aspx?guia=${n}` },
+  { key: "local", name: "Entrega local (León)" },
   { key: "other", name: "Otra" },
 ];
 

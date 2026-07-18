@@ -144,6 +144,14 @@ export async function generateSkydropxLabel(orderId: string) {
     postal_code: s.postal || "",
     country_code: "MX",
   };
+  // León local delivery: we handle logistics ourselves, no Skydropx.
+  const isLeon = to.postal_code.startsWith("37") || /le[oó]n/i.test(to.area_level2);
+  if (isLeon) {
+    await supabase.from("orders").update({ carrier: "local", tracking_number: null, tracking_url: null, shipping_label_url: null }).eq("id", orderId);
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { carrier: "local", tracking: "", labelUrl: null, local: true };
+  }
+
   if (!to.area_level3 || !to.phone) {
     throw new Error("Falta colonia o teléfono en la dirección (pedido anterior a la actualización). Captúralos manualmente.");
   }
