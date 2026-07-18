@@ -115,6 +115,57 @@ export async function setFulfillmentStage(orderId: string, stage: FulfillmentSta
   revalidatePath("/admin");
 }
 
+// Skydropx provider name → our carrier keys (lib/fulfillment CARRIERS).
+const CARRIER_MAP: Record<string, string> = {
+  estafeta: "estafeta", fedex: "fedex", dhl: "dhl",
+  paquetexpress: "paquetexpress", ninetynineminutes: "99minutos", correos: "correos",
+};
+
+// Generate the shipping guía + label for an order via Skydropx (cheapest rate)
+// and store carrier / tracking / label URL on the order.
+export async function generateSkydropxLabel(orderId: string) {
+  const supabase = await requireAdmin();
+  const { data: o } = await supabase
+    .from("orders")
+    .select("shipping_address, email")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!o?.shipping_address) throw new Error("El pedido no tiene dirección de envío.");
+
+  const s = o.shipping_address as Record<string, string>;
+  const to = {
+    name: s.name || "Cliente",
+    phone: s.phone || "",
+    email: o.email,
+    street1: s.line1 || "",
+    area_level1: s.region || "",
+    area_level2: s.city || "",
+    area_level3: s.neighborhood || "",
+    postal_code: s.postal || "",
+    country_code: "MX",
+  };
+  if (!to.area_level3 || !to.phone) {
+    throw new Error("Falta colonia o teléfono en la dirección (pedido anterior a la actualización). Captúralos manualmente.");
+  }
+
+  const { generateLabel } = await import("@/lib/skydropx");
+  const r = await generateLabel(to);
+
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      carrier: CARRIER_MAP[r.carrier] ?? "other",
+      tracking_number: r.trackingNumber || null,
+      tracking_url: r.trackingUrl,
+      shipping_label_url: r.labelUrl,
+    })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
+}
+
 export async function setInventory(variantId: string, qtyOnHand: number) {
   const supabase = await requireAdmin();
   const { error } = await supabase

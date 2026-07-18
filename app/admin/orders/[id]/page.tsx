@@ -20,7 +20,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at")
+    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url")
     .eq("id", id)
     .maybeSingle();
   if (!order) notFound();
@@ -57,6 +57,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           estimated_delivery: order.estimated_delivery,
           shipped_at: order.shipped_at,
           delivered_at: order.delivered_at,
+          shipping_label_url: order.shipping_label_url,
         }}
       />
 

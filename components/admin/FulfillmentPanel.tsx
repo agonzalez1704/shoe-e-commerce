@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
-import { saveTracking, setFulfillmentStage } from "@/app/admin/actions";
+import { saveTracking, setFulfillmentStage, generateSkydropxLabel } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
 type Order = {
@@ -16,6 +16,7 @@ type Order = {
   estimated_delivery: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  shipping_label_url: string | null;
 };
 
 const STAGE_ICON: Record<FulfillmentStage, React.ComponentType<{ size?: number; weight?: "bold" | "fill" | "regular" }>> = {
@@ -39,10 +40,16 @@ export function FulfillmentPanel({ order }: { order: Order }) {
   const autoUrl = trackingUrlFor(carrier, tracking, trackUrl || null);
   const isPaid = order.paymentStatus === "paid" || order.paymentStatus === "fulfilled";
 
+  const [err, setErr] = useState<string | null>(null);
   const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
-      await fn();
-      router.refresh();
+      setErr(null);
+      try {
+        await fn();
+        router.refresh();
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Error");
+      }
     });
 
   const advanceLabel: Record<FulfillmentStage, string> = {
@@ -142,14 +149,30 @@ export function FulfillmentPanel({ order }: { order: Order }) {
             Ver rastreo <ArrowSquareOut size={12} />
           </a>
         ) : <span />}
-        <button
-          disabled={isPending}
-          onClick={() => run(() => saveTracking(order.id, { carrier: carrier || null, trackingNumber: tracking || null, trackingUrl: trackUrl || null, estimatedDelivery: eta || null }))}
-          className="rounded-full border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-elevated disabled:opacity-50"
-        >
-          Guardar seguimiento
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            disabled={isPending}
+            onClick={() => run(async () => { await generateSkydropxLabel(order.id); })}
+            className="inline-flex items-center gap-1.5 rounded-full bg-text px-4 py-2 text-sm font-medium text-bg transition-transform active:scale-[0.98] disabled:opacity-50"
+          >
+            <Truck size={14} weight="bold" /> {isPending ? "Generando…" : "Generar guía (Skydropx)"}
+          </button>
+          <button
+            disabled={isPending}
+            onClick={() => run(() => saveTracking(order.id, { carrier: carrier || null, trackingNumber: tracking || null, trackingUrl: trackUrl || null, estimatedDelivery: eta || null }))}
+            className="rounded-full border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-elevated disabled:opacity-50"
+          >
+            Guardar
+          </button>
+        </div>
       </div>
+
+      {err && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">{err}</p>}
+      {order.shipping_label_url && (
+        <a href={order.shipping_label_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
+          <ArrowSquareOut size={12} /> Descargar etiqueta (PDF)
+        </a>
+      )}
 
       {/* Advance stage */}
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">

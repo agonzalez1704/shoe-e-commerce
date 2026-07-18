@@ -575,6 +575,7 @@ export type Database = {
           shipped_at: string | null
           shipping_address: Json | null
           shipping_cents: number
+          shipping_label_url: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal_cents: number
           tax_cents: number
@@ -606,6 +607,7 @@ export type Database = {
           shipped_at?: string | null
           shipping_address?: Json | null
           shipping_cents?: number
+          shipping_label_url?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_cents?: number
           tax_cents?: number
@@ -637,6 +639,7 @@ export type Database = {
           shipped_at?: string | null
           shipping_address?: Json | null
           shipping_cents?: number
+          shipping_label_url?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_cents?: number
           tax_cents?: number

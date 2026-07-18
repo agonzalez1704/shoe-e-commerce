@@ -151,7 +151,11 @@ export function CheckoutForm({
         email: g("email"),
         customerName: g("name"),
         phone: g("phone"),
-        shippingAddress: { line1: g("line1"), city: g("city"), region: g("region"), postal: g("postal"), country: "MX" },
+        shippingAddress: {
+          name: g("name"), phone: g("phone"),
+          line1: g("line1"), neighborhood: g("neighborhood"),
+          city: g("city"), region: g("region"), postal: g("postal"), country: "MX",
+        },
         discountCode: g("discount") || undefined,
         cardTokenId,
         fiscal: needsInvoice
@@ -210,14 +214,17 @@ export function CheckoutForm({
                 <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" />
                 <Field name="phone" label="Teléfono" type="tel" autoComplete="tel" inputMode="tel" />
               </div>
-              <Field name="line1" label="Calle y número" autoComplete="address-line1" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field name="line1" label="Calle y número" autoComplete="address-line1" />
+                <Field name="neighborhood" label="Colonia" autoComplete="address-line2" />
+              </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field name="city" label="Ciudad" autoComplete="address-level2" className="sm:col-span-1" />
+                <Field name="city" label="Ciudad / Municipio" autoComplete="address-level2" className="sm:col-span-1" />
                 <Field name="region" label="Estado" autoComplete="address-level1" />
                 <Field name="postal" label="C.P." autoComplete="postal-code" inputMode="numeric" maxLength={5} />
               </div>
               <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
-                <Truck size={14} /> Envío a todo México. Lo calculamos sin costo en este demo.
+                <Truck size={14} /> Envío gratis a todo México en 4–7 días hábiles.
               </p>
             </div>
           </section>
