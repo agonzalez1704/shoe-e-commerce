@@ -140,6 +140,9 @@ export type ComboNudge = {
   savingsCents: number;
 };
 
+/** Quick-add card for a combo model when a pool is one pair away. */
+export type ComboSuggestion = { slug: string; name: string; priceCents: number; image: string | null };
+
 export type CartSummary = {
   cartId: string | null;
   lines: CartLine[];
@@ -147,11 +150,12 @@ export type CartSummary = {
   comboDiscountCents: number;
   totalCents: number;
   comboNudges: ComboNudge[];
+  comboSuggestions: ComboSuggestion[];
 };
 
 export async function getCart(): Promise<CartSummary> {
   const { db, cartId } = await resolveCart(false);
-  if (!cartId) return { cartId: null, lines: [], subtotalCents: 0, comboDiscountCents: 0, totalCents: 0, comboNudges: [] };
+  if (!cartId) return { cartId: null, lines: [], subtotalCents: 0, comboDiscountCents: 0, totalCents: 0, comboNudges: [], comboSuggestions: [] };
 
   const { data: items } = await db
     .from("cart_items")
@@ -225,9 +229,27 @@ export async function getCart(): Promise<CartSummary> {
 
   // AOV nudge: pool one unit away from another pair
   const nudges: ComboNudge[] = [];
+  const groupsNeeding = new Set<string>();
   for (const pool of poolList) {
     const n = poolNudge(pool.unitPrices, pool.combo, pool.minPrice);
-    if (n) nudges.push({ href: "/products", ...n });
+    if (n) { nudges.push({ href: "/products", ...n }); groupsNeeding.add(pool.group); }
+  }
+
+  // quick-add cards: the combo models for pools that are one pair short
+  let comboSuggestions: ComboSuggestion[] = [];
+  if (groupsNeeding.size) {
+    const { data: sug } = await db
+      .from("products")
+      .select("name, slug, base_price_cents, product_images(url, position)")
+      .in("combo_group", [...groupsNeeding])
+      .eq("status", "active");
+    type Sug = { name: string; slug: string; base_price_cents: number; product_images: { url: string; position: number }[] };
+    comboSuggestions = ((sug ?? []) as unknown as Sug[]).map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      priceCents: p.base_price_cents,
+      image: [...(p.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url ?? null,
+    }));
   }
 
   return {
@@ -237,5 +259,6 @@ export async function getCart(): Promise<CartSummary> {
     comboDiscountCents: comboDiscount,
     totalCents: subtotal - comboDiscount,
     comboNudges: nudges,
+    comboSuggestions,
   };
 }

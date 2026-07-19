@@ -50,22 +50,44 @@ export function CartView({ initial }: { initial: CartSummary }) {
     <div className="space-y-6">
       <MadeToOrderNotice />
 
-      {initial.comboNudges.map((n, i) => (
-        <Link
-          key={i}
-          href={n.href}
-          className="group flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent-soft px-4 py-3.5 transition-colors hover:border-accent"
-        >
-          <Tag size={20} weight="fill" className="shrink-0 text-accent" />
-          <p className="text-sm">
-            Agrega {n.needed} par{n.needed > 1 ? "es" : ""} más del combo y ahorra{" "}
-            <span className="font-semibold text-accent">{mxn(n.savingsCents)}</span>.
+      {initial.comboNudges.length > 0 && (
+        <div className="rounded-2xl border border-accent/40 bg-accent-soft px-4 py-3.5">
+          <p className="flex items-center gap-2 text-sm">
+            <Tag size={20} weight="fill" className="shrink-0 text-accent" />
+            Agrega {initial.comboNudges[0].needed} par
+            {initial.comboNudges[0].needed > 1 ? "es" : ""} más del combo y ahorra{" "}
+            <span className="font-semibold text-accent">{mxn(initial.comboNudges[0].savingsCents)}</span>.
           </p>
-          <span className="ml-auto hidden shrink-0 text-xs font-medium text-accent group-hover:underline sm:block">
-            Elegir →
-          </span>
-        </Link>
-      ))}
+          {initial.comboSuggestions.length > 0 && (
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+              {initial.comboSuggestions.map((s) => (
+                <Link
+                  key={s.slug}
+                  href={`/products/${s.slug}`}
+                  className="group flex w-36 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface transition-colors hover:border-accent"
+                >
+                  <div className="aspect-square overflow-hidden bg-elevated">
+                    {s.image && (
+                      <Image
+                        src={s.image}
+                        alt={s.name}
+                        width={192}
+                        height={192}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="truncate text-xs font-medium">{s.name}</p>
+                    <p className="nums mt-0.5 text-xs text-muted">{mxn(s.priceCents)}</p>
+                    <span className="mt-1.5 block text-xs font-semibold text-accent group-hover:underline">Agregar →</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-10 md:grid-cols-[1fr_360px]">
         <ul className="divide-y divide-border">
