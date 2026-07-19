@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
@@ -31,6 +31,10 @@ declare global {
 }
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
+
+// contact + shipping fields we persist on-device for the next purchase (no card, no fiscal)
+const SAVE_KEY = "blade_checkout";
+const SAVE_FIELDS = ["name", "email", "phone", "line1", "neighborhood", "city", "region", "postal"] as const;
 
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
@@ -111,7 +115,21 @@ export function CheckoutForm({
 }) {
   const [method, setMethod] = useState<Method>("card");
   const [needsInvoice, setNeedsInvoice] = useState(false);
+  const [save, setSave] = useState(true);
   const [showCode, setShowCode] = useState(false);
+
+  // Prefill contact/shipping from the last "saved" checkout on this device, but
+  // only for fields the server didn't already fill (logged-in defaults win).
+  useEffect(() => {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    let saved: Record<string, string>;
+    try { saved = JSON.parse(raw); } catch { return; }
+    for (const f of SAVE_FIELDS) {
+      const el = document.getElementById(f) as HTMLInputElement | null;
+      if (el && !el.value && saved[f]) el.value = saved[f];
+    }
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckoutResult | null>(null);
@@ -147,6 +165,10 @@ export function CheckoutForm({
     setError(null);
     const form = e.currentTarget;
     const g = (n: string) => (form.elements.namedItem(n) as HTMLInputElement)?.value ?? "";
+
+    // remember (or forget) the contact/shipping data for next time
+    if (save) localStorage.setItem(SAVE_KEY, JSON.stringify(Object.fromEntries(SAVE_FIELDS.map((f) => [f, g(f)]))));
+    else localStorage.removeItem(SAVE_KEY);
 
     try {
       let cardTokenId: string | undefined;
@@ -242,6 +264,15 @@ export function CheckoutForm({
               <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
                 <Truck size={14} /> Envío gratis a todo México en 4–7 días hábiles.
               </p>
+              <label className="flex cursor-pointer items-center gap-2 pt-1 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={save}
+                  onChange={(e) => setSave(e.target.checked)}
+                  className="h-4 w-4 accent-accent"
+                />
+                Guardar mis datos para la próxima compra
+              </label>
             </div>
           </section>
 
