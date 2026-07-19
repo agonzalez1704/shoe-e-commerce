@@ -154,6 +154,17 @@ export async function sendReviewEmail(a: { to: string; orderNumber: string; revi
   );
 }
 
+// order delivered — admin marked the shipment delivered
+export async function sendDeliveredEmail(a: { to: string; orderNumber: string }) {
+  await send(
+    a.to,
+    `Tu pedido ${a.orderNumber} fue entregado`,
+    shell("¡Llegó tu Blade! 🎉",
+      `<p>Tu pedido <strong>${a.orderNumber}</strong> fue entregado. Gracias por confiar en Blade — esperamos que lo disfrutes en cada paso.</p>
+       <p style="color:#71717a">En unos días te pediremos tu opinión; nos ayuda muchísimo.</p>`),
+  );
+}
+
 // abandoned cart — items left in a logged-in user's cart, no order placed
 export async function sendAbandonedCartEmail(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {
   await send(

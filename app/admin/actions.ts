@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
-import { sendShippedEmail } from "@/lib/email";
+import { sendShippedEmail, sendDeliveredEmail } from "@/lib/email";
 
 type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
@@ -108,6 +108,11 @@ export async function setFulfillmentStage(orderId: string, stage: FulfillmentSta
         })),
       });
     }
+  }
+
+  if (stage === "delivered") {
+    const { data: o } = await supabase.from("orders").select("email, order_number").eq("id", orderId).maybeSingle();
+    if (o) await sendDeliveredEmail({ to: o.email, orderNumber: o.order_number });
   }
 
   revalidatePath(`/admin/orders/${orderId}`);
