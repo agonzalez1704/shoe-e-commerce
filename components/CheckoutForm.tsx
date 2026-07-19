@@ -10,6 +10,8 @@ import { formatCents } from "@/lib/money";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
 import { checkout, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 
 type Method = "card" | "oxxo" | "spei" | "aplazo";
 
@@ -61,16 +63,16 @@ function MethodMark({ id }: { id: Method }) {
 
 // floating-label field — label rides up on focus/fill; no separate label clutter
 function Field({
-  name, label, type = "text", required = true, autoComplete, inputMode, maxLength, className = "", onInput,
+  name, label, type = "text", required = true, autoComplete, inputMode, maxLength, className = "", onInput, defaultValue,
 }: {
   name: string; label: string; type?: string; required?: boolean; autoComplete?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]; maxLength?: number; className?: string;
-  onInput?: React.FormEventHandler<HTMLInputElement>;
+  onInput?: React.FormEventHandler<HTMLInputElement>; defaultValue?: string;
 }) {
   return (
     <div className={`relative ${className}`}>
       <input
-        id={name} name={name} type={type} required={required} placeholder=" "
+        id={name} name={name} type={type} required={required} placeholder=" " defaultValue={defaultValue}
         autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} onInput={onInput}
         className="peer h-14 w-full rounded-xl border border-border bg-surface px-3.5 pt-5 pb-1.5 text-sm text-text outline-none transition-colors focus:border-accent focus:ring-4 focus:ring-accent/10"
       />
@@ -96,11 +98,16 @@ function StepHeader({ n, title, hint }: { n: number; title: string; hint?: strin
 
 const CARD = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 
+export type CheckoutDefaults = Partial<
+  Record<"name" | "email" | "phone" | "line1" | "neighborhood" | "city" | "region" | "postal", string>
+>;
+
 export function CheckoutForm({
-  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey,
+  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false,
 }: {
   cartId: string; lines: CartLine[]; subtotalCents: number;
   comboDiscountCents: number; totalCents: number; conektaPublicKey: string;
+  defaults?: CheckoutDefaults; googleAuth?: boolean;
 }) {
   const [method, setMethod] = useState<Method>("card");
   const [needsInvoice, setNeedsInvoice] = useState(false);
@@ -208,20 +215,29 @@ export function CheckoutForm({
           {/* 1 — contact + shipping */}
           <section className={CARD}>
             <StepHeader n={1} title="Contacto y envío" />
+            {googleAuth && (
+              <div className="mb-4">
+                <GoogleSignInButton next="/checkout" label="Autocompletar con Google" />
+                <div className="mt-3 flex items-center gap-3 text-xs text-muted">
+                  <span className="h-px flex-1 bg-border" /> o captura tus datos <span className="h-px flex-1 bg-border" />
+                </div>
+              </div>
+            )}
+            <PlacesAutocomplete />
             <div className="space-y-3">
-              <Field name="name" label="Nombre completo" autoComplete="name" />
+              <Field name="name" label="Nombre completo" autoComplete="name" defaultValue={defaults.name} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" />
-                <Field name="phone" label="Teléfono" type="tel" autoComplete="tel" inputMode="tel" />
+                <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" defaultValue={defaults.email} />
+                <Field name="phone" label="Teléfono" type="tel" autoComplete="tel" inputMode="tel" defaultValue={defaults.phone} />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field name="line1" label="Calle y número" autoComplete="address-line1" />
-                <Field name="neighborhood" label="Colonia" autoComplete="address-line2" />
+                <Field name="line1" label="Calle y número" autoComplete="address-line1" defaultValue={defaults.line1} />
+                <Field name="neighborhood" label="Colonia" autoComplete="address-line2" defaultValue={defaults.neighborhood} />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field name="city" label="Ciudad / Municipio" autoComplete="address-level2" className="sm:col-span-1" />
-                <Field name="region" label="Estado" autoComplete="address-level1" />
-                <Field name="postal" label="C.P." autoComplete="postal-code" inputMode="numeric" maxLength={5} />
+                <Field name="city" label="Ciudad / Municipio" autoComplete="address-level2" className="sm:col-span-1" defaultValue={defaults.city} />
+                <Field name="region" label="Estado" autoComplete="address-level1" defaultValue={defaults.region} />
+                <Field name="postal" label="C.P." autoComplete="postal-code" inputMode="numeric" maxLength={5} defaultValue={defaults.postal} />
               </div>
               <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
                 <Truck size={14} /> Envío gratis a todo México en 4–7 días hábiles.
