@@ -59,7 +59,7 @@ export function ProductDetail({
 
   return (
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">
-      <div className="grid grid-cols-2 gap-3 self-start">
+      <div className="grid grid-cols-2 gap-3 self-start md:sticky md:top-24">
         {hero && (
           <div className="col-span-2 aspect-square overflow-hidden rounded-2xl border border-border bg-elevated">
             <ZoomImage src={hero.url} alt={hero.alt ?? product.name} priority onClick={() => setLightbox(0)} />
@@ -82,7 +82,7 @@ export function ProductDetail({
         />
       )}
 
-      <div className="md:sticky md:top-24 md:h-fit">
+      <div>
         {product.brand && <p className="text-sm uppercase tracking-wide text-muted">{product.brand}</p>}
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">{product.name}</h1>
         {rating && (
