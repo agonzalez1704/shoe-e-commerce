@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
+import { CaretLeft, EnvelopeSimple, WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -24,6 +24,11 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     .eq("id", id)
     .maybeSingle();
   if (!order) notFound();
+
+  const ship = (order.shipping_address ?? {}) as Record<string, string>;
+  // WhatsApp needs an E.164-ish number: strip non-digits, assume MX (52) for 10-digit locals
+  const digits = (ship.phone ?? "").replace(/\D/g, "");
+  const waNumber = digits.length === 10 ? `52${digits}` : digits.length >= 11 ? digits : null;
 
   const [{ data: items }, { data: payment }, { data: fiscal }, { data: cfdi }] = await Promise.all([
     supabase.from("order_items").select("product_name, variant_label, sku, unit_price_cents, quantity, line_total_cents").eq("order_id", id),
@@ -103,7 +108,32 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
             <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Cliente</h2>
+            {ship.name && <p className="font-medium">{ship.name}</p>}
             <p className="text-muted">{order.email}</p>
+            {ship.phone && <p className="nums text-muted">{ship.phone}</p>}
+            {(ship.line1 || ship.city) && (
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                {[ship.line1, ship.neighborhood, ship.city, ship.region, ship.postal].filter(Boolean).join(", ")}
+              </p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <a
+                href={`mailto:${order.email}?subject=${encodeURIComponent(`Pedido ${order.order_number} — Blade`)}&body=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de Blade sobre tu pedido ${order.order_number}. `)}`}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-elevated"
+              >
+                <EnvelopeSimple size={14} weight="bold" /> Correo
+              </a>
+              {waNumber && (
+                <a
+                  href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de Blade sobre tu pedido ${order.order_number}. `)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2 text-xs font-medium text-[#128C4B] transition-colors hover:bg-[#25D366]/20 dark:text-[#25D366]"
+                >
+                  <WhatsappLogo size={14} weight="fill" /> WhatsApp
+                </a>
+              )}
+            </div>
           </div>
 
           {order.needs_invoice && (

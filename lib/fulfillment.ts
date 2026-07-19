@@ -7,9 +7,9 @@ export type FulfillmentStage = "pending" | "in_production" | "ready" | "shipped"
 
 export const STAGES: { key: FulfillmentStage; label: string; short: string }[] = [
   { key: "pending", label: "Pendiente de pago", short: "Pendiente" },
-  { key: "in_production", label: "En producción", short: "Producción" },
-  { key: "ready", label: "Listo para envío", short: "Listo" },
-  { key: "shipped", label: "Enviado", short: "Enviado" },
+  { key: "in_production", label: "Fabricando", short: "Fabricando" },
+  { key: "ready", label: "Recogida por el courier", short: "Recogida" },
+  { key: "shipped", label: "En camino", short: "En camino" },
   { key: "delivered", label: "Entregado", short: "Entregado" },
 ];
 

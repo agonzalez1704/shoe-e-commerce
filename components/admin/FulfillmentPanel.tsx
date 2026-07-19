@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
 import { saveTracking, setFulfillmentStage, generateSkydropxLabel } from "@/app/admin/actions";
-import { STAGES, CARRIERS, stageIndex, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
+import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
 type Order = {
   id: string;
@@ -52,13 +52,8 @@ export function FulfillmentPanel({ order }: { order: Order }) {
       }
     });
 
-  const advanceLabel: Record<FulfillmentStage, string> = {
-    pending: "Iniciar producción",
-    in_production: "Marcar en producción",
-    ready: "Marcar listo",
-    shipped: "Marcar enviado",
-    delivered: "Marcar entregado",
-  };
+  // a stage past "ready" requires confirmed payment (shipped/delivered)
+  const stageBlocked = (key: FulfillmentStage) => (key === "shipped" || key === "delivered") && !isPaid;
 
   return (
     <div className="space-y-5 rounded-2xl border border-border bg-surface p-5">
@@ -69,17 +64,22 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         )}
       </div>
 
-      {/* Timeline */}
+      {/* Timeline — click any stage to set it directly */}
       <ol className="flex items-center">
         {STAGES.map((s, i) => {
           const done = i < curIdx;
           const current = i === curIdx;
           const Icon = done ? Check : STAGE_ICON[s.key];
+          const blocked = stageBlocked(s.key);
           return (
             <li key={s.key} className="flex flex-1 items-center last:flex-none">
               <div className="flex flex-col items-center gap-1.5">
-                <span
-                  className={`grid h-8 w-8 place-items-center rounded-full ring-1 transition-colors ${
+                <button
+                  type="button"
+                  disabled={isPending || current || blocked}
+                  title={blocked ? "Requiere pago confirmado" : `Marcar “${s.label}”`}
+                  onClick={() => run(() => setFulfillmentStage(order.id, s.key))}
+                  className={`grid h-8 w-8 place-items-center rounded-full ring-1 transition-colors disabled:cursor-not-allowed enabled:hover:ring-accent ${
                     done
                       ? "bg-accent text-accent-contrast ring-accent"
                       : current
@@ -88,7 +88,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
                   }`}
                 >
                   <Icon size={16} weight={done || current ? "bold" : "regular"} />
-                </span>
+                </button>
                 <span className={`text-[10px] ${current ? "font-semibold text-text" : "text-muted"}`}>{s.short}</span>
               </div>
               {i < STAGES.length - 1 && (
@@ -183,7 +183,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
               onClick={() => run(() => setFulfillmentStage(order.id, next))}
               className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Truck size={15} weight="bold" /> {advanceLabel[next]}
+              <Truck size={15} weight="bold" /> Marcar “{stageLabel(next)}”
             </button>
             {next === "shipped" && (
               <span className="text-xs text-muted">
