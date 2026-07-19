@@ -220,6 +220,7 @@ export type Database = {
       }
       carts: {
         Row: {
+          abandoned_email_sent_at: string | null
           created_at: string
           customer_id: string | null
           id: string
@@ -227,6 +228,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          abandoned_email_sent_at?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
@@ -234,6 +236,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          abandoned_email_sent_at?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string

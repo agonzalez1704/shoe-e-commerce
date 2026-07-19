@@ -154,6 +154,18 @@ export async function sendReviewEmail(a: { to: string; orderNumber: string; revi
   );
 }
 
+// abandoned cart — items left in a logged-in user's cart, no order placed
+export async function sendAbandonedCartEmail(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {
+  await send(
+    a.to,
+    "Dejaste algo en tu carrito 👟",
+    shell("Tu par te está esperando",
+      `<p>Hola${a.name ? ` ${a.name}` : ""}, guardamos lo que agregaste. Cada Blade se hace a mano sobre pedido — termina tu compra antes de que se agote tu talla.</p>
+       ${summary(a.lines)}
+       <p style="margin-top:18px">${button(a.cartUrl, "Terminar mi compra")}</p>`),
+  );
+}
+
 // order shipped — admin marked it fulfilled
 export async function sendShippedEmail(a: Base & { carrier?: string; tracking?: string }) {
   const track =
