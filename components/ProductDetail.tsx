@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Package, Truck, ShieldCheck, ArrowsClockwise, Hammer, Sparkle } from "@phosphor-icons/react";
+import { Package, Truck, ShieldCheck, ArrowsClockwise, Hammer, Sparkle, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { comboOf } from "@/lib/pricing";
-import { ComboBuilder } from "@/components/ComboBuilder";
 import { PdpInfo } from "@/components/PdpInfo";
 import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
@@ -108,12 +108,19 @@ export function ProductDetail({
         </ul>
 
         {combo && (
-          <ComboBuilder
-            product={product}
-            minQty={combo.minQty}
-            comboPriceCents={combo.priceCents}
-            initialColor={color}
-          />
+          <div className="mt-6 rounded-2xl border border-accent/30 bg-accent-soft/60 p-4">
+            <p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold">
+              <Tag size={16} weight="fill" className="text-accent" />
+              Combo {combo.minQty} pares — <span className="text-accent">{mxn(combo.priceCents)}</span>
+            </p>
+            <p className="mt-1.5 text-sm text-muted">
+              Combina {combo.minQty} pares del combo — este u otro modelo, cualquier color. El descuento se aplica
+              solo al agregar {combo.minQty} al carrito.
+            </p>
+            <Link href="/products" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
+              Ver modelos del combo →
+            </Link>
+          </div>
         )}
         {product.description && (
           <p className="mt-5 max-w-prose text-sm leading-relaxed text-muted">{product.description}</p>
