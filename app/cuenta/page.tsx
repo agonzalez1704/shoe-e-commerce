@@ -25,7 +25,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const [{ data: customer }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("full_name, email").eq("id", user.id).maybeSingle(),
-    supabase.from("orders").select("order_number, status, total_cents, created_at").eq("customer_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("order_number, status, total_cents, created_at, payment_method").eq("customer_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -46,11 +46,26 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
       ) : (
         <ul className="divide-y divide-border rounded-2xl border border-border">
           {(orders ?? []).map((o) => (
-            <li key={o.order_number} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+            <li key={o.order_number} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm">
               <span className="nums font-medium">{o.order_number}</span>
               <StatusBadge status={o.status} />
               <span className="text-muted">{new Date(o.created_at).toLocaleDateString("es-MX")}</span>
-              <span className="nums">{mxn(o.total_cents)}</span>
+              <span className="nums ml-auto">{mxn(o.total_cents)}</span>
+              {o.status === "pending" ? (
+                <Link
+                  href={`/pedido/${o.order_number}/pagar`}
+                  className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-contrast"
+                >
+                  {o.payment_method === "aplazo" ? "Continuar en Aplazo" : "Completar pago"} →
+                </Link>
+              ) : (
+                <Link
+                  href={`/rastrear?o=${o.order_number}`}
+                  className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
+                >
+                  Rastrear
+                </Link>
+              )}
             </li>
           ))}
         </ul>

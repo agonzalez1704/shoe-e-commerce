@@ -7,12 +7,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/rastrear" },
 };
 
-export default function RastrearPage() {
+export default async function RastrearPage({ searchParams }: { searchParams: Promise<{ o?: string }> }) {
+  const { o } = await searchParams;
   return (
     <div className="py-12">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">Rastrear pedido</h1>
       <p className="mb-8 text-sm text-muted">Ingresa tu número de pedido y el correo con el que compraste.</p>
-      <TrackOrder />
+      <TrackOrder defaultOrder={o ?? ""} />
     </div>
   );
 }

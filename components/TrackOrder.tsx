@@ -13,7 +13,7 @@ const STEPS = [
 ];
 const INPUT = "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-text";
 
-export function TrackOrder() {
+export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
   const [result, setResult] = useState<TrackedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -41,7 +41,7 @@ export function TrackOrder() {
   return (
     <div className="mx-auto max-w-lg">
       <form onSubmit={onSubmit} className="space-y-3">
-        <input name="o" placeholder="Número de pedido (BL-001234)" required className={INPUT} />
+        <input name="o" defaultValue={defaultOrder} placeholder="Número de pedido (BL-001234)" required className={INPUT} />
         <input name="e" type="email" placeholder="Correo del pedido" required className={INPUT} />
         {error && <p className="text-sm text-accent">{error}</p>}
         <button
