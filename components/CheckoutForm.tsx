@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
@@ -129,6 +129,7 @@ export function CheckoutForm({
       const el = document.getElementById(f) as HTMLInputElement | null;
       if (el && !el.value && saved[f]) el.value = saved[f];
     }
+    revalidate(); // prefilled values may already satisfy the form
   }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +138,15 @@ export function CheckoutForm({
   // controlled card state drives the react-credit-cards-2 live preview
   const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
   const [focus, setFocus] = useState<Focused | undefined>(undefined);
+
+  // Keep the pay button disabled until every required field is filled. The
+  // contact/shipping inputs are uncontrolled, so lean on native validity
+  // instead of mirroring them all into state.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [formValid, setFormValid] = useState(false);
+  const revalidate = () => setFormValid(!!formRef.current?.checkValidity());
+  // fields appear/disappear with the payment method and the invoice toggle
+  useEffect(revalidate, [method, needsInvoice, showCode, card]);
 
   // Validate locally first: Conekta answers an opaque 422 for any malformed
   // field, so catch the fixable cases and say which one is wrong.
@@ -247,7 +257,7 @@ export function CheckoutForm({
         </span>
       </div>
 
-      <form onSubmit={onSubmit} className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+      <form ref={formRef} onSubmit={onSubmit} onInput={revalidate} onChange={revalidate} className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-5">
           {/* 1 — contact + shipping */}
           <section className={CARD}>
@@ -450,11 +460,14 @@ export function CheckoutForm({
           {error && <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">{error}</p>}
 
           <button
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99] disabled:opacity-60"
+            disabled={loading || !formValid || (method === "card" && cardError() !== null)}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Procesando…" : <><Lock size={15} weight="fill" /> {cta}</>}
           </button>
+          {!loading && !formValid && (
+            <p className="mt-2 text-center text-xs text-muted">Completa tus datos para continuar.</p>
+          )}
 
           <div className="flex flex-wrap items-center justify-center gap-1.5">
             <VisaMark />
