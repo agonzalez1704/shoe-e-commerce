@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { sendShippedEmail, sendDeliveredEmail, sendVoucherEmail } from "@/lib/email";
+import { notifyAdmins } from "@/lib/push";
+import { stageLabel } from "@/lib/fulfillment";
 
 type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
@@ -47,9 +49,25 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     }
   }
 
+  const { data: num } = await supabase.from("orders").select("order_number").eq("id", orderId).maybeSingle();
+  await notifyAdmins({
+    title: `Pedido ${STATUS_LABEL[status]}`,
+    body: `${num?.order_number ?? "Pedido"} actualizado.`,
+    url: `/admin/orders/${orderId}`,
+    tag: `order-${orderId}`,
+  });
+
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/orders");
 }
+
+const STATUS_LABEL: Record<OrderStatus, string> = {
+  pending: "pendiente",
+  paid: "pagado",
+  fulfilled: "enviado",
+  cancelled: "cancelado",
+  refunded: "reembolsado",
+};
 
 type FulfillmentStage = "pending" | "in_production" | "ready" | "shipped" | "delivered";
 
@@ -114,6 +132,16 @@ export async function setFulfillmentStage(orderId: string, stage: FulfillmentSta
     const { data: o } = await supabase.from("orders").select("email, order_number").eq("id", orderId).maybeSingle();
     if (o) await sendDeliveredEmail({ to: o.email, orderNumber: o.order_number });
   }
+
+  // mirror the change to every admin device, including the one that made it —
+  // a solo operator still wants the confirmation on their phone
+  const { data: num } = await supabase.from("orders").select("order_number").eq("id", orderId).maybeSingle();
+  await notifyAdmins({
+    title: `${stageLabel(stage)}`,
+    body: `${num?.order_number ?? "Pedido"} cambió de etapa.`,
+    url: `/admin/orders/${orderId}`,
+    tag: `order-${orderId}`,
+  });
 
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/orders");
