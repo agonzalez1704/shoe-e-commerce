@@ -3,6 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConektaOrder } from "@/lib/conekta";
 import { sendPaidEmail } from "@/lib/email";
 import { stampOrderCfdi } from "@/lib/cfdi";
+import { notifyAdmins } from "@/lib/push";
+import { formatCents } from "@/lib/money";
+
+const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 // Conekta -> us. OXXO/SPEI confirm here asynchronously; card double-fires (idempotent).
 // Two-layer trust: shared secret in the URL + re-fetch the order from Conekta to
@@ -91,6 +95,13 @@ export async function POST(req: NextRequest) {
         taxCents: order.tax_cents,
       },
     });
+    await notifyAdmins({
+      title: `Pago recibido · ${mxn(order.total_cents)}`,
+      body: `${order.order_number} — ${payment.method.toUpperCase()}. Listo para producción.`,
+      url: `/admin/orders/${payment.order_id}`,
+      tag: `order-${payment.order_id}`,
+    });
+
     // stamp CFDI on payment if requested (non-fatal; records failure for admin retry)
     if (order.needs_invoice) await stampOrderCfdi(payment.order_id);
   }

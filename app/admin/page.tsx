@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StageBadge } from "@/components/StageBadge";
+import { PushToggle } from "@/components/admin/PushToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ export default async function AdminHome() {
 
   return (
     <div className="space-y-10">
+      <PushToggle />
+
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, href, Icon }) => (
           <Link key={label} href={href} className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-text">

@@ -6,6 +6,10 @@ import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { sendVoucherEmail, sendPaidEmail } from "@/lib/email";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
+import { notifyAdmins } from "@/lib/push";
+import { formatCents } from "@/lib/money";
+
+const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 // Free shipping on every order — that's what /envios, the PDP, the cart and the
 // checkout all promise. Keep this the single place that decides, so a threshold
@@ -123,6 +127,16 @@ async function rollbackOrder(orderId: string, cartId: string) {
       .filter((i): i is { variant_id: string; quantity: number } => !!i.variant_id)
       .map((i) => ({ cart_id: cartId, variant_id: i.variant_id, quantity: i.quantity }));
     if (rows.length) await admin.from("cart_items").upsert(rows, { onConflict: "cart_id,variant_id" });
+
+    const { data: o } = await admin.from("orders").select("order_number, total_cents").eq("id", orderId).maybeSingle();
+    if (o) {
+      await notifyAdmins({
+        title: "Pago rechazado",
+        body: `${o.order_number} — ${mxn(o.total_cents)}. El carrito se devolvió al cliente.`,
+        url: "/admin/orders",
+        tag: `order-${orderId}`,
+      });
+    }
   } catch (e) {
     console.error("[checkout] rollback failed:", e); // never mask the original error
   }
@@ -295,6 +309,15 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
       breakdown,
     });
   }
+
+  // ping the admin phone: a cash/SPEI order is only a lead until it's paid, a
+  // card one is already money in
+  await notifyAdmins({
+    title: cardPaid ? `Pedido pagado · ${mxn(totalCents)}` : `Pedido nuevo · ${mxn(totalCents)}`,
+    body: `${created.order_number} — ${input.method.toUpperCase()} · ${input.customerName}`,
+    url: `/admin/orders/${orderId}`,
+    tag: `order-${orderId}`,
+  });
 
   return {
     orderNumber: created.order_number,

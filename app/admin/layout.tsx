@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,12 @@ import { AngleJobsProvider } from "@/components/providers/AngleJobsProvider";
 import { GlobalJobProgress } from "@/components/admin/GlobalJobProgress";
 
 export const dynamic = "force-dynamic";
+
+// installable admin PWA (its own manifest so the storefront is unaffected)
+export const metadata: Metadata = {
+  manifest: "/admin.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Blade Admin" },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
