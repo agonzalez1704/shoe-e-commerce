@@ -16,6 +16,16 @@ type Params = { o?: string; order_id?: string; payment_status?: string };
 async function resolveState({ o, order_id, payment_status }: Params): Promise<"paid" | "pending" | "failed"> {
   const declined = /error|declined|failed|denied/i.test(payment_status ?? "");
 
+  try {
+    return await lookupState({ o, order_id }, declined);
+  } catch (e) {
+    // a buyer returning from the provider must never hit an error page
+    console.error("[gracias] state lookup failed:", e);
+    return declined ? "failed" : "pending";
+  }
+}
+
+async function lookupState({ o, order_id }: Params, declined: boolean): Promise<"paid" | "pending" | "failed"> {
   if (o && order_id) {
     const admin = createAdminClient();
     const { data: payment } = await admin

@@ -157,25 +157,31 @@ export type CartSummary = {
 // ever throwing in the checkout action, yet create_order already emptied the
 // cart. Put the items back so the buyer can retry, and release the stock.
 // Idempotent: only acts while the order is still pending.
+// Callable from a Server Component render, so it must not write cookies or
+// revalidate — both throw during render. resolveCart(false) is enough: the
+// buyer already had a cart, create_order only emptied it.
 export async function restoreCartFromOrder(orderId: string) {
-  const admin = createAdminClient();
-  const { data: order } = await admin.from("orders").select("status").eq("id", orderId).maybeSingle();
-  if (order?.status !== "pending") return;
+  try {
+    const admin = createAdminClient();
+    const { data: order } = await admin.from("orders").select("status").eq("id", orderId).maybeSingle();
+    if (order?.status !== "pending") return;
 
-  const { data: items } = await admin
-    .from("order_items")
-    .select("variant_id, quantity")
-    .eq("order_id", orderId);
+    const { data: items } = await admin
+      .from("order_items")
+      .select("variant_id, quantity")
+      .eq("order_id", orderId);
 
-  await admin.rpc("cancel_order", { p_order_id: orderId }); // releases reserved stock
+    await admin.rpc("cancel_order", { p_order_id: orderId }); // releases reserved stock
 
-  const { cartId } = await resolveCart(true);
-  if (!cartId) return;
-  const rows = (items ?? [])
-    .filter((i): i is { variant_id: string; quantity: number } => !!i.variant_id)
-    .map((i) => ({ cart_id: cartId, variant_id: i.variant_id, quantity: i.quantity }));
-  if (rows.length) await admin.from("cart_items").upsert(rows, { onConflict: "cart_id,variant_id" });
-  revalidatePath("/cart");
+    const { cartId } = await resolveCart(false);
+    if (!cartId) return;
+    const rows = (items ?? [])
+      .filter((i): i is { variant_id: string; quantity: number } => !!i.variant_id)
+      .map((i) => ({ cart_id: cartId, variant_id: i.variant_id, quantity: i.quantity }));
+    if (rows.length) await admin.from("cart_items").upsert(rows, { onConflict: "cart_id,variant_id" });
+  } catch (e) {
+    console.error("[cart] restore from order failed:", e); // never break the page
+  }
 }
 
 // Item count for the header badge. Cheap (one column) and never creates a cart,
