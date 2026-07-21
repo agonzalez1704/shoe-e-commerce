@@ -153,6 +153,15 @@ export type CartSummary = {
   comboSuggestions: ComboSuggestion[];
 };
 
+// Item count for the header badge. Cheap (one column) and never creates a cart,
+// so it can run on every page without minting cookies for bots.
+export async function getCartCount(): Promise<number> {
+  const { db, cartId } = await resolveCart(false);
+  if (!cartId) return 0;
+  const { data } = await db.from("cart_items").select("quantity").eq("cart_id", cartId);
+  return (data ?? []).reduce((n, r) => n + (r.quantity as number), 0);
+}
+
 export async function getCart(): Promise<CartSummary> {
   const { db, cartId } = await resolveCart(false);
   if (!cartId) return { cartId: null, lines: [], subtotalCents: 0, comboDiscountCents: 0, totalCents: 0, comboNudges: [], comboSuggestions: [] };

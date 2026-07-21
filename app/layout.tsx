@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
-import { ShoppingBag, UserCircle } from "@phosphor-icons/react/dist/ssr";
+import { UserCircle } from "@phosphor-icons/react/dist/ssr";
+import { CartBadge } from "@/components/CartBadge";
 import { ViewTransition } from "@/components/ViewTransition";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
@@ -97,9 +98,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link
                 href="/cart"
                 aria-label="Carrito"
-                className="grid h-10 w-10 place-items-center rounded-full text-muted transition-colors hover:text-text"
+                className="relative grid h-10 w-10 place-items-center rounded-full text-muted transition-colors hover:text-text"
               >
-                <ShoppingBag size={20} weight="regular" />
+                <CartBadge />
               </Link>
             </div>
           </nav>

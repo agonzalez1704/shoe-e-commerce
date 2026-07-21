@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Trash, ShoppingBag, Package, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { updateCartItem, removeFromCart, type CartSummary } from "@/app/cart/actions";
+import { notifyCartChanged } from "@/components/CartBadge";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -44,7 +45,8 @@ export function CartView({ initial }: { initial: CartSummary }) {
     );
   }
 
-  const act = (fn: () => Promise<void>) => startTransition(async () => { await fn(); router.refresh(); });
+  const act = (fn: () => Promise<void>) =>
+    startTransition(async () => { await fn(); notifyCartChanged(); router.refresh(); });
 
   return (
     <div className="space-y-6">
