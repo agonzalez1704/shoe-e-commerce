@@ -145,8 +145,11 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     if (error) throw new Error(`fiscal data: ${error.message}`);
   }
 
-  // 4. line items for the Conekta voucher
-  const { data: items } = await supabase
+  // 4. line items for the Conekta voucher.
+  //    Service role on purpose: RLS only exposes order_items to the owning
+  //    customer, so a guest checkout read back zero rows and Conekta ended up
+  //    charging just the shipping line.
+  const { data: items } = await admin
     .from("order_items")
     .select("product_name, variant_label, unit_price_cents, quantity")
     .eq("order_id", orderId);
@@ -158,6 +161,15 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   }));
   if (shipping > 0) lineItems.push({ name: "Envío", unit_price: shipping, quantity: 1 });
 
+  // Conekta derives the amount from these lines, so they must reconcile with the
+  // order total. Failing here is far better than over/under-charging the buyer.
+  const lineSum = lineItems.reduce((n, li) => n + li.unit_price * li.quantity, 0);
+  if (lineSum - created.discount_cents !== totalCents) {
+    throw new Error(
+      `line items (${lineSum} - ${created.discount_cents}) do not match order total ${totalCents} for ${created.order_number}`,
+    );
+  }
+
   const expiresUnix = created.expires_at
     ? Math.floor(new Date(created.expires_at).getTime() / 1000)
     : undefined;
@@ -168,6 +180,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     method: input.method,
     customer: { name: input.customerName, email: input.email, phone: input.phone ?? "" },
     lineItems,
+    discountCents: created.discount_cents,
     cardTokenId: input.cardTokenId,
     orderNumber: created.order_number,
     expiresAt: expiresUnix,

@@ -42,6 +42,7 @@ type CreateArgs = {
   method: ConektaMethod;
   customer: { name: string; email: string; phone: string };
   lineItems: LineItem[];
+  discountCents?: number;    // coupon/combo discount -> Conekta discount_lines
   cardTokenId?: string;      // required for card (from Conekta.js on the client)
   orderNumber: string;       // our reference -> Conekta metadata
   expiresAt?: number;        // unix seconds, for oxxo/spei voucher expiry
@@ -101,6 +102,12 @@ export async function createConektaOrder(a: CreateArgs): Promise<ConektaOrder> {
     charges: [{ payment_method: paymentMethodBlock(a) }],
     metadata: { order_number: a.orderNumber },
   };
+
+  // Conekta charges the sum of line_items minus discount_lines — it ignores any
+  // total we'd send — so the discount has to travel as its own line.
+  if (a.discountCents && a.discountCents > 0) {
+    body.discount_lines = [{ code: "descuento", type: "coupon", amount: a.discountCents }];
+  }
 
   // card requires 3DS2; Conekta returns a challenge redirect when needed
   if (a.method === "card") {
