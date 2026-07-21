@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
-import { sendShippedEmail, sendDeliveredEmail } from "@/lib/email";
+import { sendShippedEmail, sendDeliveredEmail, sendVoucherEmail } from "@/lib/email";
 
 type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
@@ -177,6 +177,56 @@ export async function generateSkydropxLabel(orderId: string) {
 
   revalidatePath(`/admin/orders/${orderId}`);
   return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
+}
+
+// Re-send the cash/SPEI payment instructions (barcode + reference or CLABE).
+// For buyers who lost the original mail and checked out as guests, this is the
+// only way back to their voucher.
+export async function resendPaymentInstructions(orderId: string) {
+  const supabase = await requireAdmin();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("email, order_number, total_cents, status, payment_method, expires_at")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) throw new Error("Pedido no encontrado.");
+  if (order.status !== "pending") throw new Error("El pedido ya no está pendiente de pago.");
+  if (order.payment_method !== "oxxo" && order.payment_method !== "spei") {
+    throw new Error("Este pedido no se paga con referencia.");
+  }
+
+  const { data: payment } = await supabase
+    .from("payments")
+    .select("reference, clabe, voucher_url")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!payment?.reference && !payment?.clabe) throw new Error("El pedido no tiene referencia de pago.");
+
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("product_name, variant_label, unit_price_cents, quantity")
+    .eq("order_id", orderId);
+
+  await sendVoucherEmail({
+    to: order.email,
+    orderNumber: order.order_number,
+    totalCents: order.total_cents,
+    method: order.payment_method,
+    reference: payment.reference ?? undefined,
+    clabe: payment.clabe ?? undefined,
+    voucherUrl: payment.voucher_url ?? undefined,
+    expiresAt: order.expires_at,
+    lines: (items ?? []).map((i) => ({
+      name: `${i.product_name} (${i.variant_label})`,
+      quantity: i.quantity,
+      lineTotalCents: i.unit_price_cents * i.quantity,
+    })),
+  });
+
+  return { sentTo: order.email };
 }
 
 // ---- discount codes ----

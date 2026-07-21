@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { OrderStatusActions } from "@/components/OrderStatusActions";
 import { CfdiActions } from "@/components/CfdiActions";
 import { FulfillmentPanel } from "@/components/admin/FulfillmentPanel";
+import { ResendVoucher } from "@/components/admin/ResendVoucher";
 
 export const dynamic = "force-dynamic";
 
@@ -102,8 +103,16 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
             <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Pago</h2>
             <p className="uppercase">{payment?.method ?? order.payment_method ?? "—"} · <span className="text-muted">{payment?.status ?? "—"}</span></p>
-            {payment?.reference && <p className="nums mt-1 text-muted">Ref: {payment.reference}</p>}
-            {payment?.clabe && <p className="nums mt-1 text-muted">CLABE: {payment.clabe}</p>}
+            {payment?.reference && <p className="nums mt-1 break-all text-muted">Ref: {payment.reference}</p>}
+            {payment?.clabe && <p className="nums mt-1 break-all text-muted">CLABE: {payment.clabe}</p>}
+            {payment?.voucher_url && (
+              <a href={payment.voucher_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs text-accent hover:underline">
+                Ver código de barras
+              </a>
+            )}
+            {order.status === "pending" && (order.payment_method === "oxxo" || order.payment_method === "spei") && (
+              <ResendVoucher orderId={order.id} />
+            )}
           </div>
 
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
