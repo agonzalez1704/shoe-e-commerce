@@ -13,11 +13,15 @@ const MexicoFlag = () => (
   </svg>
 );
 
-export function OrderConfirmation({ orderNumber, trackUrl }: { orderNumber: string; trackUrl: string }) {
+export function OrderConfirmation({
+  orderNumber,
+  trackUrl,
+  status = "Pedido confirmado",
+}: { orderNumber: string; trackUrl: string; status?: string }) {
   const router = useRouter();
   return (
     <PackageTrackerCard
-      status="Pedido confirmado"
+      status={status}
       packageNumber={orderNumber}
       destination="Envío a México"
       destinationFlag={<MexicoFlag />}
