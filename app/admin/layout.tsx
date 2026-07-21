@@ -26,8 +26,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <GlobalJobProgress />
       <div className="py-8">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        <nav className="flex items-center gap-1 text-sm">
-          <span className="mr-3 font-semibold tracking-tight">Admin</span>
+        {/* the six links don't fit a phone: scroll them instead of stretching the page */}
+        <nav className="-mx-4 flex max-w-full items-center gap-1 overflow-x-auto px-4 text-sm [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+          <span className="mr-3 shrink-0 font-semibold tracking-tight">Admin</span>
           {[
             ["/admin", "Inicio"],
             ["/admin/orders", "Pedidos"],
@@ -36,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             ["/admin/discounts", "Descuentos"],
             ["/admin/ajustes", "Ajustes"],
           ].map(([href, label]) => (
-            <Link key={href} href={href} className="rounded-full px-3 py-1.5 text-muted transition-colors hover:text-text">
+            <Link key={href} href={href} className="shrink-0 rounded-full px-3 py-1.5 text-muted transition-colors hover:text-text">
               {label}
             </Link>
           ))}
