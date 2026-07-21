@@ -62,6 +62,8 @@ export type ConektaCharge = {
     receiving_account_number?: string;  // CLABE to transfer to
     receiving_account_bank?: string;
     expires_at?: number;
+    // Aplazo (type "bnpl") — BNPL puts its approval URL here, not in next_action
+    redirect_url?: string;
   };
 };
 

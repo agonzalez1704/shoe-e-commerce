@@ -236,7 +236,9 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   const clabe = pm.receiving_account_number;      // SPEI
   const bank = pm.receiving_account_bank;         // SPEI
   // redirect to provider — card 3DS challenge OR Aplazo approval
-  const redirectUrl = co.next_action?.redirect_to_url?.url;
+  // card 3DS uses next_action; Aplazo (BNPL) hands its approval URL back on the
+  // payment method instead, so check both or the buyer never reaches Aplazo.
+  const redirectUrl = co.next_action?.redirect_to_url?.url ?? pm.redirect_url;
 
   // 6. record the pending payment + voucher details (service role)
   await admin.rpc("record_payment", {
