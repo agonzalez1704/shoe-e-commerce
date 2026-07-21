@@ -9,8 +9,7 @@
 
 const BASE = "https://pro.skydropx.com/api/v1";
 
-// Blade warehouse. ⚠️ Verify the postal code (León Col. Obregón is likely 37320;
-// 37000 is Centro) before going live — it drives the quote.
+// Blade warehouse. Postal code confirmed 37000 by the owner (drives the quote).
 export const ORIGIN = {
   name: "Blade",
   company: "Blade",
