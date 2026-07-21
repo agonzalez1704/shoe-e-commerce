@@ -23,7 +23,12 @@ async function conekta<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const body = await res.json();
   if (!res.ok) {
-    throw new Error(`conekta ${res.status}: ${JSON.stringify(body?.details ?? body)}`);
+    // Conekta ships a buyer-facing Spanish string; prefer it over the raw dump so
+    // the checkout can show something actionable. Full payload goes to the logs.
+    console.error(`[conekta] ${res.status} ${path}:`, JSON.stringify(body).slice(0, 800));
+    const d = body?.details?.[0];
+    const buyer: string | undefined = d?.message_to_purchaser ?? d?.message;
+    throw new Error(buyer ?? `conekta ${res.status}`);
   }
   return body as T;
 }

@@ -46,7 +46,34 @@ export type CheckoutResult = {
   redirectUrl?: string; // card 3DS or Aplazo BNPL approval
 };
 
-export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
+export type CheckoutError = { error: string };
+
+// Next masks thrown server-action errors in production ("a digest property is
+// included..."), which is useless to a buyer. So every failure comes back as a
+// returned message: known causes get actionable Spanish, the rest a generic
+// line, and the real detail is logged for us.
+export async function checkout(input: CheckoutInput): Promise<CheckoutResult | CheckoutError> {
+  try {
+    return await runCheckout(input);
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    console.error("[checkout] failed:", raw);
+    return { error: buyerMessage(raw) };
+  }
+}
+
+// Messages we author (Spanish, already actionable) pass through; anything that
+// smells like an internal failure is replaced.
+function buyerMessage(raw: string): string {
+  if (/discount code/i.test(raw)) return "El código de descuento no es válido o ya venció.";
+  if (/out of stock|sin stock/i.test(raw)) return "Un artículo de tu carrito ya no está disponible.";
+  if (/cart .* not found|cart is empty/i.test(raw)) return "Tu carrito expiró. Vuelve a agregar tus productos.";
+  // our own Spanish strings + Conekta's buyer-facing messages are safe to show
+  if (/^[^{}]*[áéíóúñ¿¡]/i.test(raw) && raw.length < 200) return raw;
+  return "No pudimos procesar tu pago. Verifica tus datos o intenta con otro método.";
+}
+
+async function runCheckout(input: CheckoutInput): Promise<CheckoutResult> {
   // abuse guard: 10 checkout attempts / minute / IP (layered with the pending-order cap)
   const ip = await clientIp();
   if (!(await rateLimit("checkout", ip, 10, 60))) {

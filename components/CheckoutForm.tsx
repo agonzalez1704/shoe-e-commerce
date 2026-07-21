@@ -221,6 +221,10 @@ export function CheckoutForm({
       };
 
       const res = await checkout(input);
+      if ("error" in res) {
+        setError(res.error);
+        return;
+      }
       if (res.redirectUrl) {
         window.location.href = res.redirectUrl;
         return;
