@@ -158,6 +158,7 @@ export function CheckoutForm({
     const code = (formRef.current?.elements.namedItem("discount") as HTMLInputElement)?.value ?? "";
     setCheckingCode(true);
     setCodeMsg(null);
+    setError(null); // a previous attempt's failure isn't about this code
     try {
       const r = await previewDiscount(code, subtotalCents);
       if (r.ok) {
