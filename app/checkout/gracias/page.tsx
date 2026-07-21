@@ -64,7 +64,7 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
             movimiento en tu tarjeta es una retención temporal que tu banco libera.
           </p>
           <p className="mt-3 text-sm text-muted">
-            Intenta de nuevo con otra tarjeta, o paga en OXXO o por transferencia.
+            Intenta de nuevo con otra tarjeta, o paga en efectivo o por transferencia.
           </p>
         </div>
         <div className="mt-8 flex flex-wrap justify-center gap-3">

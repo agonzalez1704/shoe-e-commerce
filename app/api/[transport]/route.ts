@@ -36,7 +36,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "fiados_pendientes",
-      "Pedidos pendientes de pago (OXXO/SPEI/Aplazo sin liquidar): cliente, monto, días y productos.",
+      "Pedidos pendientes de pago (efectivo/SPEI/Aplazo sin liquidar): cliente, monto, días y productos.",
       {},
       async () => json(await fiadosPendientes()),
     );

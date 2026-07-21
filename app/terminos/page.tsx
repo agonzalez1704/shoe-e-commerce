@@ -28,8 +28,8 @@ export default function TerminosPage() {
       <h2>2. Precios y pagos</h2>
       <ul>
         <li>Todos los precios están en pesos mexicanos (MXN) e incluyen IVA.</li>
-        <li>Aceptamos tarjeta de crédito/débito, OXXO, transferencia SPEI y Aplazo, procesados por Conekta.</li>
-        <li>El pedido se confirma únicamente cuando el pago se acredita. Los pagos en efectivo (OXXO) y SPEI tienen una fecha límite; si vencen, el pedido se cancela automáticamente.</li>
+        <li>Aceptamos tarjeta de crédito/débito, pago en efectivo en tiendas (7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más), transferencia SPEI y Aplazo, procesados por Conekta.</li>
+        <li>El pedido se confirma únicamente cuando el pago se acredita. Los pagos en efectivo y SPEI tienen una fecha límite; si vencen, el pedido se cancela automáticamente.</li>
       </ul>
 
       <h2>3. Combos y promociones</h2>

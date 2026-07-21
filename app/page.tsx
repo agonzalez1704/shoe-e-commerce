@@ -112,7 +112,7 @@ function Benefits() {
   const items = [
     { icon: Package, title: "Hecho sobre pedido", sub: "Fabricado a mano para ti" },
     { icon: Truck, title: "Envío gratis", sub: "Entrega en 4–7 días hábiles" },
-    { icon: CreditCard, title: "Paga como quieras", sub: "Tarjeta, OXXO, SPEI o Aplazo" },
+    { icon: CreditCard, title: "Paga como quieras", sub: "Tarjeta, efectivo, SPEI o Aplazo" },
     { icon: MapPin, title: "Todo México", sub: "Con factura disponible" },
   ];
   return (

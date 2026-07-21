@@ -42,7 +42,7 @@ const BRANDS: Record<string, BrandConfig> = {
     name: "Blade",
     tagline: "Filo en cada paso.",
     description:
-      "Calzado de piel hecho sobre pedido en México. Diseño afilado, todas las tallas y anchos, envío a todo el país. Pago con tarjeta, OXXO o SPEI.",
+      "Calzado de piel hecho sobre pedido en México. Diseño afilado, todas las tallas y anchos, envío a todo el país. Pago con tarjeta, efectivo o SPEI.",
     emailFrom: "Blade <pedidos@calzadoblade.com>",
     announcement: "Hecho sobre pedido · Envío en 4-7 días hábiles · Envíos a todo México",
     seoSuffix: "calzado de piel hecho en México",

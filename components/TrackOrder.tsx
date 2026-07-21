@@ -80,7 +80,7 @@ export function TrackOrder() {
           {result.status === "pending" && result.payment && (
             <div className="mt-4 rounded-lg bg-accent-soft p-3 text-sm">
               <p className="font-medium text-accent">Falta tu pago</p>
-              {result.payment.reference && <p className="nums mt-1 text-muted">Referencia OXXO: {result.payment.reference}</p>}
+              {result.payment.reference && <p className="nums mt-1 text-muted">Referencia de pago en efectivo: {result.payment.reference}</p>}
               {result.payment.clabe && <p className="nums mt-1 text-muted">CLABE SPEI: {result.payment.clabe}</p>}
               {result.payment.voucherUrl && (
                 <a href={result.payment.voucherUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent underline">

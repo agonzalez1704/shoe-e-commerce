@@ -89,9 +89,9 @@ export async function sendVoucherEmail(
   const expires = a.expiresAt ? new Date(a.expiresAt).toLocaleString("es-MX") : null;
   const instructions =
     a.method === "oxxo"
-      ? `<p style="margin:0 0 8px">Paga en cualquier OXXO mostrando este código:</p>
+      ? `<p style="margin:0 0 8px">Paga en efectivo mostrando este código en 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más:</p>
          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:16px;text-align:center">
-           ${a.voucherUrl ? `<img src="${a.voucherUrl}" alt="Código OXXO" style="max-height:120px"/><br/>` : ""}
+           ${a.voucherUrl ? `<img src="${a.voucherUrl}" alt="Código de pago en efectivo" style="max-height:120px"/><br/>` : ""}
            <span style="font-family:monospace;font-size:15px;letter-spacing:1px;color:#18181b">${a.reference ?? ""}</span>
          </div>`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE${a.bank ? ` (${a.bank})` : ""}:</p>
@@ -116,7 +116,7 @@ export async function sendPaymentReminderEmail(
   const expires = a.expiresAt ? new Date(a.expiresAt).toLocaleString("es-MX") : null;
   const detail =
     a.method === "oxxo"
-      ? `<p style="margin:0 0 8px">Paga en cualquier OXXO con esta referencia:</p>
+      ? `<p style="margin:0 0 8px">Paga en efectivo con esta referencia en 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más:</p>
          <div class="mono" style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:16px;color:#18181b">${a.reference ?? ""}</div>`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE:</p>
          <div style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:18px;color:#18181b">${a.clabe ?? ""}</div>`;
