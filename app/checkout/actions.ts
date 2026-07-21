@@ -7,9 +7,11 @@ import { sendVoucherEmail, sendPaidEmail } from "@/lib/email";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 
-// flat shipping: 199 MXN, free over 1,500 MXN (centavos)
-function shippingFor(subtotalMinusDiscount: number) {
-  return subtotalMinusDiscount >= 150_000 ? 0 : 19_900;
+// Free shipping on every order — that's what /envios, the PDP, the cart and the
+// checkout all promise. Keep this the single place that decides, so a threshold
+// can never silently reappear and surprise the buyer at charge time.
+function shippingFor(_subtotalMinusDiscount: number) {
+  return 0;
 }
 
 export type FiscalInput = {
@@ -45,6 +47,45 @@ export type CheckoutResult = {
   card?: { paid: boolean };
   redirectUrl?: string; // card 3DS or Aplazo BNPL approval
 };
+
+export type DiscountPreview = { ok: true; discountCents: number } | { ok: false; error: string };
+
+// Show the buyer what a code is worth before they pay. Display only —
+// create_order recomputes it authoritatively — so this must mirror the SQL
+// exactly, including its integer division.
+export async function previewDiscount(code: string, subtotalCents: number): Promise<DiscountPreview> {
+  const c = code.trim().toUpperCase();
+  if (!c) return { ok: false, error: "Escribe un código." };
+
+  // codes are short and guessable; don't let anyone enumerate them
+  const ip = await clientIp();
+  if (!(await rateLimit("discount-preview", ip, 20, 60))) {
+    return { ok: false, error: "Demasiados intentos. Espera un momento." };
+  }
+
+  const admin = createAdminClient(); // discount_codes is admin-only under RLS
+  const { data: d } = await admin
+    .from("discount_codes")
+    .select("type, value, min_subtotal_cents, max_uses, used_count, starts_at, expires_at, active")
+    .eq("code", c)
+    .maybeSingle();
+
+  const now = Date.now();
+  const usable =
+    d &&
+    d.active &&
+    (!d.starts_at || new Date(d.starts_at).getTime() <= now) &&
+    (!d.expires_at || new Date(d.expires_at).getTime() > now) &&
+    (d.max_uses == null || d.used_count < d.max_uses) &&
+    subtotalCents >= d.min_subtotal_cents;
+  if (!usable) return { ok: false, error: "El código no es válido o ya venció." };
+
+  const discountCents =
+    d.type === "percent"
+      ? Math.floor((subtotalCents * d.value) / 100) // matches Postgres integer division
+      : Math.min(d.value, subtotalCents);
+  return { ok: true, discountCents };
+}
 
 export type CheckoutError = { error: string };
 

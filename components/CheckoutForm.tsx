@@ -8,7 +8,7 @@ import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
-import { checkout, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
+import { checkout, previewDiscount, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
@@ -148,6 +148,33 @@ export function CheckoutForm({
   // fields appear/disappear with the payment method and the invoice toggle
   useEffect(revalidate, [method, needsInvoice, showCode, card]);
 
+  // Discount code preview. create_order recomputes it at order time; this only
+  // shows the buyer the real total before they commit.
+  const [codeDiscount, setCodeDiscount] = useState(0);
+  const [codeMsg, setCodeMsg] = useState<string | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+
+  async function applyCode() {
+    const code = (formRef.current?.elements.namedItem("discount") as HTMLInputElement)?.value ?? "";
+    setCheckingCode(true);
+    setCodeMsg(null);
+    try {
+      const r = await previewDiscount(code, subtotalCents);
+      if (r.ok) {
+        setCodeDiscount(r.discountCents);
+        setCodeMsg(`Código aplicado: −${mxn(r.discountCents)}`);
+      } else {
+        setCodeDiscount(0);
+        setCodeMsg(r.error);
+      }
+    } finally {
+      setCheckingCode(false);
+    }
+  }
+
+  // combo discount is already baked into totalCents by the cart
+  const effectiveTotal = Math.max(0, totalCents - codeDiscount);
+
   // Validate locally first: Conekta answers an opaque 422 for any malformed
   // field, so catch the fixable cases and say which one is wrong.
   function cardError(): string | null {
@@ -248,7 +275,7 @@ export function CheckoutForm({
 
   const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/10";
 
-  const cta = method === "card" ? `Pagar ${mxn(totalCents)}` : "Confirmar pedido";
+  const cta = method === "card" ? `Pagar ${mxn(effectiveTotal)}` : "Confirmar pedido";
 
   return (
     <>
@@ -436,7 +463,22 @@ export function CheckoutForm({
                 <Tag size={14} /> ¿Tienes un código de descuento?
               </button>
             ) : (
-              <Field name="discount" label="Código de descuento" required={false} />
+              <>
+                <div className="flex items-end gap-2">
+                  <Field name="discount" label="Código de descuento" required={false} className="flex-1" />
+                  <button
+                    type="button"
+                    disabled={checkingCode}
+                    onClick={applyCode}
+                    className="h-14 shrink-0 rounded-xl border border-accent px-4 text-sm font-medium text-accent transition-colors hover:bg-accent-soft disabled:opacity-50"
+                  >
+                    {checkingCode ? "…" : "Aplicar"}
+                  </button>
+                </div>
+                {codeMsg && (
+                  <p className={`mt-2 text-xs ${codeDiscount > 0 ? "text-accent" : "text-muted"}`}>{codeMsg}</p>
+                )}
+              </>
             )}
           </div>
 
@@ -451,13 +493,19 @@ export function CheckoutForm({
                 <span className="nums font-medium text-accent">−{mxn(comboDiscountCents)}</span>
               </div>
             )}
+            {codeDiscount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-accent">Código de descuento</span>
+                <span className="nums font-medium text-accent">−{mxn(codeDiscount)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted">Envío</span>
               <span className="font-medium text-accent">Gratis</span>
             </div>
             <div className="flex items-baseline justify-between pt-1.5">
               <span className="font-semibold">Total</span>
-              <span className="nums text-xl font-semibold">{mxn(totalCents)}</span>
+              <span className="nums text-xl font-semibold">{mxn(effectiveTotal)}</span>
             </div>
           </div>
 
