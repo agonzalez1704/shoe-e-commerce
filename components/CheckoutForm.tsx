@@ -138,8 +138,23 @@ export function CheckoutForm({
   const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
   const [focus, setFocus] = useState<Focused | undefined>(undefined);
 
+  // Validate locally first: Conekta answers an opaque 422 for any malformed
+  // field, so catch the fixable cases and say which one is wrong.
+  function cardError(): string | null {
+    const number = card.number.replace(/\s/g, "");
+    const [mm, yy] = card.expiry.split("/");
+    if (!/^\d{13,19}$/.test(number)) return "Revisa el número de tarjeta.";
+    if (!card.name.trim()) return "Escribe el nombre como aparece en la tarjeta.";
+    if (!mm || !yy || !/^\d{2}$/.test(mm) || Number(mm) < 1 || Number(mm) > 12 || !/^\d{2,4}$/.test(yy))
+      return "Revisa la fecha de expiración (MM/AA).";
+    if (!/^\d{3,4}$/.test(card.cvc)) return "Revisa el CVC.";
+    return null;
+  }
+
   function tokenizeCard(): Promise<string> {
     return new Promise((resolve, reject) => {
+      const bad = cardError();
+      if (bad) return reject(new Error(bad));
       if (!window.Conekta) return reject(new Error("Conekta.js no cargó"));
       window.Conekta.setPublicKey(conektaPublicKey);
       const [mm, yy] = card.expiry.split("/");
@@ -314,23 +329,23 @@ export function CheckoutForm({
                   <input
                     value={card.number} onChange={(e) => setCardField("number", fmtNumber(e.target.value))}
                     onFocus={() => setFocus("number")} onBlur={() => setFocus(undefined)}
-                    placeholder="Número de tarjeta" inputMode="numeric" autoComplete="cc-number" maxLength={19} className={CI}
+                    placeholder="Número de tarjeta" inputMode="numeric" autoComplete="cc-number" maxLength={19} required className={CI}
                   />
                   <input
                     value={card.name} onChange={(e) => setCardField("name", e.target.value)}
                     onFocus={() => setFocus("name")} onBlur={() => setFocus(undefined)}
-                    placeholder="Nombre en la tarjeta" autoComplete="cc-name" className={CI}
+                    placeholder="Nombre en la tarjeta" autoComplete="cc-name" required className={CI}
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       value={card.expiry} onChange={(e) => setCardField("expiry", fmtExpiry(e.target.value))}
                       onFocus={() => setFocus("expiry")} onBlur={() => setFocus(undefined)}
-                      placeholder="MM/AA" inputMode="numeric" autoComplete="cc-exp" maxLength={5} className={CI}
+                      placeholder="MM/AA" inputMode="numeric" autoComplete="cc-exp" maxLength={5} required className={CI}
                     />
                     <input
                       value={card.cvc} onChange={(e) => setCardField("cvc", e.target.value.replace(/\D/g, "").slice(0, 4))}
                       onFocus={() => setFocus("cvc")} onBlur={() => setFocus(undefined)}
-                      placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={4} className={CI}
+                      placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={4} required className={CI}
                     />
                   </div>
                   <p className="flex items-center gap-1.5 text-xs text-muted">
