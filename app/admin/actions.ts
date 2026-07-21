@@ -179,6 +179,50 @@ export async function generateSkydropxLabel(orderId: string) {
   return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
 }
 
+// ---- discount codes ----
+// create_order matches the code exactly, so codes are stored upper-cased and the
+// checkout upper-cases what the buyer types.
+export async function createDiscountCode(input: {
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+  minSubtotalCents: number;
+  maxUses: number | null;
+  expiresAt: string | null;
+}) {
+  const supabase = await requireAdmin();
+  const code = input.code.trim().toUpperCase();
+  if (!code) throw new Error("El código no puede estar vacío.");
+  if (!(input.value > 0)) throw new Error("El valor debe ser mayor a 0.");
+  if (input.type === "percent" && input.value > 100) throw new Error("El porcentaje no puede pasar de 100.");
+
+  const { error } = await supabase.from("discount_codes").insert({
+    code,
+    type: input.type,
+    value: input.value,
+    min_subtotal_cents: Math.max(0, Math.round(input.minSubtotalCents)),
+    max_uses: input.maxUses,
+    expires_at: input.expiresAt,
+    active: true,
+  });
+  if (error) throw new Error(error.code === "23505" ? "Ya existe un código con ese nombre." : error.message);
+  revalidatePath("/admin/discounts");
+}
+
+export async function setDiscountActive(id: string, active: boolean) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from("discount_codes").update({ active }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/discounts");
+}
+
+export async function deleteDiscountCode(id: string) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from("discount_codes").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/discounts");
+}
+
 export async function setInventory(variantId: string, qtyOnHand: number) {
   const supabase = await requireAdmin();
   const { error } = await supabase

@@ -64,11 +64,16 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
       p_payment_method: input.method,
       p_shipping: input.shippingAddress as never,
       p_billing: (input.billingAddress ?? input.shippingAddress) as never,
-      p_discount_code: input.discountCode ?? undefined,
+      // codes are stored upper-cased; create_order matches exactly
+      p_discount_code: input.discountCode?.trim().toUpperCase() || undefined,
       p_needs_invoice: !!input.fiscal,
     })
     .single();
-  if (createErr || !created) throw new Error(createErr?.message ?? "create_order failed");
+  if (createErr || !created) {
+    const msg = createErr?.message ?? "create_order failed";
+    // surface the one error a buyer can actually fix, in Spanish
+    throw new Error(/discount code/i.test(msg) ? "El código de descuento no es válido o ya venció." : msg);
+  }
 
   const orderId = created.order_id;
   const baseAfterDiscount = created.subtotal_cents - created.discount_cents;
