@@ -53,12 +53,37 @@ export type CheckoutError = { error: string };
 // returned message: known causes get actionable Spanish, the rest a generic
 // line, and the real detail is logged for us.
 export async function checkout(input: CheckoutInput): Promise<CheckoutResult | CheckoutError> {
+  // create_order empties the cart as soon as the order exists, so a failure after
+  // that point would leave the buyer with nothing to retry with.
+  let createdOrderId: string | null = null;
   try {
-    return await runCheckout(input);
+    return await runCheckout(input, (id) => { createdOrderId = id; });
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     console.error("[checkout] failed:", raw);
+    if (createdOrderId) await rollbackOrder(createdOrderId, input.cartId);
     return { error: buyerMessage(raw) };
+  }
+}
+
+// Payment never went through: release the reserved stock, cancel the order and
+// put the items back in the cart so the buyer can just try again.
+async function rollbackOrder(orderId: string, cartId: string) {
+  try {
+    const admin = createAdminClient();
+    const { data: items } = await admin
+      .from("order_items")
+      .select("variant_id, quantity")
+      .eq("order_id", orderId);
+
+    await admin.rpc("cancel_order", { p_order_id: orderId }); // releases stock
+
+    const rows = (items ?? [])
+      .filter((i): i is { variant_id: string; quantity: number } => !!i.variant_id)
+      .map((i) => ({ cart_id: cartId, variant_id: i.variant_id, quantity: i.quantity }));
+    if (rows.length) await admin.from("cart_items").upsert(rows, { onConflict: "cart_id,variant_id" });
+  } catch (e) {
+    console.error("[checkout] rollback failed:", e); // never mask the original error
   }
 }
 
@@ -73,7 +98,7 @@ function buyerMessage(raw: string): string {
   return "No pudimos procesar tu pago. Verifica tus datos o intenta con otro método.";
 }
 
-async function runCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) => void): Promise<CheckoutResult> {
   // abuse guard: 10 checkout attempts / minute / IP (layered with the pending-order cap)
   const ip = await clientIp();
   if (!(await rateLimit("checkout", ip, 10, 60))) {
@@ -103,6 +128,7 @@ async function runCheckout(input: CheckoutInput): Promise<CheckoutResult> {
   }
 
   const orderId = created.order_id;
+  onOrderCreated(orderId); // from here on, a failure must roll the cart back
   const baseAfterDiscount = created.subtotal_cents - created.discount_cents;
 
   // 2. add shipping, recompute totals (service role)

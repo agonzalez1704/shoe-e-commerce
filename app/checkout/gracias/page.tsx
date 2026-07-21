@@ -2,6 +2,7 @@ import Link from "next/link";
 import { WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { OrderConfirmation } from "@/components/OrderConfirmation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { restoreCartFromOrder } from "@/app/cart/actions";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ type Params = { o?: string; order_id?: string; payment_status?: string };
 // sequential and guessable, so the lookup is keyed on the provider's order id
 // (unguessable) — holding it proves the visitor came through the flow.
 async function resolveState({ o, order_id, payment_status }: Params): Promise<"paid" | "pending" | "failed"> {
+  const declined = /error|declined|failed|denied/i.test(payment_status ?? "");
+
   if (o && order_id) {
     const admin = createAdminClient();
     const { data: payment } = await admin
@@ -24,10 +27,15 @@ async function resolveState({ o, order_id, payment_status }: Params): Promise<"p
     if (order?.order_number === o) {
       if (order.status === "paid" || order.status === "fulfilled") return "paid";
       if (order.status === "cancelled") return "failed";
+      // still pending and the provider says it failed -> hand the cart back
+      if (declined && payment?.order_id) {
+        await restoreCartFromOrder(payment.order_id);
+        return "failed";
+      }
     }
   }
   // not confirmed on our side yet — the provider's hint is all we have
-  return /error|declined|failed|denied/i.test(payment_status ?? "") ? "failed" : "pending";
+  return declined ? "failed" : "pending";
 }
 
 export default async function GraciasPage({ searchParams }: { searchParams: Promise<Params> }) {
