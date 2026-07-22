@@ -52,8 +52,8 @@ function Hero() {
     <section className="relative ml-[calc(50%-50vw)] w-screen">
       <div className="relative aspect-[4/3] w-full overflow-hidden sm:aspect-[16/9]">
         <Image
-          src="/hero-sneakers.jpg"
-          alt="Sneakers de piel Blade en un patio mediterráneo al atardecer"
+          src="/hero-moto.jpg"
+          alt="Sneaker de piel Blade con grabado cocodrilo apoyado en el estribo de una motocicleta al atardecer"
           fill
           priority
           sizes="100vw"
