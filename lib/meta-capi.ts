@@ -21,10 +21,11 @@ export type CapiPurchase = {
   valueCents: number;
   orderNumber: string;
   sourceUrl?: string;
+  testEventCode?: string; // Events Manager "Probar eventos" code; omit in production
 };
 
 export async function sendPurchaseToMeta(p: CapiPurchase) {
-  if (!PIXEL_ID || !TOKEN) return; // not configured -> silently skip
+  if (!PIXEL_ID || !TOKEN) return { skipped: "no configurado" as const }; // not configured -> silently skip
 
   const userData: Record<string, string[]> = {};
   if (p.email) userData.em = [hash(p.email)];
@@ -33,7 +34,8 @@ export async function sendPurchaseToMeta(p: CapiPurchase) {
     if (digits) userData.ph = [hash(digits.length === 10 ? `52${digits}` : digits)];
   }
 
-  const body = {
+  const body: Record<string, unknown> = {
+    ...(p.testEventCode ? { test_event_code: p.testEventCode } : {}),
     data: [
       {
         event_name: "Purchase",
@@ -57,8 +59,14 @@ export async function sendPurchaseToMeta(p: CapiPurchase) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) console.error("[meta-capi]", res.status, (await res.text()).slice(0, 300));
+    const text = await res.text();
+    if (!res.ok) {
+      console.error("[meta-capi]", res.status, text.slice(0, 300));
+      return { ok: false as const, status: res.status, detail: text.slice(0, 300) };
+    }
+    return { ok: true as const, detail: text.slice(0, 200) };
   } catch (e) {
     console.error("[meta-capi] send failed:", e); // never break the webhook
+    return { ok: false as const, detail: e instanceof Error ? e.message : "error" };
   }
 }
