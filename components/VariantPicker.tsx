@@ -6,6 +6,7 @@ import { ShoppingBag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { addToCart } from "@/app/cart/actions";
 import { trackMeta } from "@/components/MetaPixel";
+import { metaContentId } from "@/lib/meta-content";
 
 type Variant = {
   id: string;
@@ -21,12 +22,14 @@ type Variant = {
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 export function VariantPicker({
+  slug,
   variants,
   basePriceCents,
   color,
   onColorChange,
   madeToOrder = false,
 }: {
+  slug: string;
   variants: Variant[];
   basePriceCents: number;
   color: string;
@@ -58,7 +61,7 @@ export function VariantPicker({
     startTransition(async () => {
       await addToCart(selected.id, 1);
       trackMeta("AddToCart", {
-        content_ids: [selected.sku],
+        content_ids: [metaContentId(slug, selected.color)],
         content_type: "product",
         value: (selected.price_cents ?? basePriceCents) / 100,
         currency: "MXN",

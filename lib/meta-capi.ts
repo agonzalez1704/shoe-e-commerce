@@ -20,6 +20,7 @@ export type CapiPurchase = {
   phone?: string;       // digits only, with country code
   valueCents: number;
   orderNumber: string;
+  contentIds?: string[]; // catalog ids, so the server Purchase matches the feed
   sourceUrl?: string;
   testEventCode?: string; // Events Manager "Probar eventos" code; omit in production
 };
@@ -48,6 +49,7 @@ export async function sendPurchaseToMeta(p: CapiPurchase) {
           value: p.valueCents / 100,
           currency: "MXN",
           order_id: p.orderNumber,
+          ...(p.contentIds?.length ? { content_type: "product", content_ids: p.contentIds } : {}),
         },
       },
     ],

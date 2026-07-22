@@ -11,6 +11,7 @@ import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
 import { Stars } from "@/components/Stars";
 import { trackMeta } from "@/components/MetaPixel";
+import { metaContentId } from "@/lib/meta-content";
 import type { ProductDetail as Product } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -58,16 +59,18 @@ export function ProductDetail({
     [product.variants, product.base_price_cents, color],
   );
 
-  // Meta: one ViewContent per product page (colour changes aren't new content)
+  // Meta: ViewContent per colour, since each colour is its own catalog item —
+  // dynamic ads match on this id
   useEffect(() => {
+    if (!color) return;
     trackMeta("ViewContent", {
-      content_ids: [product.slug],
-      content_name: product.name,
+      content_ids: [metaContentId(product.slug, color)],
+      content_name: `${product.name} ${color}`,
       content_type: "product",
-      value: product.base_price_cents / 100,
+      value: colorPriceCents / 100,
       currency: "MXN",
     });
-  }, [product.slug, product.name, product.base_price_cents]);
+  }, [product.slug, product.name, color, colorPriceCents]);
 
   return (
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">
@@ -152,6 +155,7 @@ export function ProductDetail({
         )}
 
         <VariantPicker
+          slug={product.slug}
           variants={product.variants}
           basePriceCents={product.base_price_cents}
           color={color}

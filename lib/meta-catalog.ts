@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SITE_URL } from "@/lib/site";
+import { metaContentId } from "@/lib/meta-content";
 
 // Meta Commerce product feed, generated live from the DB. Meta re-fetches this on
 // a schedule, so a sale (availability) or a product add/remove is reflected
@@ -16,9 +17,6 @@ const COLS = [
   "gtin","product_tags[0]","product_tags[1]","style[0]",
 ] as const;
 
-function slugify(s: string) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
 function cell(v: unknown) {
   const s = String(v ?? "");
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -74,7 +72,7 @@ export async function buildMetaCatalogCsv(): Promise<string> {
         "";
 
       const row: Row = {
-        id: `${p.slug}__${slugify(color)}`,
+        id: metaContentId(p.slug, color),
         title: `${p.name} ${color} — Sneaker de piel`.slice(0, 200),
         description: p.description ?? `${p.name} en piel genuina. Hecho a mano en México.`,
         availability: inStock ? "in stock" : "out of stock",

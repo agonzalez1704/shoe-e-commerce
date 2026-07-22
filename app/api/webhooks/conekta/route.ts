@@ -5,6 +5,7 @@ import { sendPaidEmail } from "@/lib/email";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { notifyAdmins } from "@/lib/push";
 import { sendPurchaseToMeta } from "@/lib/meta-capi";
+import { metaContentId } from "@/lib/meta-content";
 import { SITE_URL } from "@/lib/site";
 import { formatCents } from "@/lib/money";
 
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
   if (order) {
     const { data: items } = await admin
       .from("order_items")
-      .select("product_name, variant_label, unit_price_cents, quantity")
+      .select("product_name, variant_label, unit_price_cents, quantity, variants(color, products(slug))")
       .eq("order_id", payment.order_id);
     await sendPaidEmail({
       to: order.email,
@@ -100,12 +101,19 @@ export async function POST(req: NextRequest) {
     // report the confirmed conversion to Meta (browser pixel can't: cash/SPEI
     // confirm long after the buyer left)
     const ship = (order as { shipping_address?: Record<string, string> }).shipping_address;
+    const contentIds = (items ?? [])
+      .map((i) => {
+        const v = i.variants as unknown as { color?: string; products?: { slug?: string } } | null;
+        return v?.products?.slug && v.color ? metaContentId(v.products.slug, v.color) : null;
+      })
+      .filter((x): x is string => !!x);
     await sendPurchaseToMeta({
       eventId: order.order_number,
       orderNumber: order.order_number,
       email: order.email,
       phone: ship?.phone,
       valueCents: order.total_cents,
+      contentIds,
       sourceUrl: `${SITE_URL}/checkout`,
     });
 

@@ -13,6 +13,7 @@ import type { CartLine } from "@/app/cart/actions";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { trackMeta } from "@/components/MetaPixel";
+import { metaContentId } from "@/lib/meta-content";
 
 type Method = "card" | "oxxo" | "spei" | "aplazo";
 
@@ -155,7 +156,7 @@ export function CheckoutForm({
       value: totalCents / 100,
       currency: "MXN",
       num_items: lines.reduce((n, l) => n + l.quantity, 0),
-      content_ids: lines.map((l) => l.slug),
+      content_ids: lines.map((l) => metaContentId(l.slug, l.color)),
     });
   }, []);
 
@@ -270,7 +271,12 @@ export function CheckoutForm({
       if (res.card?.paid) {
         trackMeta(
           "Purchase",
-          { value: res.totalCents / 100, currency: "MXN", content_type: "product" },
+          {
+            value: res.totalCents / 100,
+            currency: "MXN",
+            content_type: "product",
+            content_ids: lines.map((l) => metaContentId(l.slug, l.color)),
+          },
           res.orderNumber,
         );
       }
