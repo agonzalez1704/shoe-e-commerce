@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Package, Truck, ShieldCheck, ArrowsClockwise, Hammer, Sparkle, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { comboOf } from "@/lib/pricing";
@@ -10,6 +10,7 @@ import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
 import { Stars } from "@/components/Stars";
+import { trackMeta } from "@/components/MetaPixel";
 import type { ProductDetail as Product } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -56,6 +57,17 @@ export function ProductDetail({
     () => product.variants.find((v) => v.color === color && v.price_cents != null)?.price_cents ?? product.base_price_cents,
     [product.variants, product.base_price_cents, color],
   );
+
+  // Meta: one ViewContent per product page (colour changes aren't new content)
+  useEffect(() => {
+    trackMeta("ViewContent", {
+      content_ids: [product.slug],
+      content_name: product.name,
+      content_type: "product",
+      value: product.base_price_cents / 100,
+      currency: "MXN",
+    });
+  }, [product.slug, product.name, product.base_price_cents]);
 
   return (
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">

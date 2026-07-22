@@ -4,6 +4,8 @@ import { getConektaOrder } from "@/lib/conekta";
 import { sendPaidEmail } from "@/lib/email";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { notifyAdmins } from "@/lib/push";
+import { sendPurchaseToMeta } from "@/lib/meta-capi";
+import { SITE_URL } from "@/lib/site";
 import { formatCents } from "@/lib/money";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
   // confirmation email (non-fatal)
   const { data: order } = await admin
     .from("orders")
-    .select("email, order_number, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, needs_invoice")
+    .select("email, order_number, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, needs_invoice, shipping_address")
     .eq("id", payment.order_id)
     .maybeSingle();
   if (order) {
@@ -95,6 +97,18 @@ export async function POST(req: NextRequest) {
         taxCents: order.tax_cents,
       },
     });
+    // report the confirmed conversion to Meta (browser pixel can't: cash/SPEI
+    // confirm long after the buyer left)
+    const ship = (order as { shipping_address?: Record<string, string> }).shipping_address;
+    await sendPurchaseToMeta({
+      eventId: order.order_number,
+      orderNumber: order.order_number,
+      email: order.email,
+      phone: ship?.phone,
+      valueCents: order.total_cents,
+      sourceUrl: `${SITE_URL}/checkout`,
+    });
+
     await notifyAdmins({
       title: `Pago recibido · ${mxn(order.total_cents)}`,
       body: `${order.order_number} — ${payment.method.toUpperCase()}. Listo para producción.`,

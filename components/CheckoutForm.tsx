@@ -12,6 +12,7 @@ import { checkout, previewDiscount, type CheckoutResult, type CheckoutInput } fr
 import type { CartLine } from "@/app/cart/actions";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
+import { trackMeta } from "@/components/MetaPixel";
 
 type Method = "card" | "oxxo" | "spei" | "aplazo";
 
@@ -148,6 +149,16 @@ export function CheckoutForm({
   // fields appear/disappear with the payment method and the invoice toggle
   useEffect(revalidate, [method, needsInvoice, showCode, card]);
 
+  // Meta: the buyer reached checkout with a real cart
+  useEffect(() => {
+    trackMeta("InitiateCheckout", {
+      value: totalCents / 100,
+      currency: "MXN",
+      num_items: lines.reduce((n, l) => n + l.quantity, 0),
+      content_ids: lines.map((l) => l.slug),
+    });
+  }, []);
+
   // Discount code preview. create_order recomputes it at order time; this only
   // shows the buyer the real total before they commit.
   const [codeDiscount, setCodeDiscount] = useState(0);
@@ -252,6 +263,16 @@ export function CheckoutForm({
       if ("error" in res) {
         setError(res.error);
         return;
+      }
+      // Meta: only a card that cleared right now is a real purchase. Cash, SPEI
+      // and Aplazo confirm later — the Conversions API reports those from the
+      // webhook, sharing this eventID so Meta never double-counts.
+      if (res.card?.paid) {
+        trackMeta(
+          "Purchase",
+          { value: res.totalCents / 100, currency: "MXN", content_type: "product" },
+          res.orderNumber,
+        );
       }
       if (res.redirectUrl) {
         window.location.href = res.redirectUrl;

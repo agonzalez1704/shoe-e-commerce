@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShoppingBag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { addToCart } from "@/app/cart/actions";
+import { trackMeta } from "@/components/MetaPixel";
 
 type Variant = {
   id: string;
@@ -56,6 +57,12 @@ export function VariantPicker({
     }
     startTransition(async () => {
       await addToCart(selected.id, 1);
+      trackMeta("AddToCart", {
+        content_ids: [selected.sku],
+        content_type: "product",
+        value: (selected.price_cents ?? basePriceCents) / 100,
+        currency: "MXN",
+      });
       router.push("/cart");
     });
   };

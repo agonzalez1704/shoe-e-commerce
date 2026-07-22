@@ -52,10 +52,17 @@ export default function PrivacidadPage() {
         solicitud concreta. Responderemos en los plazos que marca la ley.
       </p>
 
-      <h2>5. Cookies</h2>
+      <h2>5. Cookies y herramientas de medición</h2>
       <p>
         Usamos cookies y tecnologías similares para el funcionamiento del carrito, la sesión y métricas de uso.
         Puedes deshabilitarlas desde tu navegador, aunque algunas funciones podrían verse afectadas.
+      </p>
+      <p>
+        Utilizamos <strong>Meta Pixel</strong> y la <strong>API de Conversiones de Meta</strong> (Meta Platforms,
+        Inc.) para medir la efectividad de nuestra publicidad. Esto implica compartir con Meta eventos de
+        navegación y compra. Cuando enviamos datos de contacto para asociar una compra, se transmiten{" "}
+        <strong>cifrados con SHA-256</strong>, nunca en texto claro. Puedes limitar este tratamiento desde la
+        configuración de anuncios de tu cuenta de Meta o bloqueando cookies de terceros en tu navegador.
       </p>
 
       <h2>6. Cambios al aviso</h2>
