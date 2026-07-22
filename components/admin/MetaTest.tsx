@@ -16,12 +16,9 @@ export function MetaTest() {
     startTransition(async () => {
       setMsg(null);
       setErr(null);
-      try {
-        const r = await sendMetaTestEvent(code);
-        setMsg(`Enviado. Meta respondió: ${r.detail}`);
-      } catch (e) {
-        setErr(e instanceof Error ? e.message : "Error");
-      }
+      const r = await sendMetaTestEvent(code);
+      if (r.ok) setMsg(`Enviado. Meta respondió: ${r.detail}`);
+      else setErr(r.error);
     });
   }
 
