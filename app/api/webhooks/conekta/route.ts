@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConektaOrder } from "@/lib/conekta";
-import { sendPaidEmail } from "@/lib/email";
+import { sendPaidEmail, sendExpiredEmail } from "@/lib/email";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { notifyAdmins } from "@/lib/push";
 import { sendPurchaseToMeta } from "@/lib/meta-capi";
@@ -53,6 +53,29 @@ export async function POST(req: NextRequest) {
 
   // anti-spoof: confirm with Conekta directly
   const co = await getConektaOrder(conektaOrderId);
+
+  // voucher expired / charge declined / voided -> release the order so the
+  // reserved stock comes back, and tell the buyer. Idempotent: cancel_order
+  // only touches a still-pending order.
+  if (/expired|declined|voided|canceled|cancelled/i.test(co.payment_status ?? "")) {
+    const { data: o } = await admin
+      .from("orders")
+      .select("order_number, status, email")
+      .eq("id", payment.order_id)
+      .maybeSingle();
+    if (o && o.status === "pending") {
+      await admin.rpc("cancel_order", { p_order_id: payment.order_id });
+      await sendExpiredEmail({ to: o.email, orderNumber: o.order_number, shopUrl: `${SITE_URL}/products` });
+      await notifyAdmins({
+        title: "Pago vencido",
+        body: `${o.order_number} — la referencia venció sin pago. Stock liberado.`,
+        url: `/admin/orders/${payment.order_id}`,
+        tag: `order-${payment.order_id}`,
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (co.payment_status !== "paid") {
     return NextResponse.json({ ok: true });
   }

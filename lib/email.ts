@@ -165,6 +165,18 @@ export async function sendDeliveredEmail(a: { to: string; orderNumber: string })
   );
 }
 
+// cash/SPEI voucher expired unpaid — the order was released, invite a retry
+export async function sendExpiredEmail(a: { to: string; orderNumber: string; shopUrl: string }) {
+  await send(
+    a.to,
+    `Tu pedido ${a.orderNumber} venció`,
+    shell("Tu referencia de pago venció",
+      `<p>No recibimos el pago de tu pedido <strong>${a.orderNumber}</strong> antes de la fecha límite, así que lo liberamos. No se hizo ningún cargo.</p>
+       <p>Si aún lo quieres, puedes volver a ordenarlo — tu calzado se fabrica sobre pedido.</p>
+       <p style="margin-top:16px">${button(a.shopUrl, "Volver a la tienda")}</p>`),
+  );
+}
+
 // abandoned cart — items left in a logged-in user's cart, no order placed
 export async function sendAbandonedCartEmail(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {
   await send(
