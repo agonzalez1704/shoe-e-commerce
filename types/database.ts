@@ -104,6 +104,42 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          device: string | null
+          id: number
+          path: string
+          referrer: string | null
+          session_id: string
+          source: string | null
+          target: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          id?: never
+          path: string
+          referrer?: string | null
+          session_id: string
+          source?: string | null
+          target?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          id?: never
+          path?: string
+          referrer?: string | null
+          session_id?: string
+          source?: string | null
+          target?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       angle_jobs: {
         Row: {
           created_at: string
@@ -1302,6 +1338,7 @@ export type Database = {
       }
     }
     Functions: {
+      analytics_summary: { Args: { p_days?: number }; Returns: Json }
       cancel_order: { Args: { p_order_id: string }; Returns: undefined }
       check_rate_limit: {
         Args: {

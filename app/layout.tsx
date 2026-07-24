@@ -4,6 +4,7 @@ import Link from "next/link";
 import { UserCircle } from "@phosphor-icons/react/dist/ssr";
 import { CartBadge } from "@/components/CartBadge";
 import { MetaPixel } from "@/components/MetaPixel";
+import { AnalyticsBeacon } from "@/components/AnalyticsBeacon";
 import { ViewTransition } from "@/components/ViewTransition";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="overflow-x-hidden">
         <MetaPixel />
+        <AnalyticsBeacon />
         <div className="bg-text text-bg">
           <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs">
             {activeBrand.announcement ?? "Envíos a todo México"}
