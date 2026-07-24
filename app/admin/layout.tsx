@@ -26,8 +26,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <GlobalJobProgress />
       <div className="py-8">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        {/* the six links don't fit a phone: scroll them instead of stretching the page */}
-        <nav className="-mx-4 flex max-w-full items-center gap-1 overflow-x-auto px-4 text-sm [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+        {/* links don't fit a phone: the nav scrolls on its own (w-full + min-w-0),
+            no negative margins that would push the whole page sideways */}
+        <nav className="flex w-full min-w-0 items-center gap-1 overflow-x-auto text-sm [scrollbar-width:none] sm:w-auto [&::-webkit-scrollbar]:hidden">
           <span className="mr-3 shrink-0 font-semibold tracking-tight">Admin</span>
           {[
             ["/admin", "Inicio"],

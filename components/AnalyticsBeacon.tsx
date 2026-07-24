@@ -70,11 +70,16 @@ export function AnalyticsBeacon() {
     function onClick(e: MouseEvent) {
       const el = (e.target as HTMLElement)?.closest?.("a, button, [role=button]") as HTMLElement | null;
       if (!el) return;
-      const label =
-        el.getAttribute("aria-label") ||
-        el.textContent?.trim() ||
-        el.getAttribute("href") ||
-        el.tagName.toLowerCase();
+      const text = el.textContent?.trim() ?? "";
+      const anchor = el.closest("a") as HTMLAnchorElement | null;
+      // aria-label wins; then short button/link text; else the link's path
+      // (a whole product card's text is useless as a label)
+      let label = el.getAttribute("aria-label") || "";
+      if (!label) label = text.length > 0 && text.length <= 40 ? text : "";
+      if (!label && anchor) {
+        try { label = new URL(anchor.href).pathname; } catch { label = anchor.getAttribute("href") ?? ""; }
+      }
+      if (!label) label = text || el.tagName.toLowerCase();
       send({ type: "click", path: pathname, target: label.slice(0, 120), device: device() });
     }
     document.addEventListener("click", onClick, true);

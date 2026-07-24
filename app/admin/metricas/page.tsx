@@ -95,7 +95,7 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
 
 function Kpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
+    <div className="min-w-0 rounded-2xl border border-border bg-surface p-5">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted">{label}</p>
         {icon}
@@ -108,7 +108,7 @@ function Kpi({ icon, label, value }: { icon: React.ReactNode; label: string; val
 function RankCard({ title, subtitle, rows }: { title: string; subtitle?: string; rows: { label: string; n: number }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.n));
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
+    <div className="min-w-0 rounded-2xl border border-border bg-surface p-5">
       <h2 className="text-sm font-semibold">{title}</h2>
       {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
       <ul className="mt-4 space-y-2.5">
