@@ -114,13 +114,13 @@ function RankCard({ title, subtitle, rows }: { title: string; subtitle?: string;
       <ul className="mt-4 space-y-2.5">
         {rows.length === 0 && <li className="text-sm text-muted">Sin datos.</li>}
         {rows.map((r, i) => (
-          <li key={i} className="text-sm">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 truncate" title={r.label}>{r.label || "—"}</span>
+          <li key={i} className="min-w-0 text-sm">
+            <div className="flex w-full min-w-0 items-baseline justify-between gap-3">
+              <span className="min-w-0 flex-1 truncate" title={r.label}>{r.label || "—"}</span>
               <span className="nums shrink-0 font-medium">{r.n.toLocaleString("es-MX")}</span>
             </div>
-            <div className="mt-1 h-1.5 rounded-full bg-elevated">
-              <div className="h-full rounded-full bg-accent/60" style={{ width: `${Math.round((r.n / max) * 100)}%` }} />
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-elevated">
+              <div className="h-full rounded-full bg-accent/60" style={{ width: `${Math.min(100, Math.round((r.n / max) * 100))}%` }} />
             </div>
           </li>
         ))}
