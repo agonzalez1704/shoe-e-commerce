@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
+import { createMpPreference } from "@/lib/mercadopago";
 import { sendVoucherEmail, sendPaidEmail } from "@/lib/email";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
@@ -27,10 +28,13 @@ export type FiscalInput = {
   email: string;
 };
 
+// MercadoPago is a parallel provider (Checkout Pro redirect), not a Conekta method.
+export type PaymentMethod = ConektaMethod | "mercadopago";
+
 export type CheckoutInput = {
   cartId: string;
   email: string;
-  method: ConektaMethod;
+  method: PaymentMethod;
   customerName: string;
   phone?: string;
   shippingAddress: Record<string, unknown>;
@@ -42,7 +46,7 @@ export type CheckoutInput = {
 
 export type CheckoutResult = {
   orderNumber: string;
-  method: ConektaMethod;
+  method: PaymentMethod;
   totalCents: number;
   expiresAt: string | null;
   // method-specific instructions for the confirmation screen:
@@ -223,6 +227,45 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     throw new Error(
       `line items (${lineSum} - ${created.discount_cents}) do not match order total ${totalCents} for ${created.order_number}`,
     );
+  }
+
+  // 5a. MercadoPago path (Checkout Pro): create a hosted preference and redirect.
+  //     Skips Conekta entirely; the MP webhook commits the order on approval.
+  if (input.method === "mercadopago") {
+    // create_order left expires_at NULL for MP; without a deadline an abandoned
+    // redirect would hold the reserved stock forever. Give it 2h so the
+    // expire-orders cron reclaims it (webhook commit is idempotent within that).
+    await admin
+      .from("orders")
+      .update({ expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() })
+      .eq("id", orderId);
+
+    const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
+    const pref = await createMpPreference({
+      orderNumber: created.order_number,
+      amountCents: totalCents,
+      itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
+      customer: { name: input.customerName, email: input.email },
+      successUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,
+      failureUrl: `${SITE_URL}/checkout?pago=cancelado`,
+      notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,
+    });
+
+    // a MercadoPago order is a lead until the webhook approves it
+    await notifyAdmins({
+      title: `Pedido nuevo · ${mxn(totalCents)}`,
+      body: `${created.order_number} — MERCADOPAGO · ${input.customerName}`,
+      url: `/admin/orders/${orderId}`,
+      tag: `order-${orderId}`,
+    });
+
+    return {
+      orderNumber: created.order_number,
+      method: input.method,
+      totalCents,
+      expiresAt: null,
+      redirectUrl: pref.init_point || pref.sandbox_init_point,
+    };
   }
 
   const expiresUnix = created.expires_at

@@ -1,15 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConektaOrder } from "@/lib/conekta";
-import { sendPaidEmail, sendExpiredEmail } from "@/lib/email";
-import { stampOrderCfdi } from "@/lib/cfdi";
+import { sendExpiredEmail } from "@/lib/email";
 import { notifyAdmins } from "@/lib/push";
-import { sendPurchaseToMeta } from "@/lib/meta-capi";
-import { metaContentId } from "@/lib/meta-content";
+import { markOrderPaid } from "@/lib/order-fulfillment";
 import { SITE_URL } from "@/lib/site";
-import { formatCents } from "@/lib/money";
-
-const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 // Conekta -> us. OXXO/SPEI confirm here asynchronously; card double-fires (idempotent).
 // Two-layer trust: shared secret in the URL + re-fetch the order from Conekta to
@@ -84,72 +79,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true }); // payment row incomplete, skip
   }
 
-  const { error } = await admin.rpc("commit_order", {
-    p_order_id: payment.order_id,
-    p_charge_id: conektaOrderId,
-    p_amount_cents: payment.amount_cents,
-    p_method: payment.method as "card" | "oxxo" | "spei" | "aplazo",
+  const res = await markOrderPaid({
+    orderId: payment.order_id,
+    chargeId: conektaOrderId,
+    amountCents: payment.amount_cents,
+    method: payment.method as "card" | "oxxo" | "spei" | "aplazo",
   });
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // confirmation email (non-fatal)
-  const { data: order } = await admin
-    .from("orders")
-    .select("email, order_number, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, needs_invoice, shipping_address")
-    .eq("id", payment.order_id)
-    .maybeSingle();
-  if (order) {
-    const { data: items } = await admin
-      .from("order_items")
-      .select("product_name, variant_label, unit_price_cents, quantity, variants(color, products(slug))")
-      .eq("order_id", payment.order_id);
-    await sendPaidEmail({
-      to: order.email,
-      orderNumber: order.order_number,
-      totalCents: order.total_cents,
-      lines: (items ?? []).map((i) => ({
-        name: `${i.product_name} (${i.variant_label})`,
-        quantity: i.quantity,
-        lineTotalCents: i.unit_price_cents * i.quantity,
-      })),
-      breakdown: {
-        subtotalCents: order.subtotal_cents,
-        discountCents: order.discount_cents,
-        shippingCents: order.shipping_cents,
-        taxCents: order.tax_cents,
-      },
-    });
-    // report the confirmed conversion to Meta (browser pixel can't: cash/SPEI
-    // confirm long after the buyer left)
-    const ship = (order as { shipping_address?: Record<string, string> }).shipping_address;
-    const contentIds = (items ?? [])
-      .map((i) => {
-        const v = i.variants as unknown as { color?: string; products?: { slug?: string } } | null;
-        return v?.products?.slug && v.color ? metaContentId(v.products.slug, v.color) : null;
-      })
-      .filter((x): x is string => !!x);
-    await sendPurchaseToMeta({
-      eventId: order.order_number,
-      orderNumber: order.order_number,
-      email: order.email,
-      phone: ship?.phone,
-      valueCents: order.total_cents,
-      contentIds,
-      sourceUrl: `${SITE_URL}/checkout`,
-    });
-
-    await notifyAdmins({
-      title: `Pago recibido · ${mxn(order.total_cents)}`,
-      body: `${order.order_number} — ${payment.method.toUpperCase()}. Listo para producción.`,
-      url: `/admin/orders/${payment.order_id}`,
-      tag: `order-${payment.order_id}`,
-    });
-
-    // stamp CFDI on payment if requested (non-fatal; records failure for admin retry)
-    if (order.needs_invoice) await stampOrderCfdi(payment.order_id);
-  }
+  if (!res.ok) return NextResponse.json({ error: res.error }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

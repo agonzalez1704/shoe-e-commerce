@@ -55,6 +55,7 @@ export default async function CheckoutPage() {
         conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
         defaults={defaults}
         googleAuth={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"}
+        mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
       />
     </div>
   );

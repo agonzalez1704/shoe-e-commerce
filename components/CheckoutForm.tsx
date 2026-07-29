@@ -15,7 +15,7 @@ import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
 
-type Method = "card" | "oxxo" | "spei" | "aplazo";
+type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
 
 declare global {
   interface Window {
@@ -43,6 +43,8 @@ const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "oxxo", label: "Efectivo", hint: "+20,000 tiendas" },
   { id: "aplazo", label: "Aplazo", hint: "Págalo en quincenas" },
 ];
+// Only offered when MERCADOPAGO_ACCESS_TOKEN is configured (see checkout/page.tsx).
+const MP_METHOD = { id: "mercadopago" as Method, label: "Mercado Pago", hint: "Tarjeta, saldo o meses" };
 
 // Real brand logo on a white chip (keeps colour brands legible in both themes).
 function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }) {
@@ -69,6 +71,12 @@ function MethodMark({ id }: { id: Method }) {
   if (id === "oxxo") return <LogoChip src="/pay/7eleven.svg" alt="Efectivo en tiendas" h={14} />;
   if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
   if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
+  if (id === "mercadopago")
+    return (
+      <span className="inline-flex items-center rounded-md bg-[#009EE3] px-2 py-1 text-[11px] font-bold leading-none text-white">
+        Mercado Pago
+      </span>
+    );
   return (
     <span className="flex gap-1">
       <VisaMark />
@@ -119,12 +127,13 @@ export type CheckoutDefaults = Partial<
 >;
 
 export function CheckoutForm({
-  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false,
+  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false, mpEnabled = false,
 }: {
   cartId: string; lines: CartLine[]; subtotalCents: number;
   comboDiscountCents: number; totalCents: number; conektaPublicKey: string;
-  defaults?: CheckoutDefaults; googleAuth?: boolean;
+  defaults?: CheckoutDefaults; googleAuth?: boolean; mpEnabled?: boolean;
 }) {
+  const methods = mpEnabled ? [...METHODS, MP_METHOD] : METHODS;
   const [method, setMethod] = useState<Method>("card");
   const [needsInvoice, setNeedsInvoice] = useState(false);
   const [save, setSave] = useState(true);
@@ -313,7 +322,11 @@ export function CheckoutForm({
 
   const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/10";
 
-  const cta = method === "card" ? `Pagar ${mxn(effectiveTotal)}` : "Confirmar pedido";
+  const cta =
+    method === "card" ? `Pagar ${mxn(effectiveTotal)}`
+    : method === "mercadopago" ? "Continuar a Mercado Pago"
+    : method === "aplazo" ? "Continuar a Aplazo"
+    : "Confirmar pedido";
 
   return (
     <>
@@ -374,7 +387,7 @@ export function CheckoutForm({
           <section className={CARD}>
             <StepHeader n={2} title="Pago" />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {METHODS.map(({ id, label, hint }) => (
+              {methods.map(({ id, label, hint }) => (
                 <button
                   type="button" key={id} onClick={() => setMethod(id)}
                   aria-pressed={method === id}
@@ -451,6 +464,11 @@ export function CheckoutForm({
             {method === "aplazo" && (
               <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
                 Paga en quincenas sin tarjeta. Te llevamos a Aplazo para aprobar; al volver, tu pedido queda confirmado.
+              </p>
+            )}
+            {method === "mercadopago" && (
+              <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
+                Te llevamos a Mercado Pago para pagar con tarjeta, saldo o meses sin intereses. Al volver, tu pedido queda confirmado.
               </p>
             )}
           </section>
