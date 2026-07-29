@@ -44,7 +44,7 @@ const orgJsonLd = {
   description: SITE_DESCRIPTION,
   areaServed: "MX",
   currenciesAccepted: "MXN",
-  paymentAccepted: "Tarjeta, efectivo, SPEI",
+  paymentAccepted: "Tarjeta, efectivo, Aplazo",
 };
 const siteJsonLd = {
   "@context": "https://schema.org",
@@ -119,7 +119,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="text-muted">
               <p className="font-medium text-text">{SITE_NAME}</p>
               <p className="mt-2">{SITE_DESCRIPTION}</p>
-              <p className="mt-4 text-xs">Pagos con tarjeta, efectivo y SPEI. Facturación disponible.</p>
+              <p className="mt-4 text-xs">Pagos con tarjeta, efectivo y Aplazo. Facturación disponible.</p>
             </div>
             <nav className="flex flex-col gap-2">
               <p className="font-medium text-text">Categorías</p>
