@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash, ShoppingBag, Package, Truck, Tag } from "@phosphor-icons/react";
+import { Trash, ShoppingBag, ArrowsClockwise, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { updateCartItem, removeFromCart, type CartSummary } from "@/app/cart/actions";
 import { notifyCartChanged } from "@/components/CartBadge";
@@ -14,11 +14,11 @@ const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 function MadeToOrderNotice() {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3.5">
-      <Package size={22} weight="bold" className="mt-0.5 shrink-0 text-accent" />
+      <ArrowsClockwise size={22} weight="bold" className="mt-0.5 shrink-0 text-accent" />
       <div className="text-sm">
-        <p className="font-medium">Hecho sobre pedido</p>
+        <p className="font-medium">¿No te queda? Te lo cambiamos</p>
         <p className="mt-0.5 text-muted">
-          Cada par se fabrica especialmente para ti cuando lo compras. Entrega estimada de{" "}
+          Si tu talla no queda como esperabas, el primer cambio es sin costo. Envío gratis y entrega en{" "}
           <span className="font-medium text-text">4 a 7 días hábiles</span> a todo México.
         </p>
       </div>
@@ -118,7 +118,7 @@ export function CartView({ initial }: { initial: CartSummary }) {
                     </Link>
                     <p className="mt-1 text-sm capitalize text-muted">{l.label}</p>
                     <p className="mt-1 flex items-center gap-1 text-[11px] text-muted">
-                      <Package size={12} weight="fill" className="text-accent" /> Se fabrica sobre pedido
+                      <ArrowsClockwise size={12} weight="fill" className="text-accent" /> Primer cambio de talla sin costo
                     </p>
                   </div>
                   <p className="nums shrink-0 text-base font-semibold">{mxn(l.lineTotalCents)}</p>
@@ -174,7 +174,7 @@ export function CartView({ initial }: { initial: CartSummary }) {
 
           <p className="flex items-start gap-1.5 rounded-lg bg-elevated px-3 py-2 text-xs text-muted">
             <Truck size={14} className="mt-0.5 shrink-0" />
-            Se fabrica al comprar · entrega en 4 a 7 días hábiles a todo México.
+            Envío gratis · entrega en 4 a 7 días hábiles a todo México.
           </p>
 
           <Link

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Truck, ShieldCheck, ArrowsClockwise, Hammer, Sparkle, Tag } from "@phosphor-icons/react";
+import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { comboOf } from "@/lib/pricing";
 import { PdpInfo } from "@/components/PdpInfo";
@@ -141,18 +141,16 @@ export function ProductDetail({
           <p className="mt-5 max-w-prose text-sm leading-relaxed text-muted">{product.description}</p>
         )}
 
-        {product.made_to_order && (
-          <div className="mt-6 space-y-2 rounded-xl border border-accent/25 bg-accent-soft/60 p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkle size={18} weight="fill" className="text-accent" />
-              Hecho solo para ti · edición limitada
-            </p>
-            <p className="flex items-start gap-2 text-sm text-muted">
-              <Package size={17} className="mt-0.5 shrink-0" />
-              No producimos de más: tu par se fabrica a mano al ordenarlo. Piel genuina, listo en 4-7 días hábiles con envío gratis.
-            </p>
-          </div>
-        )}
+        <div className="mt-6 space-y-2 rounded-xl border border-accent/25 bg-accent-soft/60 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <ArrowsClockwise size={18} weight="fill" className="text-accent" />
+            ¿No te queda? Te lo cambiamos
+          </p>
+          <p className="flex items-start gap-2 text-sm text-muted">
+            <ShieldCheck size={17} className="mt-0.5 shrink-0" />
+            Si tu talla no queda como esperabas, el primer cambio es sin costo. Piel genuina, envío gratis y entrega en 4-7 días hábiles.
+          </p>
+        </div>
 
         <VariantPicker
           slug={product.slug}
