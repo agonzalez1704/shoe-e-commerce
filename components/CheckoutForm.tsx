@@ -154,6 +154,11 @@ export function CheckoutForm({
     revalidate(); // prefilled values may already satisfy the form
   }, []);
   const [loading, setLoading] = useState(false);
+  // Synchronous double-submit guard: `loading` disables the button, but the
+  // re-render lags a fast double-click, so two checkout() calls could race past
+  // the cart-empty check and create two orders (visible on cash, which stays on
+  // the page instead of redirecting). A ref blocks the second call immediately.
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckoutResult | null>(null);
 
@@ -246,6 +251,8 @@ export function CheckoutForm({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submittingRef.current) return; // a submit is already in flight
+    submittingRef.current = true;
     setLoading(true);
     setError(null);
     const form = e.currentTarget;
@@ -309,6 +316,7 @@ export function CheckoutForm({
       setError(err instanceof Error ? err.message : "el pago falló");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   }
 
