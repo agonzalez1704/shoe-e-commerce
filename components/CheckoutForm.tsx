@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
-import { CheckCircle, Lock, Money, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
+import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
 import { checkout, previewDiscount, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
@@ -41,7 +41,6 @@ const SAVE_FIELDS = ["name", "email", "phone", "line1", "neighborhood", "city", 
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
   { id: "oxxo", label: "Efectivo", hint: "+20,000 tiendas" },
-  { id: "spei", label: "SPEI", hint: "Transferencia" },
   { id: "aplazo", label: "Aplazo", hint: "Págalo en quincenas" },
 ];
 
@@ -55,8 +54,19 @@ function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }
   );
 }
 
+// Store logos where a cash voucher can be paid (representative of +20,000).
+function StoreLogos({ h = 15 }: { h?: number }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <LogoChip src="/pay/7eleven.svg" alt="7-Eleven" h={h} />
+      <LogoChip src="/pay/bbva.svg" alt="BBVA" h={h} />
+      <LogoChip src="/pay/farmacias-ahorro.svg" alt="Farmacias del Ahorro" h={h} />
+    </span>
+  );
+}
+
 function MethodMark({ id }: { id: Method }) {
-  if (id === "oxxo") return <Money size={20} weight="fill" className="text-accent" />;
+  if (id === "oxxo") return <LogoChip src="/pay/7eleven.svg" alt="Efectivo en tiendas" h={14} />;
   if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
   if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
   return (
@@ -425,9 +435,13 @@ export function CheckoutForm({
               </div>
             )}
             {method === "oxxo" && (
-              <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
-                Generamos un voucher con código de barras. Págalo en efectivo dentro de 3 días en 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más.
-              </p>
+              <div className="mt-4 space-y-2.5 rounded-xl bg-accent-soft px-4 py-3">
+                <p className="text-xs text-muted">
+                  Generamos un voucher con código de barras. Págalo en efectivo dentro de 3 días en:
+                </p>
+                <StoreLogos h={16} />
+                <p className="text-[11px] text-muted">y +20,000 tiendas. No disponible en OXXO.</p>
+              </div>
             )}
             {method === "spei" && (
               <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
@@ -553,15 +567,14 @@ export function CheckoutForm({
             <VisaMark />
             <MastercardMark />
             <AmexMark />
-            <span className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-1 text-[11px] font-semibold text-zinc-900 ring-1 ring-black/5">
-              <Money size={13} weight="fill" /> Efectivo
-            </span>
-            <LogoChip src="/pay/spei.svg" alt="SPEI" h={12} />
+            <LogoChip src="/pay/7eleven.svg" alt="7-Eleven" h={12} />
+            <LogoChip src="/pay/bbva.svg" alt="BBVA" h={12} />
+            <LogoChip src="/pay/farmacias-ahorro.svg" alt="Farmacias del Ahorro" h={12} />
             <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={14} />
           </div>
           <p className="text-center text-[11px] leading-relaxed text-muted">
-            Efectivo en 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam&apos;s Club, Farmacias del Ahorro,
-            Soriana y +20,000 tiendas. <span className="font-medium">No disponible en OXXO.</span>
+            Paga en efectivo en 7-Eleven, BBVA, Farmacias del Ahorro, Walmart, Bodega Aurrerá, Circle K, Soriana
+            y +20,000 tiendas. <span className="font-medium">No disponible en OXXO.</span>
           </p>
           <p className="flex items-center justify-center gap-1 text-[11px] text-muted">
             <ShieldCheck size={13} weight="fill" /> Compra protegida · procesado por Conekta
