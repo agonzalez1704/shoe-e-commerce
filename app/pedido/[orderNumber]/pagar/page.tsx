@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConektaOrder } from "@/lib/conekta";
 import { formatCents } from "@/lib/money";
+import { CASH_CHAINS } from "@/lib/payment-method";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,14 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
           <p className="text-xs text-muted">
             Muestra este código en la caja de {CHAINS}. <span className="font-medium">No disponible en OXXO.</span>
           </p>
+          <details className="text-sm [&_summary]:cursor-pointer">
+            <summary className="font-medium text-accent">Ver todas las tiendas</summary>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {CASH_CHAINS.map((c) => (
+                <span key={c} className="rounded-md bg-elevated px-2 py-1 text-[11px] text-muted ring-1 ring-border">{c}</span>
+              ))}
+            </div>
+          </details>
         </div>
       )}
 

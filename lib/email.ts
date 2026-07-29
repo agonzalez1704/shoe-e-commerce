@@ -2,6 +2,7 @@ import "server-only";
 
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
+import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const FROM = process.env.EMAIL_FROM ?? activeBrand.emailFrom;
@@ -89,11 +90,12 @@ export async function sendVoucherEmail(
   const expires = a.expiresAt ? new Date(a.expiresAt).toLocaleString("es-MX") : null;
   const instructions =
     a.method === "oxxo"
-      ? `<p style="margin:0 0 8px">Paga en efectivo mostrando este código en 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más:</p>
+      ? `<p style="margin:0 0 8px">Paga en efectivo mostrando este código de barras (o dictando la referencia) en la caja de ${CASH_CHAINS_SHORT} y +20,000 tiendas. <strong>No es válido en OXXO.</strong></p>
          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:16px;text-align:center">
            ${a.voucherUrl ? `<img src="${a.voucherUrl}" alt="Código de pago en efectivo" style="max-height:120px"/><br/>` : ""}
            <span style="font-family:monospace;font-size:15px;letter-spacing:1px;color:#18181b">${a.reference ?? ""}</span>
-         </div>`
+         </div>
+         ${a.voucherUrl ? `<p style="margin:10px 0 0"><a href="${a.voucherUrl}" style="color:${ACCENT};font-size:13px">Ver comprobante y lista completa de tiendas →</a></p>` : ""}`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE${a.bank ? ` (${a.bank})` : ""}:</p>
          <div style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:18px;color:#18181b">${a.clabe ?? ""}</div>`;
 
@@ -116,7 +118,7 @@ export async function sendPaymentReminderEmail(
   const expires = a.expiresAt ? new Date(a.expiresAt).toLocaleString("es-MX") : null;
   const detail =
     a.method === "oxxo"
-      ? `<p style="margin:0 0 8px">Paga en efectivo con esta referencia en 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más:</p>
+      ? `<p style="margin:0 0 8px">Paga en efectivo con esta referencia en ${CASH_CHAINS_SHORT} y +20,000 tiendas. <strong>No es válido en OXXO.</strong></p>
          <div class="mono" style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:16px;color:#18181b">${a.reference ?? ""}</div>`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE:</p>
          <div style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:18px;color:#18181b">${a.clabe ?? ""}</div>`;

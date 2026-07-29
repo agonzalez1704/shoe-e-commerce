@@ -8,6 +8,7 @@ import { sendVoucherEmail, sendPaidEmail } from "@/lib/email";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 import { notifyAdmins } from "@/lib/push";
+import { methodLabel } from "@/lib/payment-method";
 import { formatCents } from "@/lib/money";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -254,7 +255,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     // a MercadoPago order is a lead until the webhook approves it
     await notifyAdmins({
       title: `Pedido nuevo · ${mxn(totalCents)}`,
-      body: `${created.order_number} — MERCADOPAGO · ${input.customerName}`,
+      body: `${created.order_number} — ${methodLabel("mercadopago")} · ${input.customerName}`,
       url: `/admin/orders/${orderId}`,
       tag: `order-${orderId}`,
     });
@@ -357,7 +358,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   // card one is already money in
   await notifyAdmins({
     title: cardPaid ? `Pedido pagado · ${mxn(totalCents)}` : `Pedido nuevo · ${mxn(totalCents)}`,
-    body: `${created.order_number} — ${input.method.toUpperCase()} · ${input.customerName}`,
+    body: `${created.order_number} — ${methodLabel(input.method)} · ${input.customerName}`,
     url: `/admin/orders/${orderId}`,
     tag: `order-${orderId}`,
   });

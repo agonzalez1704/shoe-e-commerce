@@ -14,6 +14,7 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
+import { CASH_CHAINS } from "@/lib/payment-method";
 
 type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
 
@@ -603,6 +604,24 @@ export function CheckoutForm({
   );
 }
 
+// Expandable "where can I pay" list — mirrors the chains on the Conekta voucher
+// page so the buyer can confirm a store near them without leaving the site.
+function CashChains() {
+  return (
+    <details className="rounded-xl border border-border bg-elevated/60 px-3.5 py-2.5 text-sm [&_summary]:cursor-pointer">
+      <summary className="font-medium text-text">¿Dónde puedo pagar? Ver todas las tiendas</summary>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {CASH_CHAINS.map((c) => (
+          <span key={c} className="rounded-md bg-surface px-2 py-1 text-[11px] text-muted ring-1 ring-border">
+            {c}
+          </span>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-muted">y +20,000 tiendas. <span className="font-medium text-text">No disponible en OXXO.</span></p>
+    </details>
+  );
+}
+
 function Confirmation({ result }: { result: CheckoutResult }) {
   return (
     <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-border bg-surface p-6">
@@ -620,7 +639,10 @@ function Confirmation({ result }: { result: CheckoutResult }) {
 
       {result.method === "oxxo" && result.oxxo && (
         <div className="space-y-3">
-          <p className="text-sm text-muted">Muestra este código en la caja de 7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más:</p>
+          <p className="text-sm text-muted">
+            Paga en efectivo mostrando este código de barras (o dictando la referencia) en la caja de una tienda afiliada.
+            <span className="font-medium text-text"> No es válido en OXXO.</span>
+          </p>
           <div className="rounded-xl bg-white p-4 text-center">
             {result.oxxo.voucherUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -629,6 +651,7 @@ function Confirmation({ result }: { result: CheckoutResult }) {
             <p className="mt-2 font-mono text-sm tracking-wider text-zinc-900">{result.oxxo.reference}</p>
           </div>
           <p className="nums text-sm">Monto a pagar: <span className="font-medium">{mxn(result.totalCents)}</span></p>
+          <CashChains />
           {result.expiresAt && (
             <p className="text-xs text-muted">Vence {new Date(result.expiresAt).toLocaleString("es-MX")}</p>
           )}

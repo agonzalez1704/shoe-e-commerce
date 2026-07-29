@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CaretLeft, EnvelopeSimple, WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
+import { methodLabel } from "@/lib/payment-method";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderStatusActions } from "@/components/OrderStatusActions";
 import { CfdiActions } from "@/components/CfdiActions";
@@ -102,7 +103,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
             <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Pago</h2>
-            <p className="uppercase">{payment?.method ?? order.payment_method ?? "—"} · <span className="text-muted">{payment?.status ?? "—"}</span></p>
+            <p>{order.payment_method ? methodLabel(order.payment_method) : "—"} · <span className="text-muted">{payment?.status ?? "—"}</span></p>
             {payment?.reference && <p className="nums mt-1 break-all text-muted">Ref: {payment.reference}</p>}
             {payment?.clabe && <p className="nums mt-1 break-all text-muted">CLABE: {payment.clabe}</p>}
             {payment?.voucher_url && (

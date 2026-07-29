@@ -5,6 +5,7 @@ import { stampOrderCfdi } from "@/lib/cfdi";
 import { notifyAdmins } from "@/lib/push";
 import { sendPurchaseToMeta } from "@/lib/meta-capi";
 import { metaContentId } from "@/lib/meta-content";
+import { methodLabel } from "@/lib/payment-method";
 import { SITE_URL } from "@/lib/site";
 import { formatCents } from "@/lib/money";
 
@@ -84,7 +85,7 @@ export async function markOrderPaid(opts: {
 
   await notifyAdmins({
     title: `Pago recibido · ${mxn(order.total_cents)}`,
-    body: `${order.order_number} — ${opts.method.toUpperCase()}. Listo para producción.`,
+    body: `${order.order_number} — ${methodLabel(opts.method)}. Listo para producción.`,
     url: `/admin/orders/${opts.orderId}`,
     tag: `order-${opts.orderId}`,
   });
