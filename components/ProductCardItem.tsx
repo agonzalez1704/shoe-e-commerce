@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { ProductImage } from "@/components/ProductImage";
@@ -34,11 +35,11 @@ export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priori
             />
           )}
           {p.imageAlt && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={p.imageAlt}
               alt=""
-              loading="lazy"
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
             />
           )}
