@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { comboOf } from "@/lib/pricing";
+import { comboOf, precioConPromo } from "@/lib/pricing";
 import { PdpInfo } from "@/components/PdpInfo";
 import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
@@ -58,6 +58,10 @@ export function ProductDetail({
     () => product.variants.find((v) => v.color === color && v.price_cents != null)?.price_cents ?? product.base_price_cents,
     [product.variants, product.base_price_cents, color],
   );
+  // sale price with the active promo (null for combos). precioEfectivo is what
+  // the buyer pays and what create_order will charge.
+  const precioEfectivo = precioConPromo(colorPriceCents, product.promoPercent);
+  const onSale = product.promoPercent != null && precioEfectivo < colorPriceCents;
 
   // Meta: ViewContent per colour, since each colour is its own catalog item —
   // dynamic ads match on this id
@@ -67,7 +71,7 @@ export function ProductDetail({
       content_ids: [metaContentId(product.slug, color)],
       content_name: `${product.name} ${color}`,
       content_type: "product",
-      value: colorPriceCents / 100,
+      value: precioEfectivo / 100,
       currency: "MXN",
     });
   }, [product.slug, product.name, color, colorPriceCents]);
@@ -106,10 +110,20 @@ export function ProductDetail({
             <span className="nums">{rating.average.toFixed(1)} · {rating.count} reseñas</span>
           </p>
         )}
-        <p className="nums mt-3 text-2xl font-medium">{mxn(colorPriceCents)}</p>
+        {onSale ? (
+          <p className="nums mt-3 flex items-baseline gap-2.5">
+            <span className="text-2xl font-medium text-accent">{mxn(precioEfectivo)}</span>
+            <span className="text-lg text-muted line-through">{mxn(colorPriceCents)}</span>
+            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-contrast">
+              -{product.promoPercent}%
+            </span>
+          </p>
+        ) : (
+          <p className="nums mt-3 text-2xl font-medium">{mxn(colorPriceCents)}</p>
+        )}
         <p className="mt-1 text-xs text-muted">
           Precio con IVA incluido · o {APLAZO_PAYMENTS} pagos de{" "}
-          <span className="font-medium text-text">{mxn(Math.round(colorPriceCents / APLAZO_PAYMENTS))}</span> con Aplazo
+          <span className="font-medium text-text">{mxn(Math.round(precioEfectivo / APLAZO_PAYMENTS))}</span> con Aplazo
         </p>
 
         {/* value props (trust row) */}

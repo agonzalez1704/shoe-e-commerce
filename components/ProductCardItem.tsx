@@ -6,7 +6,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { ProductImage } from "@/components/ProductImage";
 import { swatchBg } from "@/lib/colors";
-import { comboOf, comboLabel } from "@/lib/pricing";
+import { comboOf, comboLabel, precioConPromo } from "@/lib/pricing";
 import type { ProductCard } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -18,6 +18,8 @@ export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priori
   // unique per colourway so view-transition names don't collide on the grid
   const vtName = p.key.replace(/[^a-zA-Z0-9_-]/g, "-");
   const combo = comboOf(p.comboMinQty, p.comboPriceCents);
+  const salePrice = precioConPromo(p.base_price_cents, p.promoPercent);
+  const onSale = p.promoPercent != null && salePrice < p.base_price_cents;
 
   return (
     <li className="group">
@@ -49,6 +51,11 @@ export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priori
               {comboLabel(combo, mxn)}
             </span>
           )}
+          {onSale && (
+            <span className="absolute left-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold tracking-wide text-accent-contrast shadow-[var(--shadow-sm)]">
+              -{p.promoPercent}%
+            </span>
+          )}
           {badge && (
             <span className="absolute right-2.5 top-2.5 rounded-full bg-text px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-bg shadow-[var(--shadow-sm)]">
               {badge}
@@ -73,7 +80,14 @@ export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priori
               </span>
             )}
           </div>
-          <p className="nums shrink-0 text-[15px] font-semibold tabular-nums">{mxn(p.base_price_cents)}</p>
+          {onSale ? (
+            <div className="shrink-0 text-right">
+              <p className="nums text-[15px] font-semibold tabular-nums text-accent">{mxn(salePrice)}</p>
+              <p className="nums text-xs tabular-nums text-muted line-through">{mxn(p.base_price_cents)}</p>
+            </div>
+          ) : (
+            <p className="nums shrink-0 text-[15px] font-semibold tabular-nums">{mxn(p.base_price_cents)}</p>
+          )}
         </div>
       </Link>
     </li>

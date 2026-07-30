@@ -21,16 +21,40 @@ export type ProductCard = {
   imageAlt: string | null;  // that colour's 2nd image (hover crossfade)
   comboMinQty: number | null;
   comboPriceCents: number | null;
+  promoPercent: number | null;  // active promo %, or null (combos never get one)
 };
 
+// Active promo % per product id (combo products excluded), for the storefront to
+// render sale prices. Mirrors the promo_percent() SQL + create_order.
+export async function getPromoMap(): Promise<Map<string, number>> {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { data } = await supabase
+    .from("promocion_productos")
+    .select("product_id, promociones!inner(percent, active, starts_at, ends_at), products!inner(combo_group)")
+    .eq("promociones.active", true)
+    .lte("promociones.starts_at", now)
+    .gt("promociones.ends_at", now)
+    .is("products.combo_group", null);
+  const m = new Map<string, number>();
+  for (const r of (data ?? []) as unknown as { product_id: string; promociones: { percent: number } | null }[]) {
+    const pct = r.promociones?.percent ?? 0;
+    if (pct > 0 && pct > (m.get(r.product_id) ?? 0)) m.set(r.product_id, pct);
+  }
+  return m;
+}
+
 // Expand a product row into one card per active variant colour.
-function toVariantCards(p: {
-  id: string; name: string; slug: string; base_price_cents: number;
-  combo_min_qty?: number | null; combo_price_cents?: number | null;
-  brands: { name: string } | null;
-  product_images: { url: string; position: number; color: string | null }[];
-  variants: { color: string | null; status: string; price_cents?: number | null }[];
-}): ProductCard[] {
+function toVariantCards(
+  p: {
+    id: string; name: string; slug: string; base_price_cents: number;
+    combo_min_qty?: number | null; combo_price_cents?: number | null;
+    brands: { name: string } | null;
+    product_images: { url: string; position: number; color: string | null }[];
+    variants: { color: string | null; status: string; price_cents?: number | null }[];
+  },
+  promoPct: number | null = null,
+): ProductCard[] {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
   const brand = p.brands?.name ?? null;
   const colors: string[] = [];
@@ -44,6 +68,7 @@ function toVariantCards(p: {
   const common = {
     name: p.name, slug: p.slug, brand,
     comboMinQty: p.combo_min_qty ?? null, comboPriceCents: p.combo_price_cents ?? null,
+    promoPercent: promoPct,
   };
 
   if (colors.length === 0) {
@@ -77,7 +102,11 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   const { data, error } = await q;
   if (error) throw error;
 
-  return (data ?? []).flatMap((p) => toVariantCards(p as Parameters<typeof toVariantCards>[0]));
+  const promo = await getPromoMap();
+  return (data ?? []).flatMap((p) => {
+    const row = p as Parameters<typeof toVariantCards>[0];
+    return toVariantCards(row, promo.get(row.id) ?? null);
+  });
 }
 
 // Cross-sell: other active models (one card per model, not per colourway).
@@ -92,7 +121,8 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
   if (error) throw error;
 
   type Row = Parameters<typeof toVariantCards>[0];
-  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p));
+  const promo = await getPromoMap();
+  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null));
   // one card per model
   const bySlug = new Map<string, ProductCard>();
   for (const c of cards) if (!bySlug.has(c.slug)) bySlug.set(c.slug, c);
@@ -126,7 +156,8 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   if (error) throw error;
 
   type Row = Parameters<typeof toVariantCards>[0];
-  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p));
+  const promo = await getPromoMap();
+  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null));
 }
 
 export type ProductDetail = {
@@ -150,6 +181,7 @@ export type ProductDetail = {
   made_to_order: boolean;
   comboMinQty: number | null;
   comboPriceCents: number | null;
+  promoPercent: number | null;
 };
 
 // PDP: one product by slug, with variants joined to live availability.
@@ -196,6 +228,10 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
 
   const availMap = new Map((avail ?? []).map((a) => [a.variant_id, a.qty_available]));
 
+  // Active promo % (combo-excluded) via the SQL helper — single source of truth.
+  const { data: pct } = await supabase.rpc("promo_percent", { p_product_id: p.id });
+  const promoPercent = typeof pct === "number" && pct > 0 ? pct : null;
+
   return {
     id: p.id,
     name: p.name,
@@ -219,5 +255,6 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     made_to_order: p.made_to_order,
     comboMinQty: p.combo_min_qty,
     comboPriceCents: p.combo_price_cents,
+    promoPercent,
   };
 });

@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { comboOf, cartComboDiscountCents, poolNudge, type ComboPool } from "@/lib/pricing";
+import { comboOf, cartComboDiscountCents, poolNudge, precioConPromo, type ComboPool } from "@/lib/pricing";
+import { getPromoMap } from "@/lib/catalog";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const COOKIE = "cart_token";
@@ -229,10 +230,17 @@ export async function getCart(): Promise<CartSummary> {
     .in("variant_id", variantIds.length ? variantIds : ["00000000-0000-0000-0000-000000000000"]);
   const availMap = new Map((avail ?? []).map((a) => [a.variant_id, a.qty_available]));
 
+  // Active promos (combo products excluded) → sale price per non-combo line.
+  // Mirrors create_order so cart totals match what's billed.
+  const promo = await getPromoMap();
+
   let subtotal = 0;
   const lines: CartLine[] = rows.map((it) => {
     const v = it.variants;
-    const unit = v.price_cents ?? v.products.base_price_cents;
+    const unit = precioConPromo(
+      v.price_cents ?? v.products.base_price_cents,
+      promo.get(v.products.id) ?? null,
+    );
     const lineTotal = unit * it.quantity;
     subtotal += lineTotal;
     const img = [...(v.products.product_images ?? [])].sort((a, b) => a.position - b.position)[0];

@@ -874,6 +874,69 @@ export type Database = {
           },
         ]
       }
+      promocion_productos: {
+        Row: {
+          product_id: string
+          promocion_id: string
+        }
+        Insert: {
+          product_id: string
+          promocion_id: string
+        }
+        Update: {
+          product_id?: string
+          promocion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promocion_productos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_productos_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promociones: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          nombre: string
+          percent: number
+          starts_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          nombre: string
+          percent: number
+          starts_at: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          nombre?: string
+          percent?: number
+          starts_at?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1387,6 +1450,7 @@ export type Database = {
       expire_stale_angle_jobs: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       iva_of: { Args: { p_inclusive: number }; Returns: number }
+      promo_percent: { Args: { p_product_id: string }; Returns: number }
       record_payment: {
         Args: {
           p_amount_cents: number

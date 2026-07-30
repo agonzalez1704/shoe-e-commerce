@@ -5,6 +5,13 @@
 // across the pool (mix models) cost `priceCents`. The server RPC is billing truth.
 // ============================================================
 
+// ---- Promo markdown (mirrors promo_percent + create_order in 0036) ---------
+/** Sale price after a % promo, integer cents. Unchanged when no promo. */
+export function precioConPromo(cents: number, percent: number | null | undefined): number {
+  if (!percent || percent <= 0) return cents;
+  return Math.round((cents * (100 - percent)) / 100);
+}
+
 export type ComboConfig = { minQty: number; priceCents: number };
 
 /** Combo config for a product, or null when it has none / is misconfigured. */
