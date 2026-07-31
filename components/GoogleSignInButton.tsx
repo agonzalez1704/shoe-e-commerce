@@ -1,30 +1,12 @@
-"use client";
-
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-
-// "Continuar con Google" — OAuth sign-in that returns to `next`. Rendered only
-// when NEXT_PUBLIC_GOOGLE_AUTH=1 (set once the Google provider is enabled in
-// Supabase); otherwise the button would just redirect to an error page.
+// "Continuar/Autocompletar con Google" — a plain link to the server-side OAuth
+// starter (/auth/google). Rendered only when NEXT_PUBLIC_GOOGLE_AUTH=1. A link is
+// a top-level navigation, so iOS Safari never blocks it (the client SDK's
+// post-await redirect was silently dropped on mobile).
 export function GoogleSignInButton({ next = "/cuenta", label = "Continuar con Google" }: { next?: string; label?: string }) {
-  const [loading, setLoading] = useState(false);
-
-  async function go() {
-    setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
-    });
-    if (error) setLoading(false); // on success the browser navigates away
-  }
-
   return (
-    <button
-      type="button"
-      onClick={go}
-      disabled={loading}
-      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-text disabled:opacity-60"
+    <a
+      href={`/auth/google?next=${encodeURIComponent(next)}`}
+      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-text"
     >
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -33,6 +15,6 @@ export function GoogleSignInButton({ next = "/cuenta", label = "Continuar con Go
         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       </svg>
       {label}
-    </button>
+    </a>
   );
 }
