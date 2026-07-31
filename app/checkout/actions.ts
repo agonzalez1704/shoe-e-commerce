@@ -252,13 +252,9 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
       notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,
     });
 
-    // a MercadoPago order is a lead until the webhook approves it
-    await notifyAdmins({
-      title: `Pedido nuevo · ${mxn(totalCents)}`,
-      body: `${created.order_number} — ${methodLabel("mercadopago")} · ${input.customerName}`,
-      url: `/admin/orders/${orderId}`,
-      tag: `order-${orderId}`,
-    });
+    // No admin ping here: a MercadoPago redirect isn't a lead like a cash voucher
+    // — the buyer may abandon or get blocked at MP. The webhook notifies on the
+    // real payment; unpaid orders just expire (2h).
 
     return {
       orderNumber: created.order_number,
