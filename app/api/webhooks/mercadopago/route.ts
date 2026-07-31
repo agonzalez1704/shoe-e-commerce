@@ -46,6 +46,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // defense-in-depth: the preference fixes the amount server-side, but never
+  // commit an order against a payment whose amount doesn't match our total.
+  if (pay.transaction_amount != null && Math.round(pay.transaction_amount * 100) !== order.total_cents) {
+    console.error("[mercadopago webhook] amount mismatch:", orderNumber, "paid", pay.transaction_amount, "expected", order.total_cents / 100);
+    return NextResponse.json({ ok: true });
+  }
+
   const chargeId = `mp_${paymentId}`;
   const res = await markOrderPaid({
     orderId: order.id,
