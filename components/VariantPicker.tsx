@@ -38,6 +38,7 @@ export function VariantPicker({
 }) {
   const colors = useMemo(() => Array.from(new Set(variants.map((v) => v.color))), [variants]);
   const [variantId, setVariantId] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false); // pulse the size picker when tapped without a size
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -55,7 +56,9 @@ export function VariantPicker({
 
   const add = () => {
     if (!selected) {
-      document.getElementById("size-picker")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("size-picker")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setFlash(true);
+      setTimeout(() => setFlash(false), 1400);
       return;
     }
     startTransition(async () => {
@@ -96,7 +99,7 @@ export function VariantPicker({
       </fieldset>
 
       {/* size + width */}
-      <fieldset id="size-picker" className="mt-7 scroll-mt-24">
+      <fieldset id="size-picker" className={`mt-7 scroll-mt-24 rounded-xl transition-all ${flash ? "bg-accent-soft/60 ring-2 ring-accent p-3 -m-3" : "ring-0"}`}>
         <div className="flex items-center justify-between">
           <legend className="text-xs font-medium uppercase tracking-wide text-muted">Talla</legend>
           <a href="#size-guide" className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline">Guía de tallas</a>
