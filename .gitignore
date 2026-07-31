@@ -1,6 +1,7 @@
 node_modules
 .next
 out
+.codex/
 .env*
 !.env.example
 .DS_Store

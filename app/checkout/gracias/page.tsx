@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { OrderConfirmation } from "@/components/OrderConfirmation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { restoreCartFromOrder } from "@/app/cart/actions";
 import { SITE_URL } from "@/lib/site";
 
@@ -44,8 +46,29 @@ async function lookupState({ o, order_id }: Params, declined: boolean): Promise<
       }
     }
   }
-  // not confirmed on our side yet — the provider's hint is all we have
+  // Redirect-cancel (MercadoPago / Aplazo) returns carry only our order number,
+  // no provider charge id. Release the pending order + restore the cart, but
+  // only to its owner — order numbers are guessable.
+  if (o && declined) {
+    await abandonIfOwned(o);
+    return "failed";
+  }
   return declined ? "failed" : "pending";
+}
+
+async function abandonIfOwned(orderNumber: string) {
+  const admin = createAdminClient();
+  const { data: o } = await admin
+    .from("orders")
+    .select("id, status, session_token, customer_id")
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+  if (o?.status !== "pending") return;
+  const { data: { user } } = await (await createClient()).auth.getUser();
+  const owns = user
+    ? o.customer_id === user.id
+    : !!o.session_token && o.session_token === (await cookies()).get("cart_token")?.value;
+  if (owns) await restoreCartFromOrder(o.id);
 }
 
 export default async function GraciasPage({ searchParams }: { searchParams: Promise<Params> }) {

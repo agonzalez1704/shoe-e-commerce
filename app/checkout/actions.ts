@@ -248,7 +248,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
       itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
       customer: { name: input.customerName, email: input.email },
       successUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,
-      failureUrl: `${SITE_URL}/checkout?pago=cancelado`,
+      failureUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}&payment_status=failed`,
       notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,
     });
 
@@ -284,7 +284,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     orderNumber: created.order_number,
     expiresAt: expiresUnix,
     returnUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,
-    cancelUrl: `${SITE_URL}/checkout?pago=cancelado`,
+    cancelUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}&payment_status=failed`,
   });
 
   const charge = co.charges.data[0];
