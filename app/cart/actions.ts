@@ -230,7 +230,7 @@ export async function getCart(): Promise<CartSummary> {
     .in("variant_id", variantIds.length ? variantIds : ["00000000-0000-0000-0000-000000000000"]);
   const availMap = new Map((avail ?? []).map((a) => [a.variant_id, a.qty_available]));
 
-  // Active promos (combo products excluded) → sale price per non-combo line.
+  // Active promos (all products, combos included) → sale price per line.
   // Mirrors create_order so cart totals match what's billed.
   const promo = await getPromoMap();
 
@@ -266,7 +266,9 @@ export async function getCart(): Promise<CartSummary> {
     const p = it.variants.products;
     const combo = comboOf(p.combo_min_qty, p.combo_price_cents);
     if (!p.combo_group || !combo) continue;
-    const unit = it.variants.price_cents ?? p.base_price_cents;
+    // promo-discounted, same as the line price — the pool discount then only
+    // applies when the combo beats 2×(promo price). Mirrors create_order (0037).
+    const unit = precioConPromo(it.variants.price_cents ?? p.base_price_cents, promo.get(p.id) ?? null);
     const pool = pools.get(p.combo_group);
     const units = Array(it.quantity).fill(unit);
     if (pool) { pool.unitPrices.push(...units); pool.minPrice = Math.min(pool.minPrice, unit); }

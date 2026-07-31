@@ -72,12 +72,7 @@ function MethodMark({ id }: { id: Method }) {
   if (id === "oxxo") return <LogoChip src="/pay/7eleven.svg" alt="Efectivo en tiendas" h={14} />;
   if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
   if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
-  if (id === "mercadopago")
-    return (
-      <span className="inline-flex items-center rounded-md bg-[#009EE3] px-2 py-1 text-[11px] font-bold leading-none text-white">
-        Mercado Pago
-      </span>
-    );
+  if (id === "mercadopago") return <LogoChip src="/pay/mercadopago.svg" alt="Mercado Pago" h={18} />;
   return (
     <span className="flex gap-1">
       <VisaMark />

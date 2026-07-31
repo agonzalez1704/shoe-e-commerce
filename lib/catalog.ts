@@ -21,21 +21,21 @@ export type ProductCard = {
   imageAlt: string | null;  // that colour's 2nd image (hover crossfade)
   comboMinQty: number | null;
   comboPriceCents: number | null;
-  promoPercent: number | null;  // active promo %, or null (combos never get one)
+  promoPercent: number | null;  // active promo %, or null
 };
 
-// Active promo % per product id (combo products excluded), for the storefront to
-// render sale prices. Mirrors the promo_percent() SQL + create_order.
+// Active promo % per product id, for the storefront to render sale prices.
+// Applies to every product (combos included); when combo units pair up, the
+// combo price reprices them instead. Mirrors promo_percent() + create_order (0037).
 export async function getPromoMap(): Promise<Map<string, number>> {
   const supabase = await createClient();
   const now = new Date().toISOString();
   const { data } = await supabase
     .from("promocion_productos")
-    .select("product_id, promociones!inner(percent, active, starts_at, ends_at), products!inner(combo_group)")
+    .select("product_id, promociones!inner(percent, active, starts_at, ends_at)")
     .eq("promociones.active", true)
     .lte("promociones.starts_at", now)
-    .gt("promociones.ends_at", now)
-    .is("products.combo_group", null);
+    .gt("promociones.ends_at", now);
   const m = new Map<string, number>();
   for (const r of (data ?? []) as unknown as { product_id: string; promociones: { percent: number } | null }[]) {
     const pct = r.promociones?.percent ?? 0;
@@ -228,7 +228,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
 
   const availMap = new Map((avail ?? []).map((a) => [a.variant_id, a.qty_available]));
 
-  // Active promo % (combo-excluded) via the SQL helper — single source of truth.
+  // Active promo % via the SQL helper (all products) — single source of truth.
   const { data: pct } = await supabase.rpc("promo_percent", { p_product_id: p.id });
   const promoPercent = typeof pct === "number" && pct > 0 ? pct : null;
 
