@@ -290,14 +290,14 @@ export async function getCart(): Promise<CartSummary> {
   if (groupsNeeding.size) {
     const { data: sug } = await db
       .from("products")
-      .select("name, slug, base_price_cents, product_images(url, position)")
+      .select("id, name, slug, base_price_cents, product_images(url, position)")
       .in("combo_group", [...groupsNeeding])
       .eq("status", "active");
-    type Sug = { name: string; slug: string; base_price_cents: number; product_images: { url: string; position: number }[] };
+    type Sug = { id: string; name: string; slug: string; base_price_cents: number; product_images: { url: string; position: number }[] };
     comboSuggestions = ((sug ?? []) as unknown as Sug[]).map((p) => ({
       slug: p.slug,
       name: p.name,
-      priceCents: p.base_price_cents,
+      priceCents: precioConPromo(p.base_price_cents, promo.get(p.id) ?? null),
       image: [...(p.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url ?? null,
     }));
   }
