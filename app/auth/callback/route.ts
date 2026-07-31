@@ -10,11 +10,15 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/cuenta";
 
-  if (code) {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.exchangeCodeForSession(code);
-    if (data?.user) await mergeGuestCart(data.user.id);
+  if (!code) return NextResponse.redirect(`${origin}${next}?auth=nocode`);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    console.error("[auth callback] exchange failed:", error.message);
+    return NextResponse.redirect(`${origin}${next}?auth=error`);
   }
+  if (data?.user) await mergeGuestCart(data.user.id);
   return NextResponse.redirect(`${origin}${next}`);
 }
 
