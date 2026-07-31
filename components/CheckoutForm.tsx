@@ -61,18 +61,17 @@ function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }
 function StoreLogos({ h = 15 }: { h?: number }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      <LogoChip src="/pay/7eleven.svg" alt="7-Eleven" h={h} />
-      <LogoChip src="/pay/bbva.svg" alt="BBVA" h={h} />
       <LogoChip src="/pay/farmacias-ahorro.svg" alt="Farmacias del Ahorro" h={h} />
+      <LogoChip src="/pay/bbva.svg" alt="BBVA" h={h} />
     </span>
   );
 }
 
 function MethodMark({ id }: { id: Method }) {
-  if (id === "oxxo") return <LogoChip src="/pay/7eleven.svg" alt="Efectivo en tiendas" h={14} />;
+  if (id === "oxxo") return <LogoChip src="/pay/farmacias-ahorro.svg" alt="Efectivo en tiendas" h={14} />;
   if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
   if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
-  if (id === "mercadopago") return <LogoChip src="/pay/mercadopago.svg" alt="Mercado Pago" h={18} />;
+  if (id === "mercadopago") return <LogoChip src="/pay/mercadopago.svg" alt="Mercado Pago" h={30} />;
   return (
     <span className="flex gap-1">
       <VisaMark />
@@ -589,13 +588,12 @@ export function CheckoutForm({
             <VisaMark />
             <MastercardMark />
             <AmexMark />
-            <LogoChip src="/pay/7eleven.svg" alt="7-Eleven" h={12} />
-            <LogoChip src="/pay/bbva.svg" alt="BBVA" h={12} />
             <LogoChip src="/pay/farmacias-ahorro.svg" alt="Farmacias del Ahorro" h={12} />
+            <LogoChip src="/pay/bbva.svg" alt="BBVA" h={12} />
             <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={14} />
           </div>
           <p className="text-center text-[11px] leading-relaxed text-muted">
-            Paga en efectivo en 7-Eleven, BBVA, Farmacias del Ahorro, Walmart, Bodega Aurrerá, Circle K, Soriana
+            Paga en efectivo en Farmacias del Ahorro, BBVA, Walmart, Bodega Aurrerá, Circle K, Soriana
             y +20,000 tiendas. <span className="font-medium">No disponible en OXXO.</span>
           </p>
           <p className="flex items-center justify-center gap-1 text-[11px] text-muted">
