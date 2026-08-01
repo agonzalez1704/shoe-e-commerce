@@ -25,7 +25,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const [{ data: customer }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("full_name, email").eq("id", user.id).maybeSingle(),
-    supabase.from("orders").select("order_number, status, total_cents, created_at, payment_method").eq("customer_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("order_number, status, total_cents, created_at, payment_method, shipping_address, order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -45,29 +45,58 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
         <p className="text-sm text-muted">Aún no tienes pedidos. <Link href="/products" className="text-accent underline">Ir a la tienda</Link></p>
       ) : (
         <ul className="divide-y divide-border rounded-2xl border border-border">
-          {(orders ?? []).map((o) => (
-            <li key={o.order_number} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm">
-              <span className="nums font-medium">{o.order_number}</span>
-              <StatusBadge status={o.status} />
-              <span className="text-muted">{new Date(o.created_at).toLocaleDateString("es-MX")}</span>
-              <span className="nums ml-auto">{mxn(o.total_cents)}</span>
-              {o.status === "pending" ? (
-                <Link
-                  href={`/pedido/${o.order_number}/pagar`}
-                  className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-contrast"
-                >
-                  {o.payment_method === "aplazo" ? "Continuar en Aplazo" : "Completar pago"} →
-                </Link>
-              ) : (
-                <Link
-                  href={`/rastrear?o=${o.order_number}`}
-                  className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
-                >
-                  Rastrear
-                </Link>
-              )}
-            </li>
-          ))}
+          {(orders ?? []).map((o) => {
+            const items = (o.order_items ?? []) as { product_name: string; variant_label: string; quantity: number }[];
+            const ship = (o.shipping_address ?? {}) as Record<string, string>;
+            const addr = [ship.line1, ship.neighborhood, ship.city, ship.region, ship.postal].filter(Boolean).join(", ");
+            return (
+              <li key={o.order_number} className="px-4 py-3 text-sm">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <span className="nums font-medium">{o.order_number}</span>
+                  <StatusBadge status={o.status} />
+                  <span className="text-muted">{new Date(o.created_at).toLocaleDateString("es-MX")}</span>
+                  <span className="nums ml-auto">{mxn(o.total_cents)}</span>
+                  {o.status === "pending" ? (
+                    <Link
+                      href={`/pedido/${o.order_number}/pagar`}
+                      className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-contrast"
+                    >
+                      {o.payment_method === "aplazo" ? "Continuar en Aplazo" : "Completar pago"} →
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/rastrear?o=${o.order_number}`}
+                      className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
+                    >
+                      Rastrear
+                    </Link>
+                  )}
+                </div>
+                <details className="mt-2 [&_summary]:cursor-pointer">
+                  <summary className="text-xs font-medium text-accent">Ver detalle</summary>
+                  <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">Pares pedidos</p>
+                      <ul className="mt-1.5 space-y-0.5 text-muted">
+                        {items.map((it, i) => (
+                          <li key={i} className="capitalize">{it.product_name} ({it.variant_label}) × {it.quantity}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">Datos de envío</p>
+                      <div className="mt-1.5 text-muted">
+                        {ship.name && <p className="text-text">{ship.name}</p>}
+                        {ship.phone && <p className="nums">{ship.phone}</p>}
+                        {addr && <p className="leading-relaxed">{addr}</p>}
+                        {!ship.name && !addr && <p>Sin datos de envío.</p>}
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

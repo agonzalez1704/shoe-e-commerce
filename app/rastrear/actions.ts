@@ -10,6 +10,7 @@ export type TrackedOrder = {
   totalCents: number;
   createdAt: string;
   items: { name: string; quantity: number }[];
+  shipping: Record<string, string> | null;
   payment: { status: string; reference: string | null; clabe: string | null; voucherUrl: string | null } | null;
 };
 
@@ -26,7 +27,7 @@ export async function lookupOrder(
   const admin = createAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("id, order_number, status, payment_method, total_cents, created_at")
+    .select("id, order_number, status, payment_method, total_cents, created_at, shipping_address")
     .eq("order_number", orderNumber.trim().toUpperCase())
     .ilike("email", email.trim())
     .maybeSingle();
@@ -52,6 +53,7 @@ export async function lookupOrder(
       totalCents: order.total_cents,
       createdAt: order.created_at,
       items: (items ?? []).map((i) => ({ name: `${i.product_name} (${i.variant_label})`, quantity: i.quantity })),
+      shipping: (order.shipping_address ?? null) as Record<string, string> | null,
       payment: payment
         ? { status: payment.status, reference: payment.reference, clabe: payment.clabe, voucherUrl: payment.voucher_url }
         : null,

@@ -90,11 +90,27 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
             </div>
           )}
 
-          <ul className="mt-4 space-y-1 border-t border-border pt-4 text-sm text-muted">
-            {result.items.map((it, i) => (
-              <li key={i} className="capitalize">{it.name} × {it.quantity}</li>
-            ))}
-          </ul>
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Pares pedidos</p>
+            <ul className="mt-1.5 space-y-1 text-sm text-muted">
+              {result.items.map((it, i) => (
+                <li key={i} className="capitalize">{it.name} × {it.quantity}</li>
+              ))}
+            </ul>
+          </div>
+
+          {result.shipping && (result.shipping.name || result.shipping.line1) && (
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Datos de envío</p>
+              <div className="mt-1.5 text-sm text-muted">
+                {result.shipping.name && <p className="text-text">{result.shipping.name}</p>}
+                {result.shipping.phone && <p className="nums">{result.shipping.phone}</p>}
+                <p className="leading-relaxed">
+                  {[result.shipping.line1, result.shipping.neighborhood, result.shipping.city, result.shipping.region, result.shipping.postal].filter(Boolean).join(", ")}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
