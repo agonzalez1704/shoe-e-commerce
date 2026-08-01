@@ -74,11 +74,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="overflow-x-hidden">
         <MetaPixel />
         <AnalyticsBeacon />
-        <div className="bg-text text-bg">
-          <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs">
+        <Link href="/products" className="block bg-text text-bg transition-opacity hover:opacity-90">
+          <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs font-medium">
             {activeBrand.announcement ?? "Envíos a todo México"}
           </p>
-        </div>
+        </Link>
         <header className="sticky top-0 z-50 border-b border-border bg-bg/80 backdrop-blur-md">
           <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
             <Link href="/" aria-label={SITE_NAME}>

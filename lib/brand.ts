@@ -44,7 +44,7 @@ const BRANDS: Record<string, BrandConfig> = {
     description:
       "Calzado de piel hecho sobre pedido en México. Diseño afilado, todas las tallas y anchos, envío a todo el país. Pago con tarjeta, efectivo o Aplazo.",
     emailFrom: "Blade <pedidos@calzadoblade.com>",
-    announcement: "Hecho sobre pedido · Envío en 4-7 días hábiles · Envíos a todo México",
+    announcement: "2 PARES POR $1,999 · combina cualquier modelo · Envío gratis a todo México",
     seoSuffix: "calzado de piel hecho en México",
     // silver wordmark (transparent PNG); inverted to dark on light theme
     logo: { src: "/blade-logo.png", width: 565, height: 220, alt: "Blade", invertOnLight: true },
