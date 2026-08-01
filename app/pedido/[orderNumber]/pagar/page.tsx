@@ -4,8 +4,10 @@ import { Storefront, Bank, Clock } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConektaOrder } from "@/lib/conekta";
+import { createMpPreference } from "@/lib/mercadopago";
 import { formatCents } from "@/lib/money";
 import { CASH_CHAINS } from "@/lib/payment-method";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,33 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
       url = co.next_action?.redirect_to_url?.url ?? pm?.redirect_url;
     } catch (e) {
       console.error("[pagar] could not fetch the provider order:", e);
+    }
+    if (url) redirect(url);
+  }
+
+  // MercadoPago: no stored voucher — mint a fresh Checkout Pro preference for the
+  // still-pending order and bounce back to MP so the buyer can finish paying.
+  if (order.payment_method === "mercadopago") {
+    let url: string | undefined;
+    try {
+      const { data: full } = await admin
+        .from("orders").select("email, shipping_address").eq("id", order.id).maybeSingle();
+      const { data: items } = await admin
+        .from("order_items").select("quantity").eq("order_id", order.id);
+      const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
+      const ship = (full?.shipping_address ?? null) as { name?: string } | null;
+      const pref = await createMpPreference({
+        orderNumber,
+        amountCents: order.total_cents,
+        itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
+        customer: { name: ship?.name ?? "", email: full?.email ?? "" },
+        successUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}`,
+        failureUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}&payment_status=failed`,
+        notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,
+      });
+      url = pref.init_point || pref.sandbox_init_point;
+    } catch (e) {
+      console.error("[pagar] could not create MercadoPago preference:", e);
     }
     if (url) redirect(url);
   }
