@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listProducts, type ProductFilters } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
+import { ComboBand, comboPicks } from "@/components/ComboBand";
 
 export const revalidate = 60; // ISR — catalog changes infrequently
 
@@ -37,7 +38,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
       {products.length === 0 ? (
         <p className="text-muted">No se encontraron productos.</p>
       ) : (
-        <ProductGrid products={products} />
+        <>
+          <ComboBand picks={comboPicks(products)} />
+          <ProductGrid products={products} />
+        </>
       )}
     </div>
   );
