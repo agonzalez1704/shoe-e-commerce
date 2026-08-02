@@ -598,6 +598,7 @@ export type Database = {
           currency: string
           customer_id: string | null
           delivered_at: string | null
+          dev_commission_paid_at: string | null
           discount_cents: number
           email: string
           estimated_delivery: string | null
@@ -630,6 +631,7 @@ export type Database = {
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
+          dev_commission_paid_at?: string | null
           discount_cents?: number
           email: string
           estimated_delivery?: string | null
@@ -662,6 +664,7 @@ export type Database = {
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
+          dev_commission_paid_at?: string | null
           discount_cents?: number
           email?: string
           estimated_delivery?: string | null
