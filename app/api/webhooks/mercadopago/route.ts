@@ -38,12 +38,21 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("id, total_cents")
+    .select("id, total_cents, status")
     .eq("order_number", orderNumber)
     .maybeSingle();
   if (!order) {
     console.error("[mercadopago webhook] no order for external_reference:", orderNumber, "payment:", paymentId);
     return NextResponse.json({ ok: true });
+  }
+
+  // The buyer can pay after we released the order (2h expiry, or they backed out
+  // and came back). commit_order only acts on a pending order, so an approved
+  // payment would be swallowed and the buyer would never be confirmed. Revive it:
+  // every product is made-to-order, so re-reserving stock is a no-op.
+  if (order.status === "cancelled") {
+    console.error("[mercadopago webhook] reviving cancelled order for an approved payment:", orderNumber, paymentId);
+    await admin.from("orders").update({ status: "pending" }).eq("id", order.id);
   }
 
   // defense-in-depth: the preference fixes the amount server-side, but never
