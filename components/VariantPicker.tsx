@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryState, parseAsString } from "nuqs";
 import { ShoppingBag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { addToCart } from "@/app/cart/actions";
@@ -37,7 +38,10 @@ export function VariantPicker({
   madeToOrder?: boolean;
 }) {
   const colors = useMemo(() => Array.from(new Set(variants.map((v) => v.color))), [variants]);
-  const [variantId, setVariantId] = useState<string | null>(null);
+  // The size lives in the URL (?talla=26.5) so a link can carry a ready-to-buy
+  // selection. Store the size value, not the variant id: it stays readable and
+  // survives a variant being re-created.
+  const [size, setSize] = useQueryState("talla", parseAsString.withOptions({ history: "replace" }));
   const [flash, setFlash] = useState(false); // pulse the size picker when tapped without a size
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -50,7 +54,11 @@ export function VariantPicker({
     [variants, color],
   );
 
-  const selected = variants.find((v) => v.id === variantId) ?? null;
+  // a size only counts when this colour actually offers it
+  const selected = useMemo(
+    () => sizes.find((v) => v.size_value === size && !(!madeToOrder && v.qty_available <= 0)) ?? null,
+    [sizes, size, madeToOrder],
+  );
   const price = selected?.price_cents ?? basePriceCents;
   const canBuy = !!selected && !isPending && (madeToOrder || selected.qty_available > 0);
 
@@ -86,7 +94,8 @@ export function VariantPicker({
               key={c}
               onClick={() => {
                 onColorChange(c);
-                setVariantId(null);
+                // keep the size across colourways when it exists there, drop it otherwise
+                if (!variants.some((v) => v.color === c && v.size_value === size)) setSize(null);
               }}
               className={`rounded-full border px-4 py-1.5 text-sm capitalize transition-colors ${
                 c === color ? "border-accent text-accent" : "border-border text-muted hover:text-text"
@@ -110,12 +119,12 @@ export function VariantPicker({
             // made-to-order: never out of stock, no availability shown
             const oos = !madeToOrder && v.qty_available <= 0;
             const low = !madeToOrder && !oos && v.qty_available <= 3;
-            const active = v.id === variantId;
+            const active = v.size_value === size;
             return (
               <button
                 key={v.id}
                 disabled={oos}
-                onClick={() => setVariantId(v.id)}
+                onClick={() => setSize(v.size_value)}
                 title={`Ancho ${v.width}${low ? ` · quedan ${v.qty_available}` : ""}`}
                 className={`relative rounded-lg border py-2.5 text-center text-sm transition-colors ${
                   active

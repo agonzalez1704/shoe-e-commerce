@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useQueryState, parseAsString } from "nuqs";
 import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { comboOf, precioConPromo } from "@/lib/pricing";
@@ -39,9 +40,13 @@ export function ProductDetail({
     () => Array.from(new Set(product.variants.map((v) => v.color))),
     [product.variants],
   );
-  const [color, setColor] = useState(
-    () => (initialColor && colors.includes(initialColor) ? initialColor : colors[0]) ?? "",
-  );
+  // colour lives in the URL (?color=) so a picked colourway is shareable and the
+  // server render agrees with it — the page already reads the same param.
+  // No default on the parser on purpose: nuqs strips a param that equals its
+  // default, which would silently drop ?color= from a link the buyer is sharing.
+  const fallbackColor = (initialColor && colors.includes(initialColor) ? initialColor : colors[0]) ?? "";
+  const [colorParam, setColor] = useQueryState("color", parseAsString.withOptions({ history: "replace" }));
+  const color = colorParam && colors.includes(colorParam) ? colorParam : fallbackColor;
 
   // images for the chosen color + any general (null-color) shots; fallback to all
   const gallery = useMemo(() => {
