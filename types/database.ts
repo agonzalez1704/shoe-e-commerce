@@ -92,14 +92,17 @@ export type Database = {
       admin_users: {
         Row: {
           created_at: string
+          is_dev: boolean
           user_id: string
         }
         Insert: {
           created_at?: string
+          is_dev?: boolean
           user_id: string
         }
         Update: {
           created_at?: string
+          is_dev?: boolean
           user_id?: string
         }
         Relationships: []
@@ -598,6 +601,8 @@ export type Database = {
           currency: string
           customer_id: string | null
           delivered_at: string | null
+          dev_commission_marked_at: string | null
+          dev_commission_marked_by: string | null
           dev_commission_paid_at: string | null
           discount_cents: number
           email: string
@@ -607,6 +612,7 @@ export type Database = {
           id: string
           needs_invoice: boolean
           order_number: string
+          paid_at: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           reminder_sent_at: string | null
           review_request_sent_at: string | null
@@ -631,6 +637,8 @@ export type Database = {
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
+          dev_commission_marked_at?: string | null
+          dev_commission_marked_by?: string | null
           dev_commission_paid_at?: string | null
           discount_cents?: number
           email: string
@@ -640,6 +648,7 @@ export type Database = {
           id?: string
           needs_invoice?: boolean
           order_number: string
+          paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           reminder_sent_at?: string | null
           review_request_sent_at?: string | null
@@ -664,6 +673,8 @@ export type Database = {
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
+          dev_commission_marked_at?: string | null
+          dev_commission_marked_by?: string | null
           dev_commission_paid_at?: string | null
           discount_cents?: number
           email?: string
@@ -673,6 +684,7 @@ export type Database = {
           id?: string
           needs_invoice?: boolean
           order_number?: string
+          paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           reminder_sent_at?: string | null
           review_request_sent_at?: string | null
@@ -1452,6 +1464,7 @@ export type Database = {
       expire_pending_orders: { Args: never; Returns: number }
       expire_stale_angle_jobs: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      is_dev: { Args: never; Returns: boolean }
       iva_of: { Args: { p_inclusive: number }; Returns: number }
       promo_percent: { Args: { p_product_id: string }; Returns: number }
       record_payment: {

@@ -1,16 +1,22 @@
 "use client";
 
 import { useTransition } from "react";
-import { setCommissionPaid } from "@/app/admin/commission-actions";
+import { markCommissionPaid, confirmCommissionPaid, resetCommission } from "@/app/admin/commission-actions";
+
+const ACTIONS = {
+  mark: markCommissionPaid,
+  confirm: confirmCommissionPaid,
+  reset: resetCommission,
+} as const;
 
 export function CommissionPayButton({
   orderIds,
-  paid,
+  kind,
   label,
   className = "",
 }: {
   orderIds: string[];
-  paid: boolean; // target state to set
+  kind: keyof typeof ACTIONS;
   label: string;
   className?: string;
 }) {
@@ -19,7 +25,7 @@ export function CommissionPayButton({
   return (
     <button
       disabled={isPending}
-      onClick={() => start(() => setCommissionPaid(orderIds, paid))}
+      onClick={() => start(() => ACTIONS[kind](orderIds))}
       className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${className}`}
     >
       {isPending ? "…" : label}
