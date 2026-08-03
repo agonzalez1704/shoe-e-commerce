@@ -1,0 +1,12 @@
+import { slugifyColor } from "@/lib/meta-content";
+
+// Pre-rendered 1200x630 JPEG share cards live in Storage under og/.
+// They exist because the product photos are portrait WebP: link previews crop
+// them badly, and Meta/WhatsApp don't reliably decode WebP. Generated per
+// colourway, with a per-product fallback.
+//   og/{slug}--{colourslug}.jpg   ·   og/{slug}.jpg
+export function ogCardUrl(slug: string, color?: string): string {
+  const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/og`;
+  const cs = color ? slugifyColor(color) : "";
+  return cs ? `${base}/${slug}--${cs}.jpg` : `${base}/${slug}.jpg`;
+}

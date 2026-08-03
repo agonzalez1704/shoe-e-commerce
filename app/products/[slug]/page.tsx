@@ -8,11 +8,19 @@ import { ProductDetail } from "@/components/ProductDetail";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ProductReviews } from "@/components/ProductReviews";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
+import { ogCardUrl } from "@/lib/og-card";
 
 export const revalidate = 60;
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ color?: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
+  const { color } = await searchParams;
   const product = await getProduct(slug);
   if (!product) return { title: "Producto no encontrado" };
 
@@ -20,7 +28,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     product.description?.slice(0, 155) ??
     `${product.name}${product.brand ? ` de ${product.brand}` : ""}. Calzado hecho sobre pedido, envío a todo México.`;
   const url = `${SITE_URL}/products/${slug}`;
-  const cover = product.images[0]?.url;
+
+  // Pre-rendered 1200x630 JPEG share card. The product photos themselves are
+  // portrait WebP (served from Storage), which link previews crop badly and
+  // Meta/WhatsApp don't reliably decode — hence a dedicated card per colourway.
+  // only a colourway that actually has photos got a card generated
+  const hasCard = !!color && product.images.some((i) => i.color === color);
+  const cover = ogCardUrl(slug, hasCard ? color : undefined);
 
   return {
     title: product.name,
@@ -31,9 +45,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: `${product.name} · ${SITE_NAME}`,
       description: desc,
       url,
-      images: cover ? [{ url: cover, width: 800, height: 800, alt: product.name }] : undefined,
+      images: [{ url: cover, width: 1200, height: 630, type: "image/jpeg", alt: product.name }],
     },
-    twitter: { card: "summary_large_image", title: product.name, description: desc, images: cover ? [cover] : undefined },
+    twitter: { card: "summary_large_image", title: product.name, description: desc, images: [cover] },
   };
 }
 
