@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Storefront, Bank, Clock } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
@@ -20,13 +21,28 @@ const CHAINS = "7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmac
 export default async function PagarPedido({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = await params;
 
-  // ownership first: RLS only returns the order to the customer who owns it
+  // ownership first: RLS only returns the order to the customer who owns it.
+  // Guests have no customer_id, so fall back to the cart session token stamped
+  // on the order — without it a guest could never resume their own payment.
   const supabase = await createClient();
-  const { data: order } = await supabase
+  let { data: order } = await supabase
     .from("orders")
     .select("id, status, total_cents, payment_method")
     .eq("order_number", orderNumber)
     .maybeSingle();
+
+  if (!order) {
+    const token = (await cookies()).get("cart_token")?.value;
+    if (token) {
+      const { data: guestOrder } = await createAdminClient()
+        .from("orders")
+        .select("id, status, total_cents, payment_method")
+        .eq("order_number", orderNumber)
+        .eq("session_token", token)
+        .maybeSingle();
+      order = guestOrder;
+    }
+  }
   if (!order) redirect("/cuenta");
   if (order.status !== "pending") redirect(`/rastrear?o=${encodeURIComponent(orderNumber)}`);
 

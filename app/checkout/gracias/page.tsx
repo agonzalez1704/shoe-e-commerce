@@ -5,21 +5,30 @@ import { OrderConfirmation } from "@/components/OrderConfirmation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { restoreCartFromOrder } from "@/app/cart/actions";
+import { isDeclined, isSet } from "@/lib/provider-return";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-type Params = { o?: string; order_id?: string; payment_status?: string };
+type Params = {
+  o?: string;
+  order_id?: string;
+  payment_status?: string;
+  // MercadoPago appends its own params on every return
+  status?: string;
+  collection_status?: string;
+  payment_id?: string;
+};
 
-// Provider return target (card 3DS / Aplazo). Never claim the order is paid on
-// the provider's say-so: confirm against our own record first. Order numbers are
-// sequential and guessable, so the lookup is keyed on the provider's order id
-// (unguessable) — holding it proves the visitor came through the flow.
-async function resolveState({ o, order_id, payment_status }: Params): Promise<"paid" | "pending" | "failed"> {
-  const declined = /error|declined|failed|denied/i.test(payment_status ?? "");
+// Provider return target (card 3DS / Aplazo / MercadoPago). Never claim the order
+// is paid on the provider's say-so: confirm against our own record first. Order
+// numbers are sequential and guessable, so the lookup is keyed on the provider's
+// order id (unguessable) — holding it proves the visitor came through the flow.
+async function resolveState(p: Params): Promise<"paid" | "pending" | "failed"> {
+  const declined = isDeclined(p);
 
   try {
-    return await lookupState({ o, order_id }, declined);
+    return await lookupState(p, declined);
   } catch (e) {
     // a buyer returning from the provider must never hit an error page
     console.error("[gracias] state lookup failed:", e);
@@ -103,6 +112,10 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
   }
 
   const paid = state === "paid";
+  // Came back from the provider without paying (e.g. MercadoPago's "Volver a la
+  // tienda"): the order is still held, so offer to finish instead of implying a
+  // payment is being confirmed.
+  const notAttempted = !paid && !isSet(params.payment_id) && !isSet(params.order_id);
 
   return (
     <div className="flex flex-col items-center py-16 text-center">
@@ -111,13 +124,23 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
           <OrderConfirmation
             orderNumber={o}
             trackUrl={`${SITE_URL}/rastrear`}
-            status={paid ? "Pedido confirmado" : "Pedido recibido"}
+            status={paid ? "Pedido confirmado" : notAttempted ? "Pago pendiente" : "Pedido recibido"}
           />
           <p className="mt-8 max-w-md text-sm text-muted">
             {paid
               ? "Tu pago está confirmado. Tu calzado se fabrica sobre pedido y se envía en 4 a 7 días hábiles."
-              : "Estamos confirmando tu pago. Te enviaremos un correo en cuanto se acredite — si no se completa, no se hará ningún cargo."}
+              : notAttempted
+                ? "Apartamos tu pedido, pero aún no recibimos el pago. Puedes completarlo ahora — no se ha hecho ningún cargo."
+                : "Estamos confirmando tu pago. Te enviaremos un correo en cuanto se acredite — si no se completa, no se hará ningún cargo."}
           </p>
+          {notAttempted && (
+            <Link
+              href={`/pedido/${o}/pagar`}
+              className="mt-6 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-contrast"
+            >
+              Completar pago →
+            </Link>
+          )}
         </>
       ) : (
         <div className="max-w-md">
