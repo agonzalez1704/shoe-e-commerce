@@ -93,7 +93,7 @@ function Field({
       <input
         id={name} name={name} type={type} required={required} placeholder=" " defaultValue={defaultValue}
         autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} onInput={onInput}
-        className="peer h-14 w-full rounded-xl border border-border bg-surface px-3.5 pt-5 pb-1.5 text-sm text-text outline-none transition-colors focus:border-accent focus:ring-4 focus:ring-accent/10"
+        className="peer h-14 w-full rounded-xl border border-border bg-surface px-3.5 pt-5 pb-1.5 text-sm text-text outline-none transition-colors focus:border-accent focus:ring-4 focus:ring-accent/10 [&:user-invalid]:border-accent [&:user-invalid]:ring-2 [&:user-invalid]:ring-accent/30"
       />
       <label
         htmlFor={name}
@@ -246,10 +246,20 @@ export function CheckoutForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submittingRef.current) return; // a submit is already in flight
+    const form = e.currentTarget;
+
+    // Point at the offending field instead of just refusing to continue: buyers
+    // filled everything they could see (typing the colonia inside the street
+    // line, say) and had no way to tell which required field was still empty.
+    if (!form.reportValidity()) return;
+    if (method === "card") {
+      const bad = cardError();
+      if (bad) { setError(bad); return; }
+    }
+
     submittingRef.current = true;
     setLoading(true);
     setError(null);
-    const form = e.currentTarget;
     const g = (n: string) => (form.elements.namedItem(n) as HTMLInputElement)?.value ?? "";
 
     // remember (or forget) the contact/shipping data for next time
@@ -574,14 +584,16 @@ export function CheckoutForm({
 
           {error && <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">{error}</p>}
 
+          {/* Stays clickable on purpose: pressing it walks the buyer to the field
+              that is still missing (see onSubmit) instead of dead-ending them. */}
           <button
-            disabled={loading || !formValid || (method === "card" && cardError() !== null)}
+            disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Procesando…" : <><Lock size={15} weight="fill" /> {cta}</>}
           </button>
           {!loading && !formValid && (
-            <p className="mt-2 text-center text-xs text-muted">Completa tus datos para continuar.</p>
+            <p className="mt-2 text-center text-xs text-muted">Faltan datos por completar — toca el botón y te llevamos al campo.</p>
           )}
 
           <div className="flex flex-wrap items-center justify-center gap-1.5">
