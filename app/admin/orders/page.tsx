@@ -12,25 +12,49 @@ const shortDate = (s: string) => new Date(s).toLocaleDateString("es-MX", { day: 
 const STATUSES = ["all", "pending", "paid", "fulfilled", "cancelled", "refunded"] as const;
 type Status = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
+const PER_PAGE = 25;
+
 export default async function AdminOrders({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
-  const { status, q } = await searchParams;
+  const { status, q, page } = await searchParams;
   const active = status ?? "all";
   // strip chars that would break the PostgREST .or() filter syntax
   const query = (q ?? "").trim().replace(/[,()%*\\]/g, "").slice(0, 60);
+  const current = Math.max(1, Number(page) || 1);
+  const from = (current - 1) * PER_PAGE;
   const supabase = await createClient();
 
   let sb = supabase
     .from("orders")
-    .select("id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at")
+    .select(
+      "id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address",
+      { count: "exact" },
+    )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(from, from + PER_PAGE - 1);
   if (active !== "all") sb = sb.eq("status", active as Status);
-  if (query) sb = sb.or(`order_number.ilike.%${query}%,email.ilike.%${query}%`);
-  const { data: orders } = await sb;
+  // search the buyer's name too — it lives in the shipping address, and looking
+  // someone up by name is the usual way a customer message arrives
+  if (query) {
+    sb = sb.or(
+      `order_number.ilike.%${query}%,email.ilike.%${query}%,shipping_address->>name.ilike.%${query}%`,
+    );
+  }
+  const { data: orders, count } = await sb;
+
+  const total = count ?? 0;
+  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const hrefFor = (p: number) => {
+    const sp = new URLSearchParams();
+    if (active !== "all") sp.set("status", active);
+    if (query) sp.set("q", query);
+    if (p > 1) sp.set("page", String(p));
+    const s = sp.toString();
+    return `/admin/orders${s ? `?${s}` : ""}`;
+  };
 
   return (
     <div className="space-y-5">
@@ -42,7 +66,7 @@ export default async function AdminOrders({
           <input
             name="q"
             defaultValue={query}
-            placeholder="Buscar por # o correo…"
+            placeholder="Buscar por #, correo o nombre…"
             className="w-56 rounded-full border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-accent"
           />
         </form>
@@ -80,7 +104,10 @@ export default async function AdminOrders({
                 <td className="px-4 py-3">
                   <Link href={`/admin/orders/${o.id}`} className="nums font-medium hover:text-accent">{o.order_number}</Link>
                 </td>
-                <td className="max-w-[180px] truncate px-4 py-3 text-muted">{o.email}</td>
+                <td className="max-w-[220px] px-4 py-3">
+                  <p className="truncate">{(o.shipping_address as { name?: string } | null)?.name ?? "—"}</p>
+                  <p className="truncate text-xs text-muted">{o.email}</p>
+                </td>
                 <td className="nums px-4 py-3 text-muted">{shortDate(o.created_at)}</td>
                 <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                 <td className="px-4 py-3"><StageBadge stage={o.fulfillment_stage} /></td>
@@ -93,6 +120,32 @@ export default async function AdminOrders({
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p className="text-muted">
+            {from + 1}–{Math.min(from + PER_PAGE, total)} de <span className="nums font-medium text-text">{total}</span>{" "}
+            {total === 1 ? "pedido" : "pedidos"}
+          </p>
+          <div className="flex items-center gap-2">
+            {current > 1 ? (
+              <Link href={hrefFor(current - 1)} className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium transition-colors hover:border-text">
+                ← Anterior
+              </Link>
+            ) : (
+              <span className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted/40">← Anterior</span>
+            )}
+            <span className="text-xs text-muted">Página {current} de {lastPage}</span>
+            {current < lastPage ? (
+              <Link href={hrefFor(current + 1)} className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium transition-colors hover:border-text">
+                Siguiente →
+              </Link>
+            ) : (
+              <span className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted/40">Siguiente →</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
