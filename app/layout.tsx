@@ -66,6 +66,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es-MX" className={`${outfit.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
+        {/* Optional: only powers Facebook's domain insights attribution — link
+            previews render fine without it, it's just what the Sharing Debugger
+            nags about. Set NEXT_PUBLIC_FB_APP_ID to emit it. Needs `property`,
+            which Next's metadata `other` can't produce, hence the raw tag. */}
+        {process.env.NEXT_PUBLIC_FB_APP_ID && (
+          <meta property="fb:app_id" content={process.env.NEXT_PUBLIC_FB_APP_ID} />
+        )}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {/* per-brand theme tokens override globals.css defaults */}
         <style dangerouslySetInnerHTML={{ __html: brandThemeCss() }} />
