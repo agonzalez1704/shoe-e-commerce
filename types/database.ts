@@ -1661,6 +1661,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      checkout_funnel: {
+        Args: { p_desde: string }
+        Returns: {
+          llegaron_al_carrito: number
+          llegaron_al_checkout: number
+          pedidos_creados: number
+          pedidos_pagados: number
+          vieron_producto: number
+          visitantes: number
+        }[]
+      }
       cleanup_rate_limits: { Args: never; Returns: undefined }
       commit_order: {
         Args: {

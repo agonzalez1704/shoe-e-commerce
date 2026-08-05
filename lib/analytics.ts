@@ -69,28 +69,181 @@ export async function masVendidos(periodo: Periodo, limite = 5) {
 }
 
 // ---- fiados_pendientes (online = pedidos pendientes de pago: OXXO/SPEI/Aplazo) ----
+// Chasing an unpaid order needs a name, a phone and how long is left — the
+// email and the total alone can't be acted on.
+const waLink = (phone?: string | null) => {
+  const d = (phone ?? "").replace(/\D/g, "");
+  if (!d) return null;
+  return `https://wa.me/${d.length === 10 ? `52${d}` : d}`;
+};
+
 export async function fiadosPendientes() {
   const db = createAdminClient();
   const { data } = await db
     .from("orders")
-    .select("email, total_cents, created_at, payment_method, order_items(product_name, quantity)")
+    .select(
+      "id, order_number, email, total_cents, created_at, expires_at, payment_method, shipping_address, " +
+        "order_items(product_name, quantity), payments(reference, voucher_url, status)",
+    )
     .eq("status", "pending")
     .order("created_at", { ascending: true });
 
-  type Row = { email: string; total_cents: number; created_at: string; payment_method: string | null; order_items: { product_name: string; quantity: number }[] };
+  type Row = {
+    id: string; order_number: string; email: string; total_cents: number;
+    created_at: string; expires_at: string | null; payment_method: string | null;
+    shipping_address: Record<string, string> | null;
+    order_items: { product_name: string; quantity: number }[];
+    payments: { reference: string | null; voucher_url: string | null; status: string }[];
+  };
   const rows = (data ?? []) as unknown as Row[];
   const now = Date.now();
-  const fiados = rows.map((o) => ({
-    cliente: o.email,
-    metodo: o.payment_method,
-    total_mxn: peso(o.total_cents),
-    dias: Math.floor((now - new Date(o.created_at).getTime()) / 86400_000),
-    productos: o.order_items.map((i) => (i.quantity > 1 ? `${i.product_name} x${i.quantity}` : i.product_name)).join(", "),
-  }));
+
+  const fiados = rows.map((o) => {
+    const ship = o.shipping_address ?? {};
+    const pay = o.payments?.[0];
+    const horas = o.expires_at
+      ? Math.round((new Date(o.expires_at).getTime() - now) / 3600_000)
+      : null;
+    return {
+      pedido: o.order_number,
+      cliente: ship.name ?? o.email,
+      email: o.email,
+      telefono: ship.phone ?? null,
+      whatsapp: waLink(ship.phone),
+      metodo: o.payment_method,
+      total_mxn: peso(o.total_cents),
+      dias: Math.floor((now - new Date(o.created_at).getTime()) / 86400_000),
+      // negative = already past its deadline; null = no expiry (aplazo/mercadopago)
+      horas_para_vencer: horas,
+      vencido: horas != null && horas <= 0,
+      referencia: pay?.reference ?? null,
+      voucher_url: pay?.voucher_url ?? null,
+      productos: o.order_items.map((i) => (i.quantity > 1 ? `${i.product_name} x${i.quantity}` : i.product_name)).join(", "),
+    };
+  });
+
+  // soonest deadline first: that's the order to call people in
+  fiados.sort((a, b) => (a.horas_para_vencer ?? 9e9) - (b.horas_para_vencer ?? 9e9));
+
   return {
     total_mxn: peso(rows.reduce((s, o) => s + o.total_cents, 0)),
     pendientes: rows.length,
+    por_vencer_24h: fiados.filter((f) => f.horas_para_vencer != null && f.horas_para_vencer > 0 && f.horas_para_vencer <= 24).length,
     fiados,
+  };
+}
+
+// ---- buscar_pedido ----
+// "Fulanita dice que hizo un pedido" is the most common message a store gets;
+// answering it needed a hand-written query until now.
+export async function buscarPedido(q: string) {
+  const db = createAdminClient();
+  const term = q.trim().replace(/[,()%*\\]/g, "").slice(0, 60);
+  if (!term) return { encontrados: 0, pedidos: [], nota: "Escribe un nombre, correo, teléfono o número de pedido." };
+
+  const digits = term.replace(/\D/g, "");
+  const filters = [
+    `order_number.ilike.%${term}%`,
+    `email.ilike.%${term}%`,
+    `shipping_address->>name.ilike.%${term}%`,
+  ];
+  if (digits.length >= 7) filters.push(`shipping_address->>phone.ilike.%${digits}%`);
+
+  const { data } = await db
+    .from("orders")
+    .select("order_number, status, payment_method, total_cents, email, created_at, paid_at, fulfillment_stage, shipping_address, order_items(product_name, variant_label, quantity)")
+    .or(filters.join(","))
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  type Row = {
+    order_number: string; status: string; payment_method: string | null; total_cents: number;
+    email: string; created_at: string; paid_at: string | null; fulfillment_stage: string | null;
+    shipping_address: Record<string, string> | null;
+    order_items: { product_name: string; variant_label: string; quantity: number }[];
+  };
+  const rows = (data ?? []) as unknown as Row[];
+
+  return {
+    encontrados: rows.length,
+    // an empty result is a real answer here: the order never existed
+    nota: rows.length ? undefined : `No hay ningún pedido que coincida con "${term}". Puede que nunca se haya completado el checkout.`,
+    pedidos: rows.map((o) => ({
+      pedido: o.order_number,
+      cliente: o.shipping_address?.name ?? o.email,
+      email: o.email,
+      telefono: o.shipping_address?.phone ?? null,
+      estado: o.status,
+      etapa: o.fulfillment_stage,
+      metodo: o.payment_method,
+      total_mxn: peso(o.total_cents),
+      creado: o.created_at,
+      pagado: o.paid_at,
+      productos: o.order_items.map((i) => `${i.product_name} (${i.variant_label}) x${i.quantity}`).join(", "),
+    })),
+  };
+}
+
+// ---- estado_pedido ----
+export async function estadoPedido(orderNumber: string) {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("orders")
+    .select(
+      "order_number, status, payment_method, total_cents, subtotal_cents, discount_cents, email, created_at, paid_at, expires_at, " +
+        "fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, needs_invoice, " +
+        "shipping_address, order_items(product_name, variant_label, quantity), payments(provider, method, status, reference, voucher_url, expires_at)",
+    )
+    .eq("order_number", orderNumber.trim().toUpperCase())
+    .maybeSingle();
+
+  if (!data) return { encontrado: false, nota: `No existe el pedido ${orderNumber}.` };
+
+  type Row = {
+    order_number: string; status: string; payment_method: string | null;
+    total_cents: number; discount_cents: number | null; email: string;
+    created_at: string; paid_at: string | null; expires_at: string | null;
+    fulfillment_stage: string | null; carrier: string | null;
+    tracking_number: string | null; tracking_url: string | null;
+    estimated_delivery: string | null; shipped_at: string | null; delivered_at: string | null;
+    needs_invoice: boolean | null;
+    shipping_address: Record<string, string> | null;
+    order_items: { product_name: string; variant_label: string; quantity: number }[];
+    payments: { provider: string; method: string | null; status: string; reference: string | null; voucher_url: string | null; expires_at: string | null }[];
+  };
+  const o = data as unknown as Row;
+  const ship = o.shipping_address ?? {};
+  const pay = o.payments?.[0];
+
+  return {
+    encontrado: true,
+    pedido: o.order_number,
+    estado: o.status,
+    etapa_entrega: o.fulfillment_stage,
+    pago: {
+      metodo: o.payment_method,
+      estado: pay?.status ?? null,
+      proveedor: pay?.provider ?? null,
+      referencia: pay?.reference ?? null,
+      voucher_url: pay?.voucher_url ?? null,
+      vence: pay?.expires_at ?? o.expires_at,
+      pagado_el: o.paid_at,
+    },
+    envio: {
+      paqueteria: o.carrier,
+      guia: o.tracking_number,
+      rastreo: o.tracking_url,
+      entrega_estimada: o.estimated_delivery,
+      enviado_el: o.shipped_at,
+      entregado_el: o.delivered_at,
+      destino: [ship.line1, ship.neighborhood, ship.city, ship.region, ship.postal].filter(Boolean).join(", ") || null,
+    },
+    cliente: { nombre: ship.name ?? null, email: o.email, telefono: ship.phone ?? null, whatsapp: waLink(ship.phone) },
+    factura_solicitada: o.needs_invoice,
+    total_mxn: peso(o.total_cents),
+    descuento_mxn: peso(o.discount_cents ?? 0),
+    productos: o.order_items.map((i) => `${i.product_name} (${i.variant_label}) x${i.quantity}`).join(", "),
+    seguimiento_url: `${SITE_URL}/rastrear?o=${o.order_number}`,
   };
 }
 
@@ -217,4 +370,109 @@ export async function buscarProducto(q: string) {
       link: `${SITE_URL}/products/${r.slug}`,
       activo: true,
     }));
+}
+
+// ---- verificar_pago ----
+// When a buyer says "ya pagué", our own row may not have caught up (a webhook can
+// be late or lost). Ask the provider directly and compare with what we recorded.
+export async function verificarPago(orderNumber: string) {
+  const db = createAdminClient();
+  const { data: order } = await db
+    .from("orders")
+    .select("id, order_number, status, payment_method, total_cents, paid_at")
+    .eq("order_number", orderNumber.trim().toUpperCase())
+    .maybeSingle();
+  if (!order) return { encontrado: false, nota: `No existe el pedido ${orderNumber}.` };
+
+  const { data: pays } = await db
+    .from("payments")
+    .select("provider, provider_charge_id, status, amount_cents")
+    .eq("order_id", order.id)
+    .order("created_at", { ascending: false });
+  const pay = (pays ?? [])[0];
+
+  const nuestro = {
+    estado_pedido: order.status,
+    estado_pago: pay?.status ?? null,
+    pagado_el: order.paid_at,
+    total_mxn: peso(order.total_cents),
+  };
+
+  let proveedor: Record<string, unknown> | null = null;
+  try {
+    if (order.payment_method === "mercadopago") {
+      const { getMpPayment } = await import("@/lib/mercadopago");
+      // our charge id is "mp_<paymentId>"
+      const id = (pay?.provider_charge_id ?? "").replace(/^mp_/, "");
+      if (id) {
+        const p = await getMpPayment(id);
+        proveedor = { fuente: "mercadopago", estado: p.status, monto: p.transaction_amount, referencia: p.external_reference };
+      }
+    } else if (pay?.provider_charge_id) {
+      const { getConektaOrder } = await import("@/lib/conekta");
+      const co = await getConektaOrder(pay.provider_charge_id);
+      const charges = (co.charges?.data ?? []).map((c) => ({ estado: c.status, tipo: c.payment_method?.type, referencia: c.payment_method?.reference }));
+      proveedor = { fuente: "conekta", estado: co.payment_status, monto_centavos: co.amount, cargos: charges };
+    }
+  } catch (e) {
+    proveedor = { error: e instanceof Error ? e.message : "no se pudo consultar al proveedor" };
+  }
+
+  const proveedorPagado = proveedor
+    ? /paid|approved|accredited/i.test(String(proveedor.estado ?? ""))
+    : null;
+  const nosotrosPagado = ["paid", "fulfilled"].includes(order.status);
+
+  return {
+    encontrado: true,
+    pedido: order.order_number,
+    metodo: order.payment_method,
+    nuestro_registro: nuestro,
+    proveedor,
+    // the case worth catching: money in, order never confirmed
+    discrepancia:
+      proveedorPagado === true && !nosotrosPagado
+        ? "El proveedor reporta el pago como cubierto pero el pedido NO está marcado como pagado. Revisar el webhook."
+        : proveedorPagado === false && nosotrosPagado
+          ? "Nuestro pedido está pagado pero el proveedor no lo confirma. Revisar manualmente."
+          : null,
+  };
+}
+
+// ---- embudo_checkout ----
+// The disabled-button bug cost ~70% of checkouts and left no trace: those buyers
+// never create an order, so nothing else in this file can see them.
+export async function embudoCheckout(periodo: Periodo) {
+  const db = createAdminClient();
+  // Counted in SQL on purpose: PostgREST caps a response at 1000 rows, so
+  // grouping the events here would silently report a slice as the whole month.
+  const { data, error } = await db.rpc("checkout_funnel", { p_desde: sinceISO(periodo) });
+  if (error) return { periodo, error: error.message };
+  const f = (Array.isArray(data) ? data[0] : data) as {
+    visitantes: number; vieron_producto: number; llegaron_al_carrito: number;
+    llegaron_al_checkout: number; pedidos_creados: number; pedidos_pagados: number;
+  } | null;
+  if (!f) return { periodo, error: "sin datos" };
+
+  const pct = (a: number, b: number) => (b > 0 ? Number(((a / b) * 100).toFixed(1)) : 0);
+  const abandono = Math.max(0, f.llegaron_al_checkout - f.pedidos_creados);
+
+  return {
+    periodo,
+    visitantes: f.visitantes,
+    vieron_producto: f.vieron_producto,
+    llegaron_al_carrito: f.llegaron_al_carrito,
+    llegaron_al_checkout: f.llegaron_al_checkout,
+    pedidos_creados: f.pedidos_creados,
+    pedidos_pagados: f.pedidos_pagados,
+    conversion_pct: pct(f.pedidos_pagados, f.visitantes),
+    // the number that surfaces a broken checkout: reached the form, never ordered
+    abandono_en_formulario: abandono,
+    abandono_formulario_pct: pct(abandono, f.llegaron_al_checkout),
+    pago_no_completado: Math.max(0, f.pedidos_creados - f.pedidos_pagados),
+    alerta:
+      f.llegaron_al_checkout >= 10 && pct(abandono, f.llegaron_al_checkout) > 50
+        ? "Más de la mitad de quienes llegan al checkout no generan pedido. Suele ser un campo obligatorio que bloquea el botón, no falta de interés."
+        : null,
+  };
 }

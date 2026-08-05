@@ -7,6 +7,10 @@ import {
   estadoInventario,
   buscarProducto,
   listarInventarios,
+  buscarPedido,
+  estadoPedido,
+  verificarPago,
+  embudoCheckout,
 } from "@/lib/analytics";
 
 export const runtime = "nodejs";
@@ -63,6 +67,42 @@ const handler = createMcpHandler(
         "ofrécelos con entrega en 4-7 días hábiles.",
       { q: z.string().describe("SKU o nombre a buscar") },
       async ({ q }) => json(await buscarProducto(q)),
+    );
+
+    server.tool(
+      "buscar_pedido",
+      "Busca pedidos por nombre del cliente, correo, teléfono o número de pedido (BL-00XXXX). " +
+        "Úsala cuando alguien dice que hizo un pedido: si no aparece, es que el checkout nunca se completó " +
+        "y hay que pedirle que lo intente de nuevo.",
+      { q: z.string().describe("Nombre, correo, teléfono o número de pedido") },
+      async ({ q }) => json(await buscarPedido(q)),
+    );
+
+    server.tool(
+      "estado_pedido",
+      "Todo sobre un pedido: estado de pago, etapa de entrega, guía y rastreo, referencia de pago, " +
+        "dirección de envío y datos de contacto del cliente.",
+      { pedido: z.string().describe("Número de pedido, ej. BL-001043") },
+      async ({ pedido }) => json(await estadoPedido(pedido)),
+    );
+
+    server.tool(
+      "verificar_pago",
+      "Cuando un cliente dice que ya pagó: consulta a Conekta o MercadoPago directamente y lo compara " +
+        "con lo que tenemos registrado. Detecta el caso grave de dinero cobrado con el pedido sin confirmar " +
+        "(webhook perdido).",
+      { pedido: z.string().describe("Número de pedido, ej. BL-001043") },
+      async ({ pedido }) => json(await verificarPago(pedido)),
+    );
+
+    server.tool(
+      "embudo_checkout",
+      "Embudo de la tienda: visitantes, cuántos vieron producto, llegaron al carrito, al checkout, " +
+        "y cuántos terminaron comprando. Incluye `abandono_en_formulario`: gente que llegó al checkout y " +
+        "nunca generó pedido — si ese número es alto suele ser un campo obligatorio que bloquea el botón, " +
+        "no falta de interés. Revísalo a diario: esas fallas no dejan ningún otro rastro.",
+      { periodo: PERIODO },
+      async ({ periodo }) => json(await embudoCheckout(periodo)),
     );
   },
   {},
