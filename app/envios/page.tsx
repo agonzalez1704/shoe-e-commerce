@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { activeBrand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Política de Envíos",
-  description: "Tiempos, cobertura y seguimiento de los envíos de Blade en México.",
+  description: `Tiempos, cobertura y seguimiento de los envíos de ${activeBrand.name} en México.`,
   alternates: { canonical: "/envios" },
 };
 
@@ -40,7 +41,7 @@ export default function EnviosPage() {
       <h2>Incidencias</h2>
       <p>
         Ante cualquier problema con tu envío (retraso, daño o extravío), escríbenos a{" "}
-        <a href="mailto:pedidos@calzadoblade.com">pedidos@calzadoblade.com</a> con tu número de pedido y lo
+        <a href={`mailto:${activeBrand.legal.supportEmail}`}>{activeBrand.legal.supportEmail}</a> con tu número de pedido y lo
         resolvemos.
       </p>
     </LegalPage>

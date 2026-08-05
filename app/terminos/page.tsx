@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { activeBrand } from "@/lib/brand";
+import { legalConfigured, LegalPending } from "@/components/LegalGate";
+
+const L = activeBrand.legal;
 
 export const metadata: Metadata = {
   title: "Términos y Condiciones",
-  description: "Términos y condiciones de compra en calzadoblade.com.",
+  description: `Términos y condiciones de compra en ${activeBrand.domain}.`,
   alternates: { canonical: "/terminos" },
 };
 
 // NOTE: valida el contenido con tu asesor legal antes de operar en vivo.
 export default function TerminosPage() {
+  if (!legalConfigured()) return <LegalPending page="Términos y condiciones" />;
   return (
     <LegalPage title="Términos y Condiciones" updated="16 de julio de 2026">
       <p>
-        Estos Términos y Condiciones regulan el uso del sitio calzadoblade.com (el “Sitio”) y la compra de
-        productos de la marca Blade, operada por <strong>Ma. de Lourdes Cifuentes Huerta</strong>, con RFC{" "}
-        <strong>CIHL580621SK1</strong> y domicilio en <strong>Blvd. Mariano Escobedo Ote. 221-A, Col. San Juan de Dios, C.P. 37004, León, Guanajuato</strong> (“nosotros”). Al realizar una
+        Estos Términos y Condiciones regulan el uso del sitio {activeBrand.domain} (el “Sitio”) y la compra de
+        productos de la marca {activeBrand.name}, operada por <strong>{L.operator}</strong>, con RFC{" "}
+        <strong>{L.rfc}</strong> y domicilio en <strong>{L.address}</strong> (“nosotros”). Al realizar una
         compra aceptas estos términos en su totalidad.
       </p>
 
@@ -60,7 +65,7 @@ export default function TerminosPage() {
       <h2>7. Propiedad intelectual</h2>
       <p>
         Todo el contenido del Sitio (marca, logotipos, imágenes, textos y diseño) es propiedad de{" "}
-        <strong>Ma. de Lourdes Cifuentes Huerta</strong> y no puede reproducirse sin autorización.
+        <strong>{L.operator}</strong> y no puede reproducirse sin autorización.
       </p>
 
       <h2>8. Responsabilidad</h2>
@@ -83,7 +88,7 @@ export default function TerminosPage() {
 
       <h2>11. Contacto</h2>
       <p>
-        Dudas o aclaraciones: <a href="mailto:pedidos@calzadoblade.com">pedidos@calzadoblade.com</a>{" "}
+        Dudas o aclaraciones: <a href={`mailto:${L.supportEmail}`}>{L.supportEmail}</a>{" "}
         · WhatsApp <strong>477 379 1352</strong>.
       </p>
     </LegalPage>

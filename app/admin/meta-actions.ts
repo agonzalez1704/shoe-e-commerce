@@ -3,6 +3,7 @@
 import { assertPermiso } from "@/lib/permisos-guard";
 import { sendPurchaseToMeta } from "@/lib/meta-capi";
 import { SITE_URL } from "@/lib/site";
+import { activeBrand } from "@/lib/brand";
 
 export type MetaTestResult = { ok: true; detail: string } | { ok: false; error: string };
 
@@ -22,7 +23,7 @@ export async function sendMetaTestEvent(testEventCode: string): Promise<MetaTest
     const r = await sendPurchaseToMeta({
       eventId: `test-${code}`,
       orderNumber: `TEST-${code}`,
-      email: "prueba@calzadoblade.com",
+      email: `prueba@${activeBrand.domain}`,
       phone: "4773791352",
       valueCents: 199900,
       sourceUrl: `${SITE_URL}/checkout`,

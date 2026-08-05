@@ -2,12 +2,13 @@ import "server-only";
 
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { activeBrand } from "@/lib/brand";
 
 // Web Push to the admin PWA. Fire-and-forget everywhere it's used: a failed
 // notification must never break an order, a payment or a webhook.
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:pedidos@calzadoblade.com";
+const SUBJECT = process.env.VAPID_SUBJECT ?? `mailto:${activeBrand.legal.supportEmail}`;
 
 let configured = false;
 function configure() {

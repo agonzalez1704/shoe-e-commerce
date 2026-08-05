@@ -9,6 +9,7 @@ import { createMpPreference } from "@/lib/mercadopago";
 import { formatCents } from "@/lib/money";
 import { CASH_CHAINS } from "@/lib/payment-method";
 import { SITE_URL } from "@/lib/site";
+import { activeBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -151,7 +152,7 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
       {!payment?.reference && !payment?.clabe && (
         <p className="mt-6 rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
           No pudimos recuperar las instrucciones de pago de este pedido. Escríbenos a{" "}
-          <a href="mailto:pedidos@calzadoblade.com" className="text-accent underline">pedidos@calzadoblade.com</a> y te ayudamos.
+          <a href={`mailto:${activeBrand.legal.supportEmail}`} className="text-accent underline">{activeBrand.legal.supportEmail}</a> y te ayudamos.
         </p>
       )}
 

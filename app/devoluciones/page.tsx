@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { activeBrand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Devoluciones y Cambios",
-  description: "Política de devoluciones, cambios y garantía de Blade.",
+  description: `Política de devoluciones, cambios y garantía de ${activeBrand.name}.`,
   alternates: { canonical: "/devoluciones" },
 };
 
@@ -14,7 +15,7 @@ export default function DevolucionesPage() {
   return (
     <LegalPage title="Devoluciones y Cambios" updated="16 de julio de 2026">
       <p>
-        Queremos que ames tu par. Como cada Blade se <strong>fabrica sobre pedido</strong>, te pedimos revisar bien
+        Queremos que ames tu par. Como cada par se <strong>fabrica sobre pedido</strong>, te pedimos revisar bien
         tu talla antes de comprar (consulta la guía de tallas en cada producto). Aun así, te damos estas opciones:
       </p>
 
@@ -46,7 +47,7 @@ export default function DevolucionesPage() {
 
       <h2>Cómo iniciar</h2>
       <p>
-        Escríbenos a <a href="mailto:pedidos@calzadoblade.com">pedidos@calzadoblade.com</a> o por WhatsApp{" "}
+        Escríbenos a <a href={`mailto:${activeBrand.legal.supportEmail}`}>{activeBrand.legal.supportEmail}</a> o por WhatsApp{" "}
         <strong>477 379 1352</strong> con tu número de pedido. Te guiamos en el proceso y te compartimos la guía de
         retorno cuando aplique.
       </p>

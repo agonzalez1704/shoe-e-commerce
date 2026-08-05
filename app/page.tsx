@@ -13,8 +13,19 @@ import {
 import { listProducts, type ProductCard } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
+import { activeBrand, type HomeFeature } from "@/lib/brand";
+import { SITE_NAME } from "@/lib/site";
 
 export const revalidate = 60;
+
+// Storefront editorial comes from the brand config, so a second store fills it
+// in instead of editing this file.
+const home = activeBrand.home;
+const hero = home?.hero ?? {
+  image: "/hero-moto.jpg", eyebrow: "", titleTop: activeBrand.name,
+  titleBottom: "", body: activeBrand.tagline,
+};
+const FEATURES: HomeFeature[] = home?.features ?? [];
 
 export default async function Home() {
   const products = await listProducts({ sort: "newest" });
@@ -26,9 +37,9 @@ export default async function Home() {
       <Hero />
       <Benefits />
       {combos.length > 0 && <ComboBand picks={combos} />}
-      <EditorialFeature f={FEATURES[0]} />
+      {FEATURES[0] && <EditorialFeature f={FEATURES[0]} />}
       <Featured products={featured} total={products.length} />
-      <EditorialFeature f={FEATURES[1]} />
+      {FEATURES[1] && <EditorialFeature f={FEATURES[1]} />}
       <Editorial />
       <HowItWorks />
       <FinalCta />
@@ -42,8 +53,8 @@ function Hero() {
     <section className="relative ml-[calc(50%-50vw)] w-screen">
       <div className="relative aspect-[4/3] w-full overflow-hidden sm:aspect-[16/9]">
         <Image
-          src="/hero-moto.jpg"
-          alt="Sneaker de piel Blade con grabado cocodrilo apoyado en el estribo de una motocicleta al atardecer"
+          src={hero.image}
+          alt={`${SITE_NAME} — ${hero.titleTop} ${hero.titleBottom}`}
           fill
           priority
           sizes="100vw"
@@ -55,25 +66,26 @@ function Hero() {
 
         <div className="absolute inset-0 flex items-end md:items-center">
           <div className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-14 md:pb-0">
-            <Image
-              src="/blade-logo.png"
-              alt="Blade"
-              width={565}
-              height={220}
-              priority
-              className="h-10 w-auto self-start object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)] sm:h-12"
-            />
+            {activeBrand.logo && (
+              <Image
+                src={activeBrand.logo.src}
+                alt={activeBrand.logo.alt ?? SITE_NAME}
+                width={activeBrand.logo.width}
+                height={activeBrand.logo.height}
+                priority
+                className="h-10 w-auto self-start object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)] sm:h-12"
+              />
+            )}
             <p className="mt-4 text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
-              Hecho sobre pedido
+              {hero.eyebrow}
             </p>
             <h1 className="mt-3 max-w-2xl text-4xl font-semibold leading-[1.02] tracking-tight text-white drop-shadow-sm sm:text-6xl md:text-7xl">
-              Piel con filo,
+              {hero.titleTop}
               <br />
-              hecha a tu paso.
+              {hero.titleBottom}
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-white/85 sm:text-lg">
-              Sneakers de piel fabricados a mano cuando los pides. Tallas MX 25–30, envío gratis
-              en 4–7 días hábiles a todo México.
+              {hero.body}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
@@ -142,21 +154,9 @@ function Featured({ products, total }: { products: ProductCard[]; total: number 
 }
 
 /* ---------------- editorial feature (diptych split, Nuvé-style) ---------------- */
-const LANDING = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade/landing";
 
-type Feature = {
-  eyebrow: string;
-  title: React.ReactNode;
-  body: string;
-  points: string[];
-  cta: { label: string; href: string };
-  main: string;
-  macro: string;
-  alt: string;
-  flip?: boolean; // image on the right
-};
 
-function EditorialFeature({ f }: { f: Feature }) {
+function EditorialFeature({ f }: { f: HomeFeature }) {
   const media = (
     <div className="relative">
       <div className="absolute -inset-3 -z-10 rounded-3xl bg-accent-soft" aria-hidden />
@@ -174,7 +174,7 @@ function EditorialFeature({ f }: { f: Feature }) {
   const copy = (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">{f.eyebrow}</p>
-      <h2 className="mt-3 text-4xl font-semibold uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">{f.title}</h2>
+      <h2 className="mt-3 text-4xl font-semibold uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">{f.titleTop}<br />{f.titleBottom}</h2>
       <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">{f.body}</p>
       <ul className="mt-6 space-y-2.5">
         {f.points.map((t) => (
@@ -185,10 +185,10 @@ function EditorialFeature({ f }: { f: Feature }) {
         ))}
       </ul>
       <Link
-        href={f.cta.href}
+        href={f.ctaHref}
         className="group mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
       >
-        {f.cta.label}
+        {f.ctaLabel}
         <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
       </Link>
     </div>
@@ -202,38 +202,11 @@ function EditorialFeature({ f }: { f: Feature }) {
   );
 }
 
-const FEATURES: Feature[] = [
-  {
-    eyebrow: "El detalle",
-    title: <>El lujo está<br />en la piel.</>,
-    body: "Cada par nace de piel genuina trabajada a mano — texturas cocodrilo, pitón y lizard que se sienten distintas al primer paso. Sin producción en masa: solo el par que pediste.",
-    points: ["Piel exótica grabada a mano", "Suela Phylon ultra ligera", "Se fabrica solo cuando lo ordenas"],
-    cta: { label: "Descubre New York", href: "/products/new-york?color=moka" },
-    main: `${LANDING}/new-york-still.jpg`,
-    macro: `${LANDING}/croc-macro.jpg`,
-    alt: "New York en piel de cocodrilo café",
-  },
-  {
-    eyebrow: "Ligereza",
-    title: <>Perforado.<br />Ligero. Diario.</>,
-    body: "Piel perforada que respira y una suela Phylon ultra ligera: la comodidad de un sneaker con el acabado de la piel fina. Hecho para caminar todo el día.",
-    points: ["Piel perforada que respira", "Suela ultra ligera", "Silueta limpia, todos los días"],
-    cta: { label: "Descubre Manhattan", href: "/products/manhattan?color=blanco" },
-    main: `${LANDING}/manhattan-water.jpg`,
-    macro: `${LANDING}/perforado-macro.jpg`,
-    alt: "Manhattan blanco perforado",
-    flip: true,
-  },
-];
 
 /* ---------------- editorial / lifestyle gallery ---------------- */
 function Editorial() {
-  const SB = "https://pzrvnrprarnbhjmdhxjt.supabase.co/storage/v1/object/public/product-images/blade";
-  const shots = [
-    { img: `${SB}/new-york/new-york-lifestyle-1.jpg`, name: "New York", href: "/products/new-york?color=moka" },
-    { img: `${SB}/londres/londres-lifestyle-1.jpg`, name: "Londres", href: "/products/londres?color=negro" },
-    { img: `${SB}/new-jersey/new-jersey-cafe-social-1.png`, name: "New Jersey", href: "/products/new-jersey?color=caf%C3%A9" },
-  ];
+  const shots = activeBrand.home?.editorial ?? [];
+  if (!shots.length) return null;   // a store without lifestyle shots just skips the band
   return (
     <section className="border-t border-border py-14 sm:py-20">
       <div className="mb-8 max-w-xl">

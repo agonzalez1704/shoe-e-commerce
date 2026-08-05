@@ -4,6 +4,7 @@ import { CaretLeft, EnvelopeSimple, WhatsappLogo } from "@phosphor-icons/react/d
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { methodLabel } from "@/lib/payment-method";
+import { SITE_NAME } from "@/lib/site";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderStatusActions } from "@/components/OrderStatusActions";
 import { CfdiActions } from "@/components/CfdiActions";
@@ -128,14 +129,14 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             )}
             <div className="mt-3 flex gap-2">
               <a
-                href={`mailto:${order.email}?subject=${encodeURIComponent(`Pedido ${order.order_number} — Blade`)}&body=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de Blade sobre tu pedido ${order.order_number}. `)}`}
+                href={`mailto:${order.email}?subject=${encodeURIComponent(`Pedido ${order.order_number} — ${SITE_NAME}`)}&body=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de ${SITE_NAME} sobre tu pedido ${order.order_number}. `)}`}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-elevated"
               >
                 <EnvelopeSimple size={14} weight="bold" /> Correo
               </a>
               {waNumber && (
                 <a
-                  href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de Blade sobre tu pedido ${order.order_number}. `)}`}
+                  href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de ${SITE_NAME} sobre tu pedido ${order.order_number}. `)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2 text-xs font-medium text-[#128C4B] transition-colors hover:bg-[#25D366]/20 dark:text-[#25D366]"

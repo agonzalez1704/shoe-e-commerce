@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { metaContentId } from "@/lib/meta-content";
 
 // Meta Commerce product feed, generated live from the DB. Meta re-fetches this on
@@ -38,7 +38,7 @@ export async function buildMetaCatalogCsv(): Promise<string> {
   for (const p of products ?? []) {
     const price = (p.base_price_cents / 100).toFixed(2);
     const gender = p.gender === "womens" ? "female" : p.gender === "mens" ? "male" : "unisex";
-    const brand = (p.brands as { name?: string } | null)?.name ?? "Blade";
+    const brand = (p.brands as { name?: string } | null)?.name ?? SITE_NAME;
 
     const { data: variants } = await db
       .from("variants")

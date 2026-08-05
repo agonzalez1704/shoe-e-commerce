@@ -18,13 +18,57 @@ export type ThemeMode = {
   border?: string;
 };
 
+// Who legally sells. Terms and the privacy notice must name the real operator —
+// a second store cannot reuse the first one's entity, so this lives in config
+// rather than in the page copy.
+export type LegalEntity = {
+  operator: string;      // "Ma. de Lourdes Cifuentes Huerta"
+  rfc: string;
+  address: string;       // full street address as it should read in the notice
+  supportEmail: string;  // where privacy/returns requests go
+  whatsapp?: string;     // digits only, country code included: "5214771234567"
+};
+
+// The storefront's editorial content. It's the most brand-specific screen, so
+// it's data: a new store fills this in instead of editing the page.
+export type HomeFeature = {
+  eyebrow: string;
+  titleTop: string;      // rendered on two lines
+  titleBottom: string;
+  body: string;
+  points: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  main: string;          // image URL (full)
+  macro: string;
+  alt: string;
+  flip?: boolean;
+};
+
+// Ships from here. Skydropx quotes and labels start at this address, so it
+// belongs to the store, not to the shipping module.
+export type Warehouse = {
+  name: string; phone: string; street1: string;
+  state: string; city: string; neighborhood: string; postalCode: string;
+};
+
+export type HomeConfig = {
+  hero: { image: string; eyebrow: string; titleTop: string; titleBottom: string; body: string };
+  features: HomeFeature[];
+  editorial: { img: string; name: string; href: string }[];
+};
+
 export type BrandConfig = {
   key: string;
   name: string;          // shown in header/footer/metadata, e.g. "sole&co"
+  domain: string;        // "calzadoblade.com" — shown in copy and share cards
   accentWord?: string;   // a substring of name rendered in the accent color (wordmark)
   tagline: string;
   description: string;   // SEO meta description
   emailFrom: string;     // "Name <pedidos@domain.mx>"
+  legal: LegalEntity;
+  warehouse?: Warehouse;   // required to quote shipping labels
+  home?: HomeConfig;     // storefront editorial; falls back to a bare hero
   logo?: { src: string; width: number; height: number; alt?: string; invertOnLight?: boolean }; // optional full image (mark+wordmark); falls back to wordmark
   markSrc?: { src: string; width: number; height: number }; // optional logo-mark IMAGE shown before the wordmark text (keeps its own colors in both themes)
   mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
@@ -34,12 +78,70 @@ export type BrandConfig = {
   theme: { light: ThemeMode; dark: ThemeMode };
 };
 
+// Brand editorial art lives in the store's own Storage bucket, so the base URL
+// follows whichever Supabase project this deployment points at.
+const STORAGE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images`;
+const BLADE_ASSETS = `${STORAGE}/blade`;
+const BLADE_LANDING = `${BLADE_ASSETS}/landing`;
+
 const BRANDS: Record<string, BrandConfig> = {
   // ---- Brand 1 (live) — Blade · calzadoblade.com ----
   // Identity: cool graphite monochrome + a razor crimson accent ("the edge").
   blade: {
     key: "blade",
     name: "Blade",
+    domain: "calzadoblade.com",
+    legal: {
+      operator: "Ma. de Lourdes Cifuentes Huerta",
+      rfc: "CIHL580621SK1",
+      address: "Blvd. Mariano Escobedo Ote. 221-A, Col. San Juan de Dios, C.P. 37004, León, Guanajuato",
+      supportEmail: "pedidos@calzadoblade.com",
+    },
+    warehouse: {
+      name: "Blade", phone: "4773791352", street1: "Tres Guerras 213-B",
+      state: "Guanajuato", city: "León", neighborhood: "Obregón", postalCode: "37000",
+    },
+    home: {
+      hero: {
+        image: "/hero-moto.jpg",
+        eyebrow: "Hecho sobre pedido",
+        titleTop: "Piel con filo,",
+        titleBottom: "hecha a tu paso.",
+        body: "Sneakers de piel fabricados a mano cuando los pides. Tallas MX 25–30, envío gratis en 4–7 días hábiles a todo México.",
+      },
+      features: [
+        {
+          eyebrow: "El detalle",
+          titleTop: "El lujo está",
+          titleBottom: "en la piel.",
+          body: "Cada par nace de piel genuina trabajada a mano — texturas cocodrilo, pitón y lizard que se sienten distintas al primer paso. Sin producción en masa: solo el par que pediste.",
+          points: ["Piel exótica grabada a mano", "Suela Phylon ultra ligera", "Se fabrica solo cuando lo ordenas"],
+          ctaLabel: "Descubre New York",
+          ctaHref: "/products/new-york?color=moka",
+          main: `${BLADE_LANDING}/new-york-still.jpg`,
+          macro: `${BLADE_LANDING}/croc-macro.jpg`,
+          alt: "New York en piel de cocodrilo café",
+        },
+        {
+          eyebrow: "Ligereza",
+          titleTop: "Perforado.",
+          titleBottom: "Ligero. Diario.",
+          body: "Piel perforada que respira y una suela Phylon ultra ligera: la comodidad de un sneaker con el acabado de la piel fina. Hecho para caminar todo el día.",
+          points: ["Piel perforada que respira", "Suela ultra ligera", "Silueta limpia, todos los días"],
+          ctaLabel: "Descubre Manhattan",
+          ctaHref: "/products/manhattan?color=blanco",
+          main: `${BLADE_LANDING}/manhattan-water.jpg`,
+          macro: `${BLADE_LANDING}/perforado-macro.jpg`,
+          alt: "Manhattan blanco perforado",
+          flip: true,
+        },
+      ],
+      editorial: [
+        { img: `${BLADE_ASSETS}/new-york/new-york-lifestyle-1.jpg`, name: "New York", href: "/products/new-york?color=moka" },
+        { img: `${BLADE_ASSETS}/londres/londres-lifestyle-1.jpg`, name: "Londres", href: "/products/londres?color=negro" },
+        { img: `${BLADE_ASSETS}/new-jersey/new-jersey-cafe-social-1.png`, name: "New Jersey", href: "/products/new-jersey?color=caf%C3%A9" },
+      ],
+    },
     tagline: "Filo en cada paso.",
     description:
       "Calzado de piel hecho sobre pedido en México. Diseño afilado, todas las tallas y anchos, envío a todo el país. Pago con tarjeta, efectivo o Aplazo.",
@@ -79,6 +181,10 @@ const BRANDS: Record<string, BrandConfig> = {
   // ---- Shoes Art (demo) — calzado infantil/juvenil, shoesart.com.mx ----
   shoesart: {
     key: "shoesart",
+    domain: "shoesart.com.mx",
+    // Sin lanzar: la entidad va vacía a propósito. Las páginas legales
+    // muestran un aviso de "pendiente" en vez de inventar un RFC.
+    legal: { operator: "", rfc: "", address: "", supportEmail: "ventas@shoesart.com.mx" },
     name: "Shoes Art",
     tagline: "La tendencia que marca la pauta en tu estilo.",
     description:
@@ -107,6 +213,10 @@ const BRANDS: Record<string, BrandConfig> = {
   // ---- Brand 2 (template — replace name/colors/logo/email) ----
   altura: {
     key: "altura",
+    domain: "",
+    // Sin lanzar: la entidad va vacía a propósito. Las páginas legales
+    // muestran un aviso de "pendiente" en vez de inventar un RFC.
+    legal: { operator: "", rfc: "", address: "", supportEmail: "hola@altura.mx" },
     name: "Altura",
     tagline: "Hecho a mano, paso a paso.",
     description:
@@ -121,6 +231,10 @@ const BRANDS: Record<string, BrandConfig> = {
   // ---- Brand 3 (template) ----
   vellora: {
     key: "vellora",
+    domain: "",
+    // Sin lanzar: la entidad va vacía a propósito. Las páginas legales
+    // muestran un aviso de "pendiente" en vez de inventar un RFC.
+    legal: { operator: "", rfc: "", address: "", supportEmail: "hola@vellora.mx" },
     name: "Vellora",
     tagline: "Piel mexicana, diseño atemporal.",
     description:

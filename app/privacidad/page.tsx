@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { activeBrand } from "@/lib/brand";
+import { legalConfigured, LegalPending } from "@/components/LegalGate";
+
+const L = activeBrand.legal;
 
 export const metadata: Metadata = {
   title: "Aviso de Privacidad",
-  description: "Aviso de privacidad de calzadoblade.com conforme a la LFPDPPP.",
+  description: `Aviso de privacidad de ${activeBrand.domain} conforme a la LFPDPPP.`,
   alternates: { canonical: "/privacidad" },
 };
 
 // NOTE: valida con tu asesor legal antes de operar en vivo.
 export default function PrivacidadPage() {
+  if (!legalConfigured()) return <LegalPending page="Aviso de privacidad" />;
   return (
     <LegalPage title="Aviso de Privacidad" updated="16 de julio de 2026">
       <p>
-        <strong>Ma. de Lourdes Cifuentes Huerta</strong> (“Blade”), con domicilio en <strong>Blvd. Mariano Escobedo Ote. 221-A, Col. San Juan de Dios, C.P. 37004, León, Guanajuato</strong>, es
+        <strong>{L.operator}</strong> (“{activeBrand.name}”), con domicilio en <strong>{L.address}</strong>, es
         responsable del tratamiento y protección de tus datos personales conforme a la Ley Federal de Protección de
         Datos Personales en Posesión de los Particulares (LFPDPPP).
       </p>
@@ -48,7 +53,7 @@ export default function PrivacidadPage() {
       <p>
         Tienes derecho a <strong>Acceder, Rectificar, Cancelar u Oponerte</strong> al tratamiento de tus datos, así
         como a revocar tu consentimiento. Envía tu solicitud a{" "}
-        <a href="mailto:privacidad@calzadoblade.com">privacidad@calzadoblade.com</a> indicando tu nombre y la
+        <a href={`mailto:${L.supportEmail}`}>{L.supportEmail}</a> indicando tu nombre y la
         solicitud concreta. Responderemos en los plazos que marca la ley.
       </p>
 
@@ -72,7 +77,7 @@ export default function PrivacidadPage() {
 
       <h2>7. Contacto</h2>
       <p>
-        Departamento de datos personales: <a href="mailto:privacidad@calzadoblade.com">privacidad@calzadoblade.com</a>.
+        Departamento de datos personales: <a href={`mailto:${L.supportEmail}`}>{L.supportEmail}</a>.
       </p>
     </LegalPage>
   );

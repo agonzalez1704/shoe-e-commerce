@@ -3,23 +3,27 @@
 // token cached), quotes rates (async → poll), and creates the shipment + label.
 // Used by the admin fulfillment panel to generate the guía for an order.
 //
-// Origin = Blade's warehouse (edit ORIGIN if it changes). Requires env:
+// Origin = the brand's warehouse (lib/brand.ts). Requires env:
 //   SKYDROPX_API_KEY, SKYDROPX_SECRET_KEY  (add them to Vercel too).
 // ============================================================
 
+import { activeBrand } from "@/lib/brand";
+
 const BASE = "https://pro.skydropx.com/api/v1";
 
-// Blade warehouse. Postal code confirmed 37000 by the owner (drives the quote).
+// Shipping origin comes from the active brand; the postal code drives the quote.
+const W = activeBrand.warehouse;
+
 export const ORIGIN = {
-  name: "Blade",
-  company: "Blade",
-  phone: "4773791352",
-  email: "pedidos@calzadoblade.com",
-  street1: "Tres Guerras 213-B",
-  area_level1: "Guanajuato", // estado
-  area_level2: "León", // municipio
-  area_level3: "Obregón", // colonia
-  postal_code: "37000",
+  name: W?.name ?? activeBrand.name,
+  company: activeBrand.name,
+  phone: W?.phone ?? "",
+  email: activeBrand.legal.supportEmail,
+  street1: W?.street1 ?? "",
+  area_level1: W?.state ?? "",          // estado
+  area_level2: W?.city ?? "",           // municipio
+  area_level3: W?.neighborhood ?? "",   // colonia
+  postal_code: W?.postalCode ?? "",
   country_code: "MX",
   reference: "",
 };

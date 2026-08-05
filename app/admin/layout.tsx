@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { permisosDe, concede } from "@/lib/permisos-guard";
+import { SITE_NAME } from "@/lib/site";
 import type { Permiso } from "@/lib/permissions";
 import { signOut } from "@/app/auth/actions";
 import { SignOut } from "@phosphor-icons/react/dist/ssr";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 // installable admin PWA (its own manifest so the storefront is unaffected)
 export const metadata: Metadata = {
   manifest: "/admin.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Blade Admin" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: `${SITE_NAME} Admin` },
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
