@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requirePermiso } from "@/lib/permisos-guard";
 
 // Paying the dev is two-step: whoever pays marks the orders, and the dev
 // confirms they received it. The dev marking skips straight to confirmed.
 
 export async function markCommissionPaid(orderIds: string[]): Promise<void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("comisiones_ver");
   if (!orderIds.length) return;
   const { data: { user } } = await supabase.auth.getUser();
   const { data: dev } = await supabase.rpc("is_dev");
@@ -27,7 +27,7 @@ export async function markCommissionPaid(orderIds: string[]): Promise<void> {
 
 // Only the developer can confirm they were actually paid.
 export async function confirmCommissionPaid(orderIds: string[]): Promise<void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("comisiones_ver");
   const { data: dev } = await supabase.rpc("is_dev");
   if (!dev) throw new Error("Solo el desarrollador puede confirmar el pago");
   if (!orderIds.length) return;
@@ -42,7 +42,7 @@ export async function confirmCommissionPaid(orderIds: string[]): Promise<void> {
 
 // Undo — the dev arbitrates, since they are the one being paid.
 export async function resetCommission(orderIds: string[]): Promise<void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("comisiones_ver");
   const { data: dev } = await supabase.rpc("is_dev");
   if (!dev) throw new Error("Solo el desarrollador puede revertir");
   if (!orderIds.length) return;

@@ -2,11 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requirePermiso } from "@/lib/permisos-guard";
 
 async function db() {
-  await requireAdmin();
-  return await createClient();
+  return await requirePermiso("promociones_gestionar");
 }
 
 export type PromoInput = {

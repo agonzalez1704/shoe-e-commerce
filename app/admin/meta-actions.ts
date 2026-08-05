@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/admin-guard";
+import { assertPermiso } from "@/lib/permisos-guard";
 import { sendPurchaseToMeta } from "@/lib/meta-capi";
 import { SITE_URL } from "@/lib/site";
 
@@ -13,7 +13,7 @@ export type MetaTestResult = { ok: true; detail: string } | { ok: false; error: 
 // production, which would hide the very message we're trying to read.
 export async function sendMetaTestEvent(testEventCode: string): Promise<MetaTestResult> {
   try {
-    await requireAdmin();
+    await assertPermiso("ajustes_gestionar");
     const code = testEventCode.trim();
     if (!code) return { ok: false, error: "Pega el test_event_code de Events Manager." };
 

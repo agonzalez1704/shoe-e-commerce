@@ -35,6 +35,14 @@ export async function requirePagePermiso(permiso: Permiso, to = "/admin") {
   return perms;
 }
 
+// Server-action guard that also hands back the RLS-scoped client — the drop-in
+// for requireAdmin() in actions a limited role should be able to run. The
+// permission is checked here AND by RLS on the write itself.
+export async function requirePermiso(permiso: Permiso) {
+  await assertPermiso(permiso);
+  return await createClient();
+}
+
 // Server-action guard: throws rather than redirecting. UI gating is not access
 // control — every action that a limited role could reach needs this.
 export async function assertPermiso(permiso: Permiso): Promise<string> {

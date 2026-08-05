@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requirePermiso } from "@/lib/permisos-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type TeamMember = {
@@ -13,7 +13,7 @@ export type TeamMember = {
 };
 
 export async function listTeam(): Promise<TeamMember[]> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("usuarios_gestionar");
   const { data: { user } } = await supabase.auth.getUser();
 
   const admin = createAdminClient(); // needs to read other people's emails/devices
@@ -42,7 +42,7 @@ export async function listTeam(): Promise<TeamMember[]> {
 // The person must already have an account (they sign up at /cuenta); this only
 // grants the admin role, it never creates credentials.
 export async function addAdminByEmail(email: string) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("usuarios_gestionar");
   const clean = email.trim().toLowerCase();
   if (!clean) throw new Error("Escribe un correo.");
 
@@ -58,7 +58,7 @@ export async function addAdminByEmail(email: string) {
 }
 
 export async function removeAdmin(userId: string) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("usuarios_gestionar");
   const { data: { user } } = await supabase.auth.getUser();
   // refuse to strip your own access — that could lock everyone out
   if (user?.id === userId) throw new Error("No puedes quitarte a ti mismo el acceso.");

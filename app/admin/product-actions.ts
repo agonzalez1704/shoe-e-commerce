@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requirePermiso } from "@/lib/permisos-guard";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -105,7 +105,7 @@ async function writeVariants(
 }
 
 export async function saveProduct(input: ProductInput): Promise<{ error: string } | void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   const slug = (input.slug || slugify(input.name)).trim();
   if (!input.name.trim()) return { error: "El nombre es obligatorio" };
   if (input.variants.length === 0) return { error: "Agrega al menos una variante" };
@@ -146,7 +146,7 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
 // webhook-driven via the angle_jobs table + Realtime).
 
 export async function deleteProduct(id: string): Promise<void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   await supabase.from("products").delete().eq("id", id);
   revalidatePath("/admin/products");
   redirect("/admin/products");

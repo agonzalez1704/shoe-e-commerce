@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/admin-guard";
+import { requirePermiso } from "@/lib/permisos-guard";
 import { startAngleGeneration, getAngleSet, refineLogo } from "@/lib/autotoon";
 import { completeReadyJob, failJob } from "@/lib/angle-complete";
 import { rehostImages } from "@/lib/rehost";
@@ -16,7 +16,7 @@ export async function startAngleJob(
   productName: string,
   productId?: string,
 ): Promise<{ jobId: string } | { error: string }> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   const secret = process.env.AUTOTOON_WEBHOOK_SECRET;
   if (!secret) return { error: "AUTOTOON_WEBHOOK_SECRET no configurado." };
 
@@ -49,14 +49,14 @@ export async function startAngleJob(
 // Dismiss a finished job: delete the row so it doesn't reappear on the next
 // hydrate/Realtime tick. Only terminal jobs should be dismissed from the UI.
 export async function dismissAngleJob(jobId: string): Promise<void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   await supabase.from("angle_jobs").delete().eq("id", jobId);
 }
 
 // Logo correction on a single image using the active brand's logo (auto-toon).
 // Synchronous (~60-90s); returns the re-hosted refined image url.
 export async function refineImageLogo(imageUrl: string): Promise<{ url: string } | { error: string }> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   // prefer the logo uploaded in admin settings; fall back to the brand asset
   const { data: cfg } = await supabase.from("settings").select("value").eq("key", "refine_logo_url").maybeSingle();
   const configured = cfg?.value ?? activeBrand.refineLogoUrl ?? null;
@@ -78,7 +78,7 @@ export async function refineImageLogo(imageUrl: string): Promise<{ url: string }
 // is lost. The atomic claim in completeReadyJob prevents a double-attach if the
 // webhook and a reconcile land together. Idempotent — safe to call repeatedly.
 export async function reconcileJob(jobId: string): Promise<void> {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   const { data: job } = await supabase
     .from("angle_jobs")
     .select("id, toon_set_id, status, product_id, product_name")

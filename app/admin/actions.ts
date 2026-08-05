@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requirePermiso, assertPermiso } from "@/lib/permisos-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { sendShippedEmail, sendDeliveredEmail, sendVoucherEmail } from "@/lib/email";
 import { notifyAdmins } from "@/lib/push";
@@ -12,7 +12,7 @@ type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 // Server actions are publicly invocable by any authenticated client, so every
 // admin action verifies is_admin() — UI gating is not access control.
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("pedidos_gestionar");
   // keep the fulfillment pipeline in sync: 'fulfilled' means it shipped, and
   // shipped_at is what drives the review-request cron.
   const patch: { status: OrderStatus; fulfillment_stage?: string; shipped_at?: string } = { status };
@@ -76,7 +76,7 @@ export async function saveTracking(
   orderId: string,
   data: { carrier: string | null; trackingNumber: string | null; trackingUrl: string | null; estimatedDelivery: string | null },
 ) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("pedidos_gestionar");
   const { error } = await supabase
     .from("orders")
     .update({
@@ -93,7 +93,7 @@ export async function saveTracking(
 // Advance the delivery pipeline. Stamps shipped_at/delivered_at and notifies the
 // customer (with tracking) when the order ships.
 export async function setFulfillmentStage(orderId: string, stage: FulfillmentStage) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("pedidos_gestionar");
 
   const patch: { fulfillment_stage: FulfillmentStage; shipped_at?: string; delivered_at?: string } = { fulfillment_stage: stage };
   if (stage === "shipped") patch.shipped_at = new Date().toISOString();
@@ -157,7 +157,7 @@ const CARRIER_MAP: Record<string, string> = {
 // Generate the shipping guía + label for an order via Skydropx (cheapest rate)
 // and store carrier / tracking / label URL on the order.
 export async function generateSkydropxLabel(orderId: string) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("pedidos_gestionar");
   const { data: o } = await supabase
     .from("orders")
     .select("shipping_address, email")
@@ -211,7 +211,7 @@ export async function generateSkydropxLabel(orderId: string) {
 // For buyers who lost the original mail and checked out as guests, this is the
 // only way back to their voucher.
 export async function resendPaymentInstructions(orderId: string) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("pedidos_gestionar");
 
   const { data: order } = await supabase
     .from("orders")
@@ -268,7 +268,7 @@ export async function createDiscountCode(input: {
   maxUses: number | null;
   expiresAt: string | null;
 }) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("descuentos_gestionar");
   const code = input.code.trim().toUpperCase();
   if (!code) throw new Error("El código no puede estar vacío.");
   if (!(input.value > 0)) throw new Error("El valor debe ser mayor a 0.");
@@ -288,21 +288,21 @@ export async function createDiscountCode(input: {
 }
 
 export async function setDiscountActive(id: string, active: boolean) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("descuentos_gestionar");
   const { error } = await supabase.from("discount_codes").update({ active }).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/discounts");
 }
 
 export async function deleteDiscountCode(id: string) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("descuentos_gestionar");
   const { error } = await supabase.from("discount_codes").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/discounts");
 }
 
 export async function setInventory(variantId: string, qtyOnHand: number) {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("inventario_gestionar");
   const { error } = await supabase
     .from("inventory")
     .update({ qty_on_hand: Math.max(0, Math.floor(qtyOnHand)) })
@@ -312,14 +312,14 @@ export async function setInventory(variantId: string, qtyOnHand: number) {
 }
 
 export async function setProductStatus(productId: string, status: "draft" | "active" | "archived") {
-  const supabase = await requireAdmin();
+  const supabase = await requirePermiso("productos_gestionar");
   const { error } = await supabase.from("products").update({ status }).eq("id", productId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/products");
 }
 
 export async function stampInvoice(orderId: string) {
-  await requireAdmin(); // critical: stampOrderCfdi uses the service-role client (bypasses RLS)
+  await assertPermiso("facturar"); // critical: stampOrderCfdi uses the service-role client (bypasses RLS)
   const result = await stampOrderCfdi(orderId);
   revalidatePath(`/admin/orders/${orderId}`);
   return result;
