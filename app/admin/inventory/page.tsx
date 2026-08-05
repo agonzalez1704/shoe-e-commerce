@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
-import { InventoryRow, type InvRow } from "@/components/InventoryRow";
+import { InventoryColorway, type Colorway } from "@/components/admin/InventoryColorway";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 40;
+const PER_PAGE = 12; // colourways per page — each one carries all its sizes
 const STOCK = [
   { key: "all", label: "Todo" },
-  { key: "agotado", label: "Agotado" },
+  { key: "agotado", label: "Con tallas agotadas" },
   { key: "bajo", label: "Stock bajo" },
   { key: "con", label: "Con existencia" },
 ] as const;
@@ -21,7 +21,6 @@ type SearchParams = Promise<{
 export default async function AdminInventory({ searchParams }: { searchParams: SearchParams }) {
   await requirePagePermiso("inventario_ver");
   const sp = await searchParams;
-  // strip what would break the PostgREST .or() syntax
   const q = (sp.q ?? "").trim().replace(/[,()%*\\]/g, "").slice(0, 60);
   const modelo = sp.modelo ?? "";
   const talla = sp.talla ?? "";
@@ -31,52 +30,74 @@ export default async function AdminInventory({ searchParams }: { searchParams: S
 
   const supabase = await createClient();
 
-  // options for the dropdowns (whole catalog, not just this page)
-  const [{ data: productos }, { data: tallas }] = await Promise.all([
-    supabase.from("products").select("id, name").order("name"),
-    supabase.from("admin_inventory").select("size_value").order("size_value"),
-  ]);
-  // view columns come back nullable — drop the empties before sorting numerically
-  const sizeOptions = [...new Set((tallas ?? []).map((t) => t.size_value).filter((s): s is string => !!s))]
-    .sort((a, b) => parseFloat(a) - parseFloat(b));
-
-  let sb = supabase
-    .from("admin_inventory")
-    .select("variant_id, sku, size_value, size_system, width, color, product_name, made_to_order, on_hand, reserved, available",
-      { count: "exact" })
-    .order("available", { ascending: true })   // low stock first, now done in the DB
-    .order("sku", { ascending: true })
+  // 1) page over colourways (33 today, not 363 rows)
+  let cw = supabase
+    .from("admin_inventory_colorways")
+    .select("product_id, product_name, color, made_to_order, on_hand, agotadas, min_available", { count: "exact" })
+    .order("product_name")
+    .order("color")
     .range(from, from + PER_PAGE - 1);
 
-  if (modelo) sb = sb.eq("product_id", modelo);
-  if (talla) sb = sb.eq("size_value", talla);
-  if (stock === "agotado") sb = sb.eq("available", 0);
-  if (stock === "bajo") sb = sb.gt("available", 0).lte("available", 3);
-  if (stock === "con") sb = sb.gt("available", 0);
-  if (q) sb = sb.or(`sku.ilike.%${q}%,color.ilike.%${q}%,product_name.ilike.%${q}%`);
+  if (modelo) cw = cw.eq("product_id", modelo);
+  if (stock === "agotado") cw = cw.gt("agotadas", 0);
+  if (stock === "bajo") cw = cw.gt("min_available", 0).lte("min_available", 3);
+  if (stock === "con") cw = cw.gt("on_hand", 0);
+  if (q) cw = cw.or(`product_name.ilike.%${q}%,color.ilike.%${q}%`);
 
-  const { data, count } = await sb;
+  const [{ data: colorways, count }, { data: productos }, { data: tallasAll }] = await Promise.all([
+    cw,
+    supabase.from("products").select("id, name").order("name"),
+    supabase.from("admin_inventory").select("size_value"),
+  ]);
 
-  const rows: InvRow[] = (data ?? []).map((v) => ({
-    variantId: v.variant_id as string,
-    productName: v.product_name ?? "—",
-    label: `${v.size_system} ${v.size_value} / ${v.width} / ${v.color}`,
-    sku: v.sku as string,
-    onHand: v.on_hand ?? 0,
-    reserved: v.reserved ?? 0,
-    madeToOrder: v.made_to_order ?? false,
-  }));
+  // 2) the sizes, only for the colourways actually on this page
+  let sizes: {
+    variant_id: string | null; product_id: string | null; color: string | null;
+    size_value: string | null; size_system: string | null; on_hand: number | null; reserved: number | null;
+  }[] = [];
+  if (colorways?.length) {
+    const ids = [...new Set(colorways.map((c) => c.product_id).filter(Boolean))] as string[];
+    let sq = supabase
+      .from("admin_inventory")
+      .select("variant_id, product_id, color, size_value, size_system, on_hand, reserved")
+      .in("product_id", ids);
+    if (talla) sq = sq.eq("size_value", talla);
+    const { data } = await sq;
+    sizes = data ?? [];
+  }
+
+  const groups: Colorway[] = (colorways ?? []).map((c) => ({
+    productId: c.product_id as string,
+    productName: c.product_name ?? "—",
+    color: c.color ?? "—",
+    madeToOrder: c.made_to_order ?? false,
+    onHand: c.on_hand ?? 0,
+    agotadas: c.agotadas ?? 0,
+    sizes: sizes
+      .filter((s) => `${s.product_id}|${s.color}` === `${c.product_id}|${c.color}`)
+      .sort((a, b) => parseFloat(a.size_value ?? "0") - parseFloat(b.size_value ?? "0"))
+      .map((s) => ({
+        variantId: s.variant_id as string,
+        size: s.size_value ?? "",
+        sizeSystem: s.size_system ?? "MX",
+        onHand: s.on_hand ?? 0,
+        reserved: s.reserved ?? 0,
+      })),
+  })).filter((g) => g.sizes.length > 0); // a size filter can empty a colourway
+
+  const sizeOptions = [...new Set((tallasAll ?? []).map((t) => t.size_value).filter((s): s is string => !!s))]
+    .sort((a, b) => parseFloat(a) - parseFloat(b));
 
   const total = count ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
   const hrefFor = (over: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
-    const merged = { q, modelo, talla, stock, page: current, ...over };
-    if (merged.q) p.set("q", String(merged.q));
-    if (merged.modelo) p.set("modelo", String(merged.modelo));
-    if (merged.talla) p.set("talla", String(merged.talla));
-    if (merged.stock && merged.stock !== "all") p.set("stock", String(merged.stock));
-    if (merged.page && Number(merged.page) > 1) p.set("page", String(merged.page));
+    const m = { q, modelo, talla, stock, page: current, ...over };
+    if (m.q) p.set("q", String(m.q));
+    if (m.modelo) p.set("modelo", String(m.modelo));
+    if (m.talla) p.set("talla", String(m.talla));
+    if (m.stock && m.stock !== "all") p.set("stock", String(m.stock));
+    if (m.page && Number(m.page) > 1) p.set("page", String(m.page));
     const s = p.toString();
     return `/admin/inventory${s ? `?${s}` : ""}`;
   };
@@ -88,19 +109,19 @@ export default async function AdminInventory({ searchParams }: { searchParams: S
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Inventario</h1>
         <span className="text-sm text-muted">
-          <span className="nums font-medium text-text">{total}</span> variante{total === 1 ? "" : "s"} · stock bajo primero
+          <span className="nums font-medium text-text">{total}</span> modelo{total === 1 ? "" : "s"} en color
+          {talla && <> · solo talla {talla}</>}
         </span>
       </div>
 
-      {/* filtros: un solo form, GET, para que la URL quede compartible */}
       <form className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <MagnifyingGlass size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             name="q"
             defaultValue={q}
-            placeholder="SKU, modelo o color…"
-            className="w-56 rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-accent"
+            placeholder="Modelo o color…"
+            className="w-52 rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-accent"
           />
         </div>
         <select name="modelo" defaultValue={modelo} className={SEL}>
@@ -120,26 +141,16 @@ export default async function AdminInventory({ searchParams }: { searchParams: S
         )}
       </form>
 
-      <div className="overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="bg-elevated text-left text-xs uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-4 py-3">Variante</th>
-              <th className="px-4 py-3 text-right">Reservado</th>
-              <th className="px-4 py-3 text-right">Disponible</th>
-              <th className="px-4 py-3 text-right">En existencia</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.map((r) => <InventoryRow key={r.variantId} row={r} />)}
-            {rows.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-muted">Ninguna variante coincide.</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="space-y-3">
+        {groups.map((g) => <InventoryColorway key={`${g.productId}|${g.color}`} group={g} />)}
+        {groups.length === 0 && (
+          <p className="rounded-2xl border border-border p-10 text-center text-sm text-muted">
+            Ningún modelo coincide con esos filtros.
+          </p>
+        )}
       </div>
 
-      {total > 0 && (
+      {total > PER_PAGE && (
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <p className="text-muted">
             {from + 1}–{Math.min(from + PER_PAGE, total)} de <span className="nums font-medium text-text">{total}</span>

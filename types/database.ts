@@ -206,6 +206,13 @@ export type Database = {
             foreignKeyName: "angle_jobs_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "angle_jobs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -836,6 +843,13 @@ export type Database = {
             foreignKeyName: "product_categories_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_categories_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -872,6 +886,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "admin_inventory"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
             referencedColumns: ["product_id"]
           },
           {
@@ -961,6 +982,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "admin_inventory"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "promocion_productos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
             referencedColumns: ["product_id"]
           },
           {
@@ -1277,6 +1305,13 @@ export type Database = {
             foreignKeyName: "reviews_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1437,6 +1472,13 @@ export type Database = {
             foreignKeyName: "variants_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1559,6 +1601,21 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_inventory_colorways: {
+        Row: {
+          agotadas: number | null
+          available: number | null
+          color: string | null
+          made_to_order: boolean | null
+          min_available: number | null
+          on_hand: number | null
+          product_id: string | null
+          product_name: string | null
+          reserved: number | null
+          tallas: number | null
+        }
+        Relationships: []
+      }
       variant_availability: {
         Row: {
           in_stock: boolean | null
@@ -1573,6 +1630,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "admin_inventory"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
             referencedColumns: ["product_id"]
           },
           {

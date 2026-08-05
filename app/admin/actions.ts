@@ -311,6 +311,28 @@ export async function setInventory(variantId: string, qtyOnHand: number) {
   revalidatePath("/admin/inventory");
 }
 
+// Save a whole colourway at once — counting stock means walking a shelf and
+// typing every size, so one round trip beats eleven.
+export async function setInventoryBulk(
+  items: { variantId: string; qtyOnHand: number }[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const supabase = await requirePermiso("inventario_gestionar");
+    if (!items.length) return { ok: true };
+    for (const it of items) {
+      const { error } = await supabase
+        .from("inventory")
+        .update({ qty_on_hand: Math.max(0, Math.floor(it.qtyOnHand)) })
+        .eq("variant_id", it.variantId);
+      if (error) throw new Error(error.message);
+    }
+    revalidatePath("/admin/inventory");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo guardar" };
+  }
+}
+
 export async function setProductStatus(productId: string, status: "draft" | "active" | "archived") {
   const supabase = await requirePermiso("productos_gestionar");
   const { error } = await supabase.from("products").update({ status }).eq("id", productId);
