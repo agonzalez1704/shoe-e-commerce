@@ -93,19 +93,30 @@ export type Database = {
         Row: {
           created_at: string
           is_dev: boolean
+          role_id: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           is_dev?: boolean
+          role_id?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           is_dev?: boolean
+          role_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "admin_users_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       analytics_events: {
         Row: {
@@ -1201,6 +1212,56 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          permiso: string
+          role_id: string
+        }
+        Insert: {
+          permiso: string
+          role_id: string
+        }
+        Update: {
+          permiso?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           key: string
@@ -1463,8 +1524,10 @@ export type Database = {
       }
       expire_pending_orders: { Args: never; Returns: number }
       expire_stale_angle_jobs: { Args: never; Returns: undefined }
+      has_permiso: { Args: { p_permiso: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_dev: { Args: never; Returns: boolean }
+      is_staff: { Args: never; Returns: boolean }
       iva_of: { Args: { p_inclusive: number }; Returns: number }
       promo_percent: { Args: { p_product_id: string }; Returns: number }
       record_payment: {

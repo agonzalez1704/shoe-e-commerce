@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { InventoryRow, type InvRow } from "@/components/InventoryRow";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminInventory() {
+  await requirePagePermiso("inventario_ver");
   const supabase = await createClient();
   const { data } = await supabase
     .from("variants")

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eye, Users, CursorClick } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ const RANGES = [
 ];
 
 export default async function MetricasPage({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
+  await requirePagePermiso("metricas_ver");
   const { d } = await searchParams;
   const days = RANGES.some((r) => String(r.days) === d) ? Number(d) : 7;
 

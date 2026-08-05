@@ -2,12 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { ProductStatusToggle } from "@/components/ProductStatusToggle";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 export default async function AdminProducts() {
+  await requirePagePermiso("productos_gestionar");
   const supabase = await createClient();
   const { data } = await supabase
     .from("products")

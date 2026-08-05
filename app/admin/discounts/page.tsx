@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { DiscountCodes, type CodeRow } from "@/components/admin/DiscountCodes";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDiscounts() {
+  await requirePagePermiso("descuentos_gestionar");
   const supabase = await createClient();
   const { data } = await supabase
     .from("discount_codes")

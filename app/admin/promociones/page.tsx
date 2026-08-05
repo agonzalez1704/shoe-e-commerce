@@ -4,10 +4,12 @@ import {
   type PromoRow,
   type ProductoOpcion,
 } from "@/components/admin/PromocionesView";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPromociones() {
+  await requirePagePermiso("promociones_gestionar");
   const supabase = await createClient();
 
   const [{ data: promosData }, { data: prodData }] = await Promise.all([

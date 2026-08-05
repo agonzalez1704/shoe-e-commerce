@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCents } from "@/lib/money";
 import { commissionCents, mxWeekStart } from "@/lib/commission";
 import { CommissionPayButton } from "@/components/admin/CommissionPayButton";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ type OrderRow = {
 };
 
 export default async function ComisionesPage() {
+  await requirePagePermiso("comisiones_ver");
   const supabase = await createClient();
   const [{ data }, { data: isDev }] = await Promise.all([
     supabase

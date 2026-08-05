@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StageBadge } from "@/components/StageBadge";
+import { requirePagePermiso } from "@/lib/permisos-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function AdminOrders({
 }: {
   searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
+  await requirePagePermiso("pedidos_ver");
   const { status, q, page } = await searchParams;
   const active = status ?? "all";
   // strip chars that would break the PostgREST .or() filter syntax
