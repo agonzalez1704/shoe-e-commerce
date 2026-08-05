@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { permisosDe, concede } from "@/lib/permisos-guard";
 import type { Permiso } from "@/lib/permissions";
 import { signOut } from "@/app/auth/actions";
+import { SignOut } from "@phosphor-icons/react/dist/ssr";
 import { AngleJobsProvider } from "@/components/providers/AngleJobsProvider";
 import { GlobalJobProgress } from "@/components/admin/GlobalJobProgress";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -42,28 +43,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <AngleJobsProvider>
       <GlobalJobProgress />
-      <div className="py-8">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        {/* links don't fit a phone: the nav scrolls on its own (w-full + min-w-0),
-            no negative margins that would push the whole page sideways */}
-        <nav className="flex w-full min-w-0 items-center gap-1 overflow-x-auto text-sm [scrollbar-width:none] sm:w-auto [&::-webkit-scrollbar]:hidden">
-          <span className="mr-3 shrink-0 font-semibold tracking-tight">Admin</span>
-          {nav.map(([href, label]) => (
-            <Link key={href} href={href} className="shrink-0 rounded-full px-3 py-1.5 text-muted transition-colors hover:text-text">
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href="/" className="text-muted transition-colors hover:text-text">Ver tienda</Link>
-          <form action={signOut}>
-            <button className="rounded-full border border-border px-3 py-1.5 text-muted transition-colors hover:text-text">
-              Salir
-            </button>
-          </form>
-        </div>
-      </div>
-      {children}
+      {/* sidebar + content. The rail only renders inside /admin, which is already
+          gated above, so it never reaches a storefront visitor. */}
+      <div className="flex gap-6 py-6">
+        <AdminSidebar
+          items={nav.map(([href, label]) => ({ href, label }))}
+          signOut={
+            <form action={signOut}>
+              <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-elevated hover:text-text">
+                <SignOut size={17} /> Salir
+              </button>
+            </form>
+          }
+        />
+        <div className="min-w-0 flex-1">{children}</div>
       </div>
     </AngleJobsProvider>
   );

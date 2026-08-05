@@ -42,7 +42,7 @@ export default async function AdminInventory({ searchParams }: { searchParams: S
 
   let sb = supabase
     .from("admin_inventory")
-    .select("variant_id, sku, size_value, size_system, width, color, product_name, on_hand, reserved, available",
+    .select("variant_id, sku, size_value, size_system, width, color, product_name, made_to_order, on_hand, reserved, available",
       { count: "exact" })
     .order("available", { ascending: true })   // low stock first, now done in the DB
     .order("sku", { ascending: true })
@@ -64,6 +64,7 @@ export default async function AdminInventory({ searchParams }: { searchParams: S
     sku: v.sku as string,
     onHand: v.on_hand ?? 0,
     reserved: v.reserved ?? 0,
+    madeToOrder: v.made_to_order ?? false,
   }));
 
   const total = count ?? 0;

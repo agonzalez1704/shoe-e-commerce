@@ -12,6 +12,7 @@ export type InvRow = {
   sku: string;
   onHand: number;
   reserved: number;
+  madeToOrder?: boolean;
 };
 
 export function InventoryRow({ row }: { row: InvRow }) {
@@ -39,7 +40,15 @@ export function InventoryRow({ row }: { row: InvRow }) {
         <p className="text-xs capitalize text-muted">{row.label} · <span className="nums">{row.sku}</span></p>
       </td>
       <td className="nums px-4 py-3 text-right text-muted">{row.reserved}</td>
-      <td className={`nums px-4 py-3 text-right ${available <= 3 ? "text-accent" : ""}`}>{available}</td>
+      {/* made-to-order sells with no stock on hand, so a 0 here isn't a problem
+          to fix — flag it instead of showing an alarming red zero */}
+      <td className={`nums px-4 py-3 text-right ${!row.madeToOrder && available <= 3 ? "text-accent" : ""}`}>
+        {row.madeToOrder ? (
+          <span className="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-medium text-muted">sobre pedido</span>
+        ) : (
+          available
+        )}
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2">
           <input
