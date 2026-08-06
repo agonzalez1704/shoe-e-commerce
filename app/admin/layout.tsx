@@ -46,7 +46,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <GlobalJobProgress />
       {/* sidebar + content. The rail only renders inside /admin, which is already
           gated above, so it never reaches a storefront visitor. */}
-      <div className="flex gap-6 py-6">
+      {/* column on phones so the bar is a header, row on desktop so it's a rail */}
+      <div className="flex flex-col gap-4 pb-6 md:flex-row md:gap-6 md:py-6">
         <AdminSidebar
           items={nav.map(([href, label]) => ({ href, label }))}
           signOut={

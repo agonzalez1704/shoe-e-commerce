@@ -8,6 +8,7 @@ import { MetaPixel } from "@/components/MetaPixel";
 import { AnalyticsBeacon } from "@/components/AnalyticsBeacon";
 import { ViewTransition } from "@/components/ViewTransition";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { StorefrontOnly } from "@/components/StorefrontOnly";
 import { Logo } from "@/components/Logo";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import { activeBrand, brandThemeCss } from "@/lib/brand";
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <NuqsAdapter>
           <MetaPixel />
           <AnalyticsBeacon />
+          <StorefrontOnly>
           <Link href="/products" className="block bg-text text-bg transition-opacity hover:opacity-90">
             <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs font-medium">
               {activeBrand.announcement ?? "Envíos a todo México"}
@@ -118,11 +120,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </nav>
           </header>
+          </StorefrontOnly>
 
           <ViewTransition>
             <main className="mx-auto max-w-6xl px-4">{children}</main>
           </ViewTransition>
 
+          <StorefrontOnly>
           <footer className="mt-24 border-t border-border">
             <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div className="text-muted">
@@ -152,6 +156,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </nav>
             </div>
           </footer>
+          </StorefrontOnly>
         </NuqsAdapter>
       </body>
     </html>

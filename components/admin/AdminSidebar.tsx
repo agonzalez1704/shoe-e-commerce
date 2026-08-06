@@ -31,6 +31,9 @@ export function AdminSidebar({ items, signOut }: { items: NavItem[]; signOut: Re
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
+  // the bar is the only chrome on a phone, so it says where you are
+  const title = items.find(({ href }) => isActive(href))?.label ?? "Admin";
+
   const nav = (
     <nav className="flex flex-col gap-0.5">
       {items.map(({ href, label }) => {
@@ -68,15 +71,18 @@ export function AdminSidebar({ items, signOut }: { items: NavItem[]; signOut: Re
   return (
     <>
       {/* mobile: top bar + drawer */}
-      <div className="mb-4 flex items-center justify-between border-b border-border pb-3 md:hidden">
-        <span className="font-semibold tracking-tight">Admin</span>
+      <div className="sticky top-0 z-40 -mx-4 flex items-center justify-between border-b border-border bg-bg/90 px-4 py-3 backdrop-blur-md md:hidden">
         <button
           onClick={() => setOpen(true)}
           aria-label="Abrir menú"
-          className="grid h-9 w-9 place-items-center rounded-lg border border-border"
+          className="-ml-2 grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:text-text"
         >
-          <List size={18} />
+          <List size={22} />
         </button>
+        <span className="font-semibold tracking-tight">{title}</span>
+        <Link href="/" aria-label="Ver tienda" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:text-text">
+          <Storefront size={20} />
+        </Link>
       </div>
 
       {open && (
