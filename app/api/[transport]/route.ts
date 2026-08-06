@@ -11,6 +11,7 @@ import {
   estadoPedido,
   verificarPago,
   embudoCheckout,
+  reenviarInstruccionesPago,
 } from "@/lib/analytics";
 
 export const runtime = "nodejs";
@@ -103,6 +104,19 @@ const handler = createMcpHandler(
         "no falta de interés. Revísalo a diario: esas fallas no dejan ningún otro rastro.",
       { periodo: PERIODO },
       async ({ periodo }) => json(await embudoCheckout(periodo)),
+    );
+
+    // The only tool here that writes. It emails a real customer, so it refuses
+    // on a paid/expired order and rate-limits itself; if it answers
+    // `enviado: false`, read `motivo` and do NOT retry.
+    server.tool(
+      "reenviar_instrucciones_pago",
+      "Reenvía al cliente su referencia y código de barras por correo. Úsala cuando el cliente perdió " +
+        "el correo o dice que no lo recibió. Solo funciona con pedidos pendientes que se pagan con " +
+        "referencia (efectivo/SPEI) y cuya referencia no haya vencido. Tiene un límite de un envío cada " +
+        "6 horas por pedido: si responde `enviado: false`, lee `motivo` y NO lo intentes de nuevo.",
+      { pedido: z.string().describe("Número de pedido, ej. BL-001054") },
+      async ({ pedido }) => json(await reenviarInstruccionesPago(pedido)),
     );
   },
   {},

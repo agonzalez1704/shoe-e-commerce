@@ -656,6 +656,7 @@ export type Database = {
           expires_at: string | null
           fulfillment_stage: string
           id: string
+          instructions_resent_at: string | null
           needs_invoice: boolean
           order_number: string
           paid_at: string | null
@@ -692,6 +693,7 @@ export type Database = {
           expires_at?: string | null
           fulfillment_stage?: string
           id?: string
+          instructions_resent_at?: string | null
           needs_invoice?: boolean
           order_number: string
           paid_at?: string | null
@@ -728,6 +730,7 @@ export type Database = {
           expires_at?: string | null
           fulfillment_stage?: string
           id?: string
+          instructions_resent_at?: string | null
           needs_invoice?: boolean
           order_number?: string
           paid_at?: string | null

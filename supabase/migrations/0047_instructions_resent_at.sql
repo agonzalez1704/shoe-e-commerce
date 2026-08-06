@@ -1,0 +1,11 @@
+-- Cooldown for resending payment instructions.
+--
+-- The admin button is clicked by a person, so it never needed one. Exposing the
+-- same action over MCP means a model can call it in a loop, and the thing on the
+-- other end is a real customer's inbox. This records the last resend so the tool
+-- can refuse to send again too soon.
+--
+-- Separate from reminder_sent_at on purpose: that one is the abandoned-checkout
+-- cron's "once ever" marker, and writing to it here would silently cancel the
+-- automatic reminder.
+alter table orders add column if not exists instructions_resent_at timestamptz;

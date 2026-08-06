@@ -476,3 +476,82 @@ export async function embudoCheckout(periodo: Periodo) {
         : null,
   };
 }
+
+// ---- reenviar_instrucciones_pago (la única herramienta que escribe) ----
+// Sends the buyer their voucher again. It touches a real inbox and it's callable
+// by a model, so it refuses more often than the admin button does: only a
+// still-payable order, only one send per COOLDOWN_H, and never for a method that
+// has no reference to resend.
+const COOLDOWN_H = 6;
+
+export async function reenviarInstruccionesPago(orderNumber: string) {
+  const db = createAdminClient();
+  const num = orderNumber.trim().toUpperCase();
+
+  const { data: order } = await db
+    .from("orders")
+    .select("id, order_number, email, total_cents, status, payment_method, expires_at, instructions_resent_at")
+    .eq("order_number", num)
+    .maybeSingle();
+
+  if (!order) return { enviado: false, motivo: `No existe el pedido ${num}.` };
+  if (order.status !== "pending") return { enviado: false, motivo: `El pedido ya está "${order.status}", no hay nada que cobrar.` };
+  if (order.payment_method !== "oxxo" && order.payment_method !== "spei") {
+    return { enviado: false, motivo: `Ese pedido se paga con ${order.payment_method}, que no usa referencia. Mándale el link de pago desde el admin.` };
+  }
+  if (order.expires_at && new Date(order.expires_at).getTime() <= Date.now()) {
+    return { enviado: false, motivo: "La referencia ya venció; hay que generar un pedido nuevo." };
+  }
+
+  const last = order.instructions_resent_at ? new Date(order.instructions_resent_at).getTime() : 0;
+  const horas = (Date.now() - last) / 3600_000;
+  if (last && horas < COOLDOWN_H) {
+    return {
+      enviado: false,
+      motivo: `Ya se le reenviaron las instrucciones hace ${horas.toFixed(1)} h. Espera ${(COOLDOWN_H - horas).toFixed(1)} h para no saturarlo.`,
+    };
+  }
+
+  const { data: payment } = await db
+    .from("payments")
+    .select("reference, clabe, voucher_url")
+    .eq("order_id", order.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!payment?.reference && !payment?.clabe) {
+    return { enviado: false, motivo: "El pedido no tiene referencia registrada." };
+  }
+
+  const { data: items } = await db
+    .from("order_items")
+    .select("product_name, variant_label, unit_price_cents, quantity")
+    .eq("order_id", order.id);
+
+  const { sendVoucherEmail } = await import("@/lib/email");
+  await sendVoucherEmail({
+    to: order.email,
+    orderNumber: order.order_number,
+    totalCents: order.total_cents,
+    method: order.payment_method,
+    reference: payment.reference ?? undefined,
+    clabe: payment.clabe ?? undefined,
+    voucherUrl: payment.voucher_url ?? undefined,
+    expiresAt: order.expires_at,
+    lines: (items ?? []).map((i) => ({
+      name: `${i.product_name} (${i.variant_label})`,
+      quantity: i.quantity,
+      lineTotalCents: i.unit_price_cents * i.quantity,
+    })),
+  });
+
+  await db.from("orders").update({ instructions_resent_at: new Date().toISOString() }).eq("id", order.id);
+
+  return {
+    enviado: true,
+    pedido: order.order_number,
+    a: order.email,
+    referencia: payment.reference ?? payment.clabe,
+    vence: order.expires_at,
+  };
+}
