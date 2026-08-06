@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Refreshes the Supabase auth session on every request so RLS sees a valid JWT.
-export async function middleware(request: NextRequest) {
+// Named `proxy` since Next 16 — the `middleware` convention is deprecated.
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
