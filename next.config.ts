@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     viewTransition: true,
   },
   images: {
+    // How long an optimised image lives before the optimiser goes back to
+    // Storage for the original. Next takes whichever is longer, this or the
+    // upstream max-age, so a long floor here also covers the objects already
+    // uploaded with the old one-hour header. Safe because a replaced photo gets
+    // a new UUID path rather than overwriting the old one.
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       // derive protocol from the URL — local stack is http://127.0.0.1, prod is https
       ...(supabaseUrl

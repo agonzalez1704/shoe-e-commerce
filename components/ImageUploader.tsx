@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { UploadSimple, X, Spinner, MagicWand } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { generateProductAngles, type ProductImageInput } from "@/app/admin/product-actions";
+import { INMUTABLE } from "@/lib/cache";
 
 const BUCKET = "product-images";
 
@@ -50,7 +51,7 @@ export function ImageUploader({
         const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const path = `${crypto.randomUUID()}-${safe}`;
         const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-          cacheControl: "3600",
+          cacheControl: INMUTABLE,
           upsert: false,
         });
         if (upErr) throw new Error(upErr.message);
