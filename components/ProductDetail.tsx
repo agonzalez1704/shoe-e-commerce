@@ -180,7 +180,11 @@ export function ProductDetail({
           madeToOrder={product.made_to_order}
         />
 
-        <PdpInfo />
+        <PdpInfo
+          sized={product.variants.some((v) => v.size_value !== null)}
+          madeToOrder={product.made_to_order}
+          attributes={product.attributes}
+        />
       </div>
     </div>
   );
