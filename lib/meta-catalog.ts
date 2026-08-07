@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { metaContentId } from "@/lib/meta-content";
+import { cdnImage } from "@/lib/cdn-image";
 
 // Meta Commerce product feed, generated live from the DB. Meta re-fetches this on
 // a schedule, so a sale (availability) or a product add/remove is reflected
@@ -60,7 +61,9 @@ export async function buildMetaCatalogCsv(): Promise<string> {
       .order("position");
 
     const colors = [...new Set(variants.map((v) => v.color))];
-    const sizes = [...new Set(variants.map((v) => v.size_value))].sort();
+    // null on products that don't come in sizes — without the filter the feed
+    // advertises "MX null-null" to Meta
+    const sizes = [...new Set(variants.map((v) => v.size_value).filter(Boolean))].sort();
 
     for (const color of colors) {
       const inStock =
@@ -79,14 +82,16 @@ export async function buildMetaCatalogCsv(): Promise<string> {
         condition: "new",
         price: `${price} MXN`,
         link: `${SITE_URL}/products/${p.slug}?color=${encodeURIComponent(color)}`,
-        image_link: img,
+        // through Vercel, never the raw Storage URL — Meta re-crawls the whole
+        // feed often and each pull was billed as Supabase egress
+        image_link: cdnImage(img),
         brand,
         google_product_category: "Apparel & Accessories > Shoes",
         quantity_to_sell_on_facebook: p.made_to_order ? 100 : variants.filter((v) => v.color === color).reduce((n, v) => n + (stock.get(v.id) ?? 0), 0),
         item_group_id: p.slug,
         gender,
         color,
-        size: `MX ${sizes[0]}-${sizes[sizes.length - 1]}`,
+        size: sizes.length ? `MX ${sizes[0]}-${sizes[sizes.length - 1]}` : "",
         age_group: "adult",
         material: "piel genuina",
         shipping: "MX::Envío gratis:0.00 MXN",

@@ -1,4 +1,5 @@
 import { slugifyColor } from "@/lib/meta-content";
+import { cdnImage } from "@/lib/cdn-image";
 
 // Pre-rendered 1200x630 JPEG share cards live in Storage under og/.
 // They exist because the product photos are portrait WebP: link previews crop
@@ -8,5 +9,7 @@ import { slugifyColor } from "@/lib/meta-content";
 export function ogCardUrl(slug: string, color?: string): string {
   const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/og`;
   const cs = color ? slugifyColor(color) : "";
-  return cs ? `${base}/${slug}--${cs}.jpg` : `${base}/${slug}.jpg`;
+  // Served through Vercel: every WhatsApp and Facebook share preview fetches
+  // this URL directly, and pointing it at Storage billed each one to Supabase.
+  return cdnImage(cs ? `${base}/${slug}--${cs}.jpg` : `${base}/${slug}.jpg`);
 }
