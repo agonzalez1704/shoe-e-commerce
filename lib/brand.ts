@@ -210,6 +210,39 @@ const BRANDS: Record<string, BrandConfig> = {
     },
   },
 
+  // ---- Movilidad eléctrica — distribuidor autorizado Honey Whale ----
+  // Supabase project `honey-whale` (zcuilugerwmswjqlxtxp).
+  //
+  // TODO before this goes to a real domain: `name`, `domain` and `emailFrom`
+  // are the distributor's, NOT the manufacturer's — a storefront titled "Honey
+  // Whale" would read as the official brand site rather than a dealer's. And
+  // `legal` stays empty until the client hands over RFC and domicilio fiscal;
+  // LegalGate refuses to render terms and privacy until it is filled, which is
+  // what stops one store publishing another's entity.
+  honeywhale: {
+    key: "honeywhale",
+    name: "TODO Distribuidor",
+    domain: "",
+    legal: { operator: "", rfc: "", address: "", supportEmail: "" },
+    tagline: "Movilidad eléctrica para la ciudad.",
+    description:
+      "Scooters, bicicletas y motos eléctricas. Distribuidor autorizado. Envíos a todo México.",
+    emailFrom: "",
+    announcement: "Scooters y motos eléctricas · Envíos a todo México",
+    seoSuffix: "scooters y motos eléctricas en México",
+    // amber on near-black — placeholder until the client's palette is settled
+    theme: {
+      light: {
+        accent: "#E8A317", accentSoft: "#fdf4e3", accentContrast: "#1a1a1a",
+        bg: "#fafafa", surface: "#ffffff", elevated: "#f2f2f3", text: "#141417", muted: "#5c5f66", border: "#e5e5e9",
+      },
+      dark: {
+        accent: "#F5B935", accentSoft: "#2a2113", accentContrast: "#1a1a1a",
+        bg: "#0a0a0c", surface: "#151518", elevated: "#1f1f25", text: "#f5f5f7", muted: "#9c9ca6", border: "#2c2c34",
+      },
+    },
+  },
+
   // ---- Brand 2 (template — replace name/colors/logo/email) ----
   altura: {
     key: "altura",
