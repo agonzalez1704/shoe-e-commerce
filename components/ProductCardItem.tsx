@@ -11,6 +11,10 @@ import type { ProductCard } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
+const PILL = "rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide shadow-[var(--shadow-sm)]";
+const PILL_ACCENT = `${PILL} bg-accent text-accent-contrast`;
+const PILL_DARK = `${PILL} bg-text uppercase text-bg`;
+
 // One card = one variant colour (limited inventory). Links to the product with
 // that colour preselected.
 export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priority?: boolean; badge?: string }) {
@@ -46,21 +50,17 @@ export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priori
             />
           )}
 
-          {combo && (
-            <span className="absolute left-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold tracking-wide text-accent-contrast shadow-[var(--shadow-sm)]">
-              {comboLabel(combo, mxn)}
-            </span>
-          )}
-          {onSale && (
-            <span className="absolute left-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold tracking-wide text-accent-contrast shadow-[var(--shadow-sm)]">
-              -{p.promoPercent}%
-            </span>
-          )}
-          {badge && (
-            <span className="absolute right-2.5 top-2.5 rounded-full bg-text px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-bg shadow-[var(--shadow-sm)]">
-              {badge}
-            </span>
-          )}
+          {/* Two stacked columns rather than free-floating pills. The combo and
+              discount badges were both pinned to left-2.5 top-2.5 and drew on
+              top of each other on any product that had both. Stacking means a
+              card can carry all three without collision. */}
+          <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
+            {combo && <span className={PILL_ACCENT}>{comboLabel(combo, mxn)}</span>}
+          </div>
+          <div className="pointer-events-none absolute right-2.5 top-2.5 flex flex-col items-end gap-1.5">
+            {onSale && <span className={PILL_ACCENT}>-{p.promoPercent}%</span>}
+            {badge && <span className={PILL_DARK}>{badge}</span>}
+          </div>
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 transition-all duration-300 group-hover:opacity-100">
             <span className="flex items-center gap-1 rounded-full bg-text px-3 py-1.5 text-[11px] font-medium text-bg shadow-[var(--shadow-md)]">
