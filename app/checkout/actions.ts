@@ -13,6 +13,10 @@ import { formatCents } from "@/lib/money";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
+// How long a MercadoPago order stays claimable before the cron reclaims its
+// stock. Named so the trade-off is visible: too short cancels real buyers.
+const MP_EXPIRY_HOURS = 72;
+
 // Free shipping on every order — that's what /envios, the PDP, the cart and the
 // checkout all promise. Keep this the single place that decides, so a threshold
 // can never silently reappear and surprise the buyer at charge time.
@@ -234,11 +238,16 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   //     Skips Conekta entirely; the MP webhook commits the order on approval.
   if (input.method === "mercadopago") {
     // create_order left expires_at NULL for MP; without a deadline an abandoned
-    // redirect would hold the reserved stock forever. Give it 2h so the
-    // expire-orders cron reclaims it (webhook commit is idempotent within that).
+    // redirect would hold the reserved stock forever, so the expire-orders cron
+    // needs one to reclaim it (the webhook commit is idempotent within it).
+    //
+    // Was 2h, which killed real orders: a buyer who leaves MercadoPago to fetch
+    // a card, or pays from another device later in the day, came back to a
+    // cancelled order. Three days costs us reserved stock on abandoned
+    // redirects; two hours cost us the sale.
     await admin
       .from("orders")
-      .update({ expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() })
+      .update({ expires_at: new Date(Date.now() + MP_EXPIRY_HOURS * 60 * 60 * 1000).toISOString() })
       .eq("id", orderId);
 
     const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
