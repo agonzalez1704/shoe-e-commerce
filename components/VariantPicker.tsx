@@ -12,9 +12,11 @@ import { metaContentId } from "@/lib/meta-content";
 type Variant = {
   id: string;
   sku: string;
-  size_value: string;
-  size_system: string;
-  width: string;
+  // null on categories that don't come in sizes — a scooter, a helmet. Those
+  // products carry one variant per colourway and nothing to pick.
+  size_value: string | null;
+  size_system: string | null;
+  width: string | null;
   color: string;
   price_cents: number | null;
   qty_available: number;
@@ -46,24 +48,46 @@ export function VariantPicker({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  // Does this product come in sizes at all? Drives whether there is a step
+  // between picking a colour and buying.
+  const sized = useMemo(() => variants.some((v) => v.size_value !== null), [variants]);
+
   const sizes = useMemo(
     () =>
       variants
         .filter((v) => v.color === color)
-        .sort((a, b) => parseFloat(a.size_value) - parseFloat(b.size_value)),
+        .sort((a, b) => parseFloat(a.size_value ?? "0") - parseFloat(b.size_value ?? "0")),
     [variants, color],
   );
 
-  // a size only counts when this colour actually offers it
+  // Sized: a size only counts when this colour actually offers it, in stock.
+  // Unsized: the colourway *is* the choice, so it is selected the moment the
+  // colour is — otherwise the buy button would never enable.
+  const inStock = (v: Variant) => madeToOrder || v.qty_available > 0;
   const selected = useMemo(
-    () => sizes.find((v) => v.size_value === size && !(!madeToOrder && v.qty_available <= 0)) ?? null,
-    [sizes, size, madeToOrder],
+    () =>
+      sized
+        ? (sizes.find((v) => v.size_value === size && inStock(v)) ?? null)
+        : (sizes.find(inStock) ?? sizes[0] ?? null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sized, sizes, size, madeToOrder],
   );
   const price = selected?.price_cents ?? basePriceCents;
+  const soldOut = !madeToOrder && !!selected && selected.qty_available <= 0;
+  // "Selecciona una talla" is a lie on a scooter — there is nothing to select.
+  const ctaLabel = soldOut
+    ? "Agotado"
+    : selected
+      ? "Agregar al carrito"
+      : sized
+        ? "Selecciona una talla"
+        : "Agotado";
   const canBuy = !!selected && !isPending && (madeToOrder || selected.qty_available > 0);
 
   const add = () => {
     if (!selected) {
+      // nothing to nudge them towards when there is no size step
+      if (!sized) return;
       document.getElementById("size-picker")?.scrollIntoView({ behavior: "smooth", block: "start" });
       setFlash(true);
       setTimeout(() => setFlash(false), 1400);
@@ -107,7 +131,8 @@ export function VariantPicker({
         </div>
       </fieldset>
 
-      {/* size + width */}
+      {/* size + width — absent entirely on unsized categories */}
+      {sized && (
       <fieldset id="size-picker" className={`mt-7 scroll-mt-24 rounded-xl transition-all ${flash ? "bg-accent-soft/60 ring-2 ring-accent p-3 -m-3" : "ring-0"}`}>
         <div className="flex items-center justify-between">
           <legend className="text-xs font-medium uppercase tracking-wide text-muted">Talla</legend>
@@ -147,6 +172,12 @@ export function VariantPicker({
           <p className="mt-2 text-xs text-accent">Últimas {selected.qty_available} piezas</p>
         )}
       </fieldset>
+      )}
+
+      {/* unsized: the stock line has no fieldset to live in */}
+      {!sized && !madeToOrder && selected && selected.qty_available > 0 && selected.qty_available <= 3 && (
+        <p className="mt-4 text-xs text-accent">Últimas {selected.qty_available} piezas</p>
+      )}
 
       <div className="mt-7 flex items-center justify-between">
         <p className="nums text-xl font-medium">{mxn(price)}</p>
@@ -158,14 +189,16 @@ export function VariantPicker({
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-medium text-accent-contrast transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
       >
         <ShoppingBag size={18} weight="bold" />
-        {isPending ? "Agregando…" : selected ? "Agregar al carrito" : "Selecciona una talla"}
+        {isPending ? "Agregando…" : ctaLabel}
       </button>
 
       {/* mobile sticky add-to-cart bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-border bg-bg/95 px-4 py-3 backdrop-blur-md md:hidden">
         <div className="min-w-0">
           <p className="nums text-base font-semibold leading-none">{mxn(price)}</p>
-          <p className="truncate text-[11px] text-muted">{selected ? `Talla ${selected.size_value}` : "Elige tu talla"}</p>
+          <p className="truncate text-[11px] capitalize text-muted">
+            {sized ? (selected ? `Talla ${selected.size_value}` : "Elige tu talla") : color}
+          </p>
         </div>
         <button
           disabled={isPending || (!!selected && !madeToOrder && selected.qty_available <= 0)}

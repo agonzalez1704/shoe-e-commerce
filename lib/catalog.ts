@@ -171,9 +171,11 @@ export type ProductDetail = {
   variants: {
     id: string;
     sku: string;
-    size_value: string;
-    size_system: string;
-    width: string;
+    // null on products that don't come in sizes (a scooter, a helmet). The
+    // picker reads this to decide whether there is anything to pick at all.
+    size_value: string | null;
+    size_system: string | null;
+    width: string | null;
     color: string;
     price_cents: number | null;
     qty_available: number;
@@ -182,6 +184,8 @@ export type ProductDetail = {
   comboMinQty: number | null;
   comboPriceCents: number | null;
   promoPercent: number | null;
+  // free-form specs, per category — empty on products that have none
+  attributes: Record<string, string | number | boolean>;
 };
 
 // PDP: one product by slug, with variants joined to live availability.
@@ -192,7 +196,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, " +
+      "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, attributes, " +
         "brands(name), " +
         "product_images(url, alt, color, position), " +
         "variants(id, sku, size_value, size_system, width, color, price_cents, status)",
@@ -208,11 +212,12 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
   type ProductRow = {
     id: string; name: string; slug: string; description: string | null; base_price_cents: number;
     made_to_order: boolean; combo_min_qty: number | null; combo_price_cents: number | null;
+    attributes: Record<string, string | number | boolean> | null;
     brands: { name: string } | null;
     product_images: { url: string; alt: string | null; color: string | null; position: number }[];
     variants: {
-      id: string; sku: string; size_value: string; size_system: string;
-      width: string; color: string; price_cents: number | null; status: string;
+      id: string; sku: string; size_value: string | null; size_system: string | null;
+      width: string | null; color: string; price_cents: number | null; status: string;
     }[];
   };
   const p = data as unknown as ProductRow;
@@ -256,5 +261,6 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     comboMinQty: p.combo_min_qty,
     comboPriceCents: p.combo_price_cents,
     promoPercent,
+    attributes: p.attributes ?? {},
   };
 });

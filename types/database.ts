@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -909,6 +904,7 @@ export type Database = {
       }
       products: {
         Row: {
+          attributes: Json
           base_price_cents: number
           brand_id: string | null
           combo_group: string | null
@@ -925,6 +921,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attributes?: Json
           base_price_cents: number
           brand_id?: string | null
           combo_group?: string | null
@@ -941,6 +938,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attributes?: Json
           base_price_cents?: number
           brand_id?: string | null
           combo_group?: string | null
@@ -1431,11 +1429,11 @@ export type Database = {
           id: string
           price_cents: number | null
           product_id: string
-          size_system: Database["public"]["Enums"]["size_system"]
-          size_value: string
+          size_system: Database["public"]["Enums"]["size_system"] | null
+          size_value: string | null
           sku: string
           status: Database["public"]["Enums"]["variant_status"]
-          width: Database["public"]["Enums"]["width_type"]
+          width: Database["public"]["Enums"]["width_type"] | null
         }
         Insert: {
           barcode?: string | null
@@ -1444,11 +1442,11 @@ export type Database = {
           id?: string
           price_cents?: number | null
           product_id: string
-          size_system?: Database["public"]["Enums"]["size_system"]
-          size_value: string
+          size_system?: Database["public"]["Enums"]["size_system"] | null
+          size_value?: string | null
           sku: string
           status?: Database["public"]["Enums"]["variant_status"]
-          width?: Database["public"]["Enums"]["width_type"]
+          width?: Database["public"]["Enums"]["width_type"] | null
         }
         Update: {
           barcode?: string | null
@@ -1457,11 +1455,11 @@ export type Database = {
           id?: string
           price_cents?: number | null
           product_id?: string
-          size_system?: Database["public"]["Enums"]["size_system"]
-          size_value?: string
+          size_system?: Database["public"]["Enums"]["size_system"] | null
+          size_value?: string | null
           sku?: string
           status?: Database["public"]["Enums"]["variant_status"]
-          width?: Database["public"]["Enums"]["width_type"]
+          width?: Database["public"]["Enums"]["width_type"] | null
         }
         Relationships: [
           {
@@ -1916,3 +1914,4 @@ export const Constants = {
     },
   },
 } as const
+
