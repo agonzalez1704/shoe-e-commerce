@@ -96,7 +96,7 @@ export default async function ComisionesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Comisiones del desarrollador</h1>
           <p className="mt-1 text-sm text-muted">
-            $50 por par, $100 por par a partir del par 100 de la semana. Corte Lun–Dom por{" "}
+            $75 por par, $100 por par a partir del par 100 de la semana. Corte Lun–Dom por{" "}
             <span className="font-medium text-text">fecha de pago</span>.
           </p>
           <p className="mt-1 text-xs text-muted">
