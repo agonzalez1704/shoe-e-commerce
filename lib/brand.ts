@@ -247,8 +247,29 @@ const BRANDS: Record<string, BrandConfig> = {
   },
 };
 
-export const activeBrand: BrandConfig =
-  BRANDS[process.env.NEXT_PUBLIC_BRAND ?? "blade"] ?? BRANDS.blade;
+// An unknown key used to fall back to Blade. That is the worst possible
+// default: a typo in NEXT_PUBLIC_BRAND, or a deployment whose brand has not
+// been added yet, silently served Blade's name, domain and — through the terms
+// and privacy pages — Blade's operator and RFC on someone else's URL. LegalGate
+// cannot catch it, because by then the config *is* a fully valid one.
+//
+// So: unset still means Blade (its own deployment predates the variable), but a
+// key that does not resolve now fails the build instead of impersonating.
+function resolveBrand(): BrandConfig {
+  const key = process.env.NEXT_PUBLIC_BRAND;
+  if (!key) return BRANDS.blade;
+  const found = BRANDS[key];
+  if (!found) {
+    throw new Error(
+      `NEXT_PUBLIC_BRAND="${key}" no existe en lib/brand.ts. ` +
+        `Marcas disponibles: ${Object.keys(BRANDS).join(", ")}. ` +
+        `Se aborta en vez de caer a Blade: eso publicaría su RFC y su dominio en esta tienda.`,
+    );
+  }
+  return found;
+}
+
+export const activeBrand: BrandConfig = resolveBrand();
 
 // Build a <style> body that overrides the theme tokens for the active brand.
 function modeVars(m: ThemeMode): string {
