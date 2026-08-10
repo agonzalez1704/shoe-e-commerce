@@ -129,6 +129,38 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
   return [...bySlug.values()].slice(0, limit);
 }
 
+// Best sellers for the storefront. The ranking comes from top_sellers(), a
+// SECURITY DEFINER function that returns product ids and nothing else — orders
+// stay behind RLS and the volumes stay private.
+//
+// Returns [] when there is not enough history (a brand-new store has none), so
+// the caller can hide the section rather than label the newest arrivals as
+// best sellers.
+export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCard[]> {
+  const supabase = await createClient();
+  const { data: top, error } = await supabase.rpc("top_sellers", { p_limit: limit });
+  if (error || !top?.length) return [];
+
+  const ids = (top as { product_id: string }[]).map((t) => t.product_id);
+  if (ids.length < minimum) return [];
+
+  const { data } = await supabase
+    .from("products")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents)")
+    .in("id", ids)
+    .eq("status", "active");
+
+  type Row = Parameters<typeof toVariantCards>[0];
+  const promo = await getPromoMap();
+  const byId = new Map<string, Row>(((data ?? []) as unknown as Row[]).map((p) => [p.id, p]));
+  // one card per model, in the ranking's order — `in` does not preserve it
+  return ids
+    .map((id) => byId.get(id))
+    .filter((p): p is Row => !!p)
+    .map((p) => toVariantCards(p, promo.get(p.id) ?? null)[0])
+    .filter(Boolean);
+}
+
 export type Category = { id: string; name: string; slug: string; description: string | null };
 
 export const getCategory = cache(async (slug: string): Promise<Category | null> => {

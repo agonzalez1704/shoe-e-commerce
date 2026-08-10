@@ -1746,6 +1746,12 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      top_sellers: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: {
+          product_id: string
+        }[]
+      }
     }
     Enums: {
       cfdi_status: "pending" | "stamped" | "failed" | "cancelled"

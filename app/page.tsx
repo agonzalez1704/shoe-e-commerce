@@ -10,7 +10,7 @@ import {
   Hammer,
   Sparkle,
 } from "@phosphor-icons/react/dist/ssr";
-import { listProducts, type ProductCard } from "@/lib/catalog";
+import { listProducts, listBestSellers, type ProductCard } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
@@ -28,7 +28,10 @@ const hero = home?.hero ?? {
 const FEATURES: HomeFeature[] = home?.features ?? [];
 
 export default async function Home() {
-  const products = await listProducts({ sort: "newest" });
+  const [products, bestSellers] = await Promise.all([
+    listProducts({ sort: "newest" }),
+    listBestSellers(8),
+  ]);
   const featured = products.slice(0, 6);
   const combos = comboPicks(products);
 
@@ -38,6 +41,7 @@ export default async function Home() {
       <Benefits />
       {combos.length > 0 && <ComboBand picks={combos} />}
       {FEATURES[0] && <EditorialFeature f={FEATURES[0]} />}
+      <BestSellers products={bestSellers} />
       <Featured products={featured} total={products.length} />
       {FEATURES[1] && <EditorialFeature f={FEATURES[1]} />}
       <Editorial />
@@ -135,13 +139,39 @@ function Benefits() {
 }
 
 /* ---------------- featured grid ---------------- */
+// Real best sellers, ranked by units actually sold. Rendered only when there is
+// enough history: a store with no orders yet gets nothing rather than its newest
+// arrivals dressed up as favourites.
+function BestSellers({ products }: { products: ProductCard[] }) {
+  if (!products.length) return null;
+  return (
+    <section className="border-t border-border py-14 sm:py-20">
+      <div className="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">
+            Los más vendidos
+          </h2>
+          <p className="mt-2 text-sm text-muted">Lo que más se está llevando la gente.</p>
+        </div>
+        <Link href="/products" className="group inline-flex items-center gap-1.5 text-sm font-medium text-accent">
+          Ver todo
+          <ArrowRight size={15} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+      <ProductGrid products={products} />
+    </section>
+  );
+}
+
 function Featured({ products, total }: { products: ProductCard[]; total: number }) {
   return (
     <section className="border-t border-border py-14 sm:py-20">
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">Lo nuevo</h2>
-          <p className="mt-2 text-sm text-muted">{total} productos · hechos sobre pedido</p>
+          <p className="mt-2 text-sm text-muted">
+            {total} productos{activeBrand.catalogNote ? ` · ${activeBrand.catalogNote}` : ""}
+          </p>
         </div>
         <Link href="/products" className="group inline-flex items-center gap-1.5 text-sm font-medium text-accent">
           Ver todo
