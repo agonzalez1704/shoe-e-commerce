@@ -53,7 +53,11 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     marca: process.env.NEXT_PUBLIC_BRAND ?? "(sin definir)",
-    proyecto_supabase: url?.match(/https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1] ?? "(URL rara o ausente)",
+    // The whole value, not just the extracted ref: a URL carrying an extra
+    // path (".../rest/v1") still matches the ref and reads as correct while
+    // every query fails with PGRST125.
+    url_completa: url ?? "(ausente)",
+    url_valida: url === url?.replace(/\/+$/, "").replace(/\/rest\/v1.*$/, "") ? "sí" : "NO — sobra ruta",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: classify(anon),
     SUPABASE_SERVICE_ROLE_KEY: classify(svc),
     prueba_anon: await probe(url, anon, "products", HOME_SELECT),
