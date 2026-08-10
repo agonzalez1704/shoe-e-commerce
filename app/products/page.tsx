@@ -3,12 +3,16 @@ import Link from "next/link";
 import { listProducts, type ProductFilters } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
+import { activeBrand } from "@/lib/brand";
 
 export const revalidate = 60; // ISR — catalog changes infrequently
 
+// Catalogue copy follows the brand: "calzado de piel hecho sobre pedido" was
+// hardcoded here and shipped on a scooter store, in the page title and under
+// the heading. Both now come from BrandConfig.
 export const metadata: Metadata = {
-  title: "Tienda — calzado de piel",
-  description: "Explora el catálogo de calzado de piel hecho sobre pedido. Todas las tallas y anchos, envío a todo México.",
+  title: `Tienda — ${activeBrand.seoSuffix ?? activeBrand.tagline}`,
+  description: activeBrand.description,
   alternates: { canonical: "/products" },
 };
 
@@ -29,7 +33,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
         <div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Tienda</h1>
           <p className="mt-1.5 text-sm text-muted">
-            {products.length} {products.length === 1 ? "producto" : "productos"} · hechos sobre pedido · envío gratis
+            {products.length} {products.length === 1 ? "producto" : "productos"}
+            {activeBrand.catalogNote ? ` · ${activeBrand.catalogNote}` : ""}
           </p>
         </div>
         <SortLinks current={filters.sort} />

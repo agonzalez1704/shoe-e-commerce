@@ -74,6 +74,7 @@ export type BrandConfig = {
   mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
   announcement?: string; // top bar text
   seoSuffix?: string;    // appended to <title> default + OG, e.g. "calzado de piel hecho en México"
+  catalogNote?: string;  // the line under "Tienda" on the catalogue, e.g. "envío gratis a todo México"
   refineLogoUrl?: string; // brand logo (public path) applied by auto-toon logo correction
   theme: { light: ThemeMode; dark: ThemeMode };
 };
@@ -148,6 +149,7 @@ const BRANDS: Record<string, BrandConfig> = {
     emailFrom: "Blade <pedidos@calzadoblade.com>",
     announcement: "2 PARES POR $1,999 · combina cualquier modelo · Envío gratis a todo México",
     seoSuffix: "calzado de piel hecho en México",
+    catalogNote: "hechos sobre pedido · envío gratis",
     // silver wordmark (transparent PNG); inverted to dark on light theme
     logo: { src: "/blade-logo.png", width: 565, height: 220, alt: "Blade", invertOnLight: true },
     // angular blade glyph fallback: filled with the accent
@@ -224,12 +226,26 @@ const BRANDS: Record<string, BrandConfig> = {
     name: "TODO Distribuidor",
     domain: "",
     legal: { operator: "", rfc: "", address: "", supportEmail: "" },
+    home: {
+      hero: {
+        // Lives in public/ rather than Storage: a brand asset served straight
+        // off Vercel's CDN costs no Supabase egress at all.
+        image: "/hero-honeywhale.webp",
+        eyebrow: "Movilidad eléctrica",
+        titleTop: "La ciudad,",
+        titleBottom: "sin gasolina.",
+        body: "Scooters, bicicletas y motos eléctricas. Distribuidor autorizado, con garantía y envío a todo México.",
+      },
+      features: [],
+      editorial: [],
+    },
     tagline: "Movilidad eléctrica para la ciudad.",
     description:
       "Scooters, bicicletas y motos eléctricas. Distribuidor autorizado. Envíos a todo México.",
     emailFrom: "",
     announcement: "Scooters y motos eléctricas · Envíos a todo México",
     seoSuffix: "scooters y motos eléctricas en México",
+    catalogNote: "envío a todo México",
     // amber on near-black — placeholder until the client's palette is settled
     theme: {
       light: {
