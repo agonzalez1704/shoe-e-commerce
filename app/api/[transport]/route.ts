@@ -132,7 +132,17 @@ function authorized(req: Request): boolean {
   return token.length > 0 && token === expected;
 }
 
+// The transports this route actually serves. Without the check, `[transport]`
+// swallows every one-segment path under /api: a typo'd or not-yet-deployed
+// route answered 401 "unauthorized" instead of 404, which reads like an auth
+// problem and sends you looking in the wrong place.
+const TRANSPORTS = new Set(["mcp", "sse", "message"]);
+
 async function guarded(req: Request): Promise<Response> {
+  const seg = new URL(req.url).pathname.split("/").filter(Boolean).pop() ?? "";
+  if (!TRANSPORTS.has(seg)) {
+    return new Response("Not Found", { status: 404 });
+  }
   if (!authorized(req)) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
