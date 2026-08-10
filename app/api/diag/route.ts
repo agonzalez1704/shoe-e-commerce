@@ -25,12 +25,19 @@ function classify(v: string | undefined) {
   return `desconocido "${t.slice(0, 6)}…" (len ${t.length})`;
 }
 
-async function probe(url: string | undefined, key: string | undefined, table: string) {
+// `head: true` returns no body, so a failure came back with an empty message and
+// said nothing. Run the real query the homepage runs and hand back the whole
+// error object instead.
+const HOME_SELECT =
+  "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, " +
+  "brands(name, slug), product_images(url, position, color), variants(color, status, price_cents)";
+
+async function probe(url: string | undefined, key: string | undefined, table: string, select = "id") {
   if (!url || !key) return "no probado";
   try {
     const c = createClient(url, key, { auth: { persistSession: false } });
-    const { error } = await c.from(table).select("*", { head: true, count: "exact" }).limit(1);
-    return error ? `FALLA: ${error.message}` : "OK";
+    const { data, error } = await c.from(table).select(select).limit(1);
+    return error ? { falla: error } : { ok: true, filas: data?.length ?? 0 };
   } catch (e) {
     return `EXCEPCIÓN: ${(e as Error).message}`;
   }
@@ -49,7 +56,7 @@ export async function GET(req: Request) {
     proyecto_supabase: url?.match(/https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1] ?? "(URL rara o ausente)",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: classify(anon),
     SUPABASE_SERVICE_ROLE_KEY: classify(svc),
-    prueba_anon: await probe(url, anon, "products"),
+    prueba_anon: await probe(url, anon, "products", HOME_SELECT),
     prueba_service_role: await probe(url, svc, "carts"),
   });
 }
