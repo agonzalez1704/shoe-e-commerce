@@ -549,6 +549,32 @@ const BRANDS: Record<string, BrandConfig> = {
           ctaHref: "/products/f8",
         },
         {
+          // Foto de ambiente, no producto recortado: tres de las cuatro
+          // diapositivas anteriores eran recortes sobre fondo, y ni Infantil ni
+          // Bicicletas —41% del catálogo— aparecían.
+          //
+          // `focal` en vez de una segunda pieza para móvil: el sujeto va
+          // centrado, así que el recorte 4:5 lo conserva entero.
+          image: "/hw-hero-infantil.webp",
+          focal: "55% 50%",
+          eyebrow: "Infantil · desde $999",
+          titleTop: "Su primer",
+          titleBottom: "eléctrico.",
+          body: "Motos, scooters y coches eléctricos a su medida. 36 modelos para los más chicos.",
+          ctaLabel: "Ver infantil",
+          ctaHref: "/categoria/infantil",
+        },
+        {
+          image: "/hw-hero-bicicletas.webp",
+          focal: "50% 50%",
+          eyebrow: "Bicicletas · hasta 80 km",
+          titleTop: "Llega antes.",
+          titleBottom: "Sin sudar.",
+          body: "Bicicletas eléctricas para el diario, con autonomía de hasta 80 km.",
+          ctaLabel: "Ver bicicletas",
+          ctaHref: "/categoria/bicicletas",
+        },
+        {
           image: `${STORAGE}/honeywhale/motos-dm-05/motos-dm-05.webp`,
           fit: "contain",
           eyebrow: "73 km/h · 61 km de autonomía",
