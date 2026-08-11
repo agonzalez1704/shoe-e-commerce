@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getProduct, listRelatedProducts } from "@/lib/catalog";
 import { activeBrand } from "@/lib/brand";
+import { EditorialFeature } from "@/components/EditorialFeature";
 import { getProductReviews } from "@/lib/reviews";
 import { ProductDetail } from "@/components/ProductDetail";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -90,6 +91,11 @@ export default async function ProductPage({
       itemCondition: "https://schema.org/NewCondition",
     },
   };
+  // First matching category wins. A product in two categories would otherwise
+  // stack both sets of bands and read as a page that repeats itself.
+  const byCategory = activeBrand.pdp?.categoryFeatures ?? {};
+  const categoryFeatures = product.categorySlugs.map((s) => byCategory[s]).find(Boolean) ?? [];
+
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -110,6 +116,13 @@ export default async function ProductPage({
       </nav>
 
       <ProductDetail product={product} initialColor={color} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
+
+      {/* Editorial bands for whichever category this product belongs to. Nothing
+          renders until the brand supplies the art, so a store without it just
+          ends at the buy box. */}
+      {categoryFeatures.map((f, i) => (
+        <EditorialFeature key={`${f.eyebrow}-${i}`} f={f} />
+      ))}
 
       {related.length > 0 && (
         <section className="mt-16 border-t border-border pt-10">

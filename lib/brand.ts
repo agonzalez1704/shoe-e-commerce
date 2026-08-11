@@ -87,6 +87,12 @@ export type PdpConfig = {
   // items are helmets does not publish a shoe conversion table.
   sizeGuide?: { intro: string; note: string; rows: { mx: string; cm: string; us: string }[] };
   sizeHint?: string;   // one line under the size picker
+  // Editorial bands on the product page, keyed by category slug. Per CATEGORY,
+  // not per model: the reference site runs ~8 bespoke blocks per model, which
+  // at 130 models is roughly a thousand photos nobody is going to shoot. Six
+  // categories x up to three blocks is an ask a client can actually fill, and
+  // one set covers all 40 scooters.
+  categoryFeatures?: Record<string, HomeFeature[]>;
 };
 
 // The handful of phrases that recur across the cart, the checkout, the order
@@ -449,7 +455,8 @@ const BRANDS: Record<string, BrandConfig> = {
         { icon: "truck", label: "Envíos a todo México" },
         { icon: "lightning", label: "100% eléctrico" },
       ],
-      // reassurance / shipping / care: vacíos hasta que el cliente entregue sus
+      // reassurance / shipping / care / categoryFeatures: vacíos hasta que el
+      // cliente entregue sus
       // términos reales de envío, garantía y devolución. Sin ellos los bloques
       // no se pintan — es preferible a heredar los de una zapatería.
     },

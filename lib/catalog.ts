@@ -247,6 +247,10 @@ export type ProductDetail = {
   base_price_cents: number;
   brand: string | null;
   images: { url: string; alt: string | null; color: string | null }[];
+  // Used to pick the brand's per-category feature blocks. One asset set covers
+  // all 40 scooters, which is a request a client can actually fill — unlike one
+  // bespoke set per model.
+  categorySlugs: string[];
   variants: {
     id: string;
     sku: string;
@@ -278,6 +282,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
       "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, attributes, " +
         "brands(name), " +
         "product_images(url, alt, color, position), " +
+        "product_categories(categories(slug)), " +
         "variants(id, sku, size_value, size_system, width, color, price_cents, status)",
     )
     .eq("slug", slug)
@@ -294,6 +299,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     attributes: Record<string, string | number | boolean> | null;
     brands: { name: string } | null;
     product_images: { url: string; alt: string | null; color: string | null; position: number }[];
+    product_categories: { categories: { slug: string } | null }[] | null;
     variants: {
       id: string; sku: string; size_value: string | null; size_system: string | null;
       width: string | null; color: string; price_cents: number | null; status: string;
@@ -326,6 +332,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     images: [...(p.product_images ?? [])]
       .sort((a, b) => a.position - b.position)
       .map(({ url, alt, color }) => ({ url, alt, color })),
+    categorySlugs: (p.product_categories ?? []).map((c) => c.categories?.slug).filter(Boolean) as string[],
     variants: activeVariants.map((v) => ({
       id: v.id,
       sku: v.sku,
