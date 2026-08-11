@@ -186,40 +186,52 @@ const esLeon = (to: { postal_code: string; area_level2: string }) =>
 // nothing: the label is a separate, deliberate second step, so the operator
 // picks on price and delivery time instead of always getting the cheapest.
 export async function quoteSkydropxRates(orderId: string) {
-  const supabase = await requirePermiso("pedidos_gestionar");
-  const to = await shipTo(supabase, orderId);
-  if (esLeon(to)) return { local: true as const, rates: [], quotationId: "" };
-  if (!to.area_level3 || !to.phone) {
-    throw new Error("Falta colonia o teléfono en la dirección (pedido anterior a la actualización). Captúralos manualmente.");
+  // Returns the failure instead of throwing: Next strips a thrown message in
+  // production, so the operator got React #441 and no idea what Skydropx said.
+  try {
+    const supabase = await requirePermiso("pedidos_gestionar");
+    const to = await shipTo(supabase, orderId);
+    if (esLeon(to)) return { ok: true as const, local: true, rates: [], quotationId: "" };
+    if (!to.area_level3 || !to.phone) {
+      return { ok: false as const, error: "Falta colonia o teléfono en la dirección. Captúralos manualmente." };
+    }
+    const { quote } = await import("@/lib/skydropx");
+    const { quotationId, rates } = await quote(to);
+    return { ok: true as const, local: false, quotationId, rates };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "Falló la cotización" };
   }
-  const { quote } = await import("@/lib/skydropx");
-  const { quotationId, rates } = await quote(to);
-  return { local: false as const, quotationId, rates };
 }
 
 // Create the shipment for the rate the operator chose. The rate is refetched
 // from Skydropx by id — the browser sends only which one, never its price.
 export async function createSkydropxLabel(orderId: string, quotationId: string, rateId: string) {
-  const supabase = await requirePermiso("pedidos_gestionar");
-  const to = await shipTo(supabase, orderId);
-  const { rateById, createShipment } = await import("@/lib/skydropx");
-  const rate = await rateById(quotationId, rateId);
-  if (!rate) throw new Error("Esa tarifa ya no está disponible. Vuelve a cotizar.");
+  // Same reason: Skydropx rejects with a specific field, and that message is
+  // the whole diagnosis. Thrown, production replaces it with React #441.
+  try {
+    const supabase = await requirePermiso("pedidos_gestionar");
+    const to = await shipTo(supabase, orderId);
+    const { rateById, createShipment } = await import("@/lib/skydropx");
+    const rate = await rateById(quotationId, rateId);
+    if (!rate) return { ok: false as const, error: "Esa tarifa ya no está disponible. Vuelve a cotizar." };
 
-  const r = await createShipment(quotationId, rate, to);
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      carrier: CARRIER_MAP[r.carrier] ?? "other",
-      tracking_number: r.trackingNumber || null,
-      tracking_url: r.trackingUrl,
-      shipping_label_url: r.labelUrl,
-    })
-    .eq("id", orderId);
-  if (error) throw new Error(error.message);
+    const r = await createShipment(quotationId, rate, to);
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        carrier: CARRIER_MAP[r.carrier] ?? "other",
+        tracking_number: r.trackingNumber || null,
+        tracking_url: r.trackingUrl,
+        shipping_label_url: r.labelUrl,
+      })
+      .eq("id", orderId);
+    if (error) return { ok: false as const, error: error.message };
 
-  revalidatePath(`/admin/orders/${orderId}`);
-  return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { ok: true as const, carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "Falló la generación de guía" };
+  }
 }
 
 // Kept for the León path and as a one-shot fallback: quote, take the cheapest,

@@ -169,8 +169,9 @@ export function FulfillmentPanel({ order }: { order: Order }) {
             disabled={isPending}
             onClick={() => run(async () => {
               const q = await quoteSkydropxRates(order.id);
+              if (!q.ok) { setErr(q.error); return; }
               if (q.local) { await generateSkydropxLabel(order.id); return; }  // León lo entregamos nosotros
-              setQuotationId(q.quotationId);
+              setQuotationId(q.quotationId!);
               setRates(q.rates as Rate[]);
             })}
             className="inline-flex items-center gap-1.5 rounded-full bg-text px-4 py-2 text-sm font-medium text-bg transition-transform active:scale-[0.98] disabled:opacity-50"
@@ -255,7 +256,11 @@ export function FulfillmentPanel({ order }: { order: Order }) {
                     <span className="nums text-sm font-semibold">{mxn0(r.total)}</span>
                     <button
                       disabled={isPending}
-                      onClick={() => run(async () => { await createSkydropxLabel(order.id, quotationId, r.id); setRates(null); })}
+                      onClick={() => run(async () => {
+                        const res = await createSkydropxLabel(order.id, quotationId, r.id);
+                        if (!res.ok) { setErr(res.error); return; }   // deja la lista abierta para reintentar
+                        setRates(null);
+                      })}
                       className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-contrast transition-transform active:scale-[0.98] disabled:opacity-50"
                     >
                       {isPending ? "…" : "Generar guía"}

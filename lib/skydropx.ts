@@ -30,6 +30,14 @@ export const ORIGIN = {
 
 export const PARCEL = { length: 32, width: 22, height: 12, weight: 1.2 }; // cm / kg
 
+// Carta porte. Skydropx exige ambos al crear el envío — y los quiere a nivel de
+// shipment, no dentro del paquete: puestos en el parcel responde que "son
+// requeridos en todos los paquetes" aunque vayan ahí.
+//   4G       = caja de cartón
+//   53111600 = calzado en el catálogo de productos y servicios del SAT
+export const PACKAGE_TYPE = "4G";
+export const CONSIGNMENT_NOTE = process.env.SKYDROPX_CONSIGNMENT_NOTE || "53111600";
+
 export type Address = {
   name: string;
   phone: string;
@@ -97,7 +105,8 @@ const addrPayload = (a: Address) => ({
   phone: a.phone,
   email: a.email,
   street1: a.street1,
-  reference: a.reference ?? "",
+  // Skydropx rechaza una referencia vacía en cualquiera de las dos direcciones
+  reference: a.reference?.trim() || "Sin referencia",
 });
 
 // Create a quotation and poll until the rates resolve. Returns successful rates
@@ -147,6 +156,8 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
         address_from: addrPayload({ ...ORIGIN } as Address),
         address_to: addrPayload(to),
         parcels: [PARCEL],
+        package_type: PACKAGE_TYPE,
+        consignment_note: CONSIGNMENT_NOTE,
       },
     }),
   });
