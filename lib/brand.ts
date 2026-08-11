@@ -107,9 +107,9 @@ export type PdpConfig = {
   // items are helmets does not publish a shoe conversion table.
   sizeGuide?: { intro: string; note: string; rows: { mx: string; cm: string; us: string }[] };
   sizeHint?: string;   // one line under the size picker
-  // "showcase": bandas a sangre, el nombre del modelo en escala editorial y las
-  // cifras en grande, como el sitio de referencia del cliente. Ausente = el
-  // layout clásico de dos columnas.
+  // El showcase —bandas a sangre, nombre del modelo en escala editorial y
+  // cifras en grande— es el default para todas las tiendas. "classic" es la
+  // salida explícita al layout de dos columnas de antes.
   layout?: "classic" | "showcase";
   // Editorial bands on the product page, keyed by category slug. Per CATEGORY,
   // not per model: the reference site runs ~8 bespoke blocks per model, which
@@ -216,6 +216,37 @@ const BRANDS: Record<string, BrandConfig> = {
         titleBottom: "hecha a tu paso.",
         body: "Sneakers de piel fabricados a mano cuando los pides. Tallas MX 25–30, envío gratis en 4–7 días hábiles a todo México.",
       },
+      // Reusa fotografía y copy que ya vivían en `features`: son piezas propias
+      // y ya aprobadas, no material inventado para llenar el carrusel.
+      slides: [
+        {
+          image: "/hero-moto.jpg",
+          eyebrow: "Hecho sobre pedido",
+          titleTop: "Piel con filo,",
+          titleBottom: "hecha a tu paso.",
+          body: "Sneakers de piel fabricados a mano cuando los pides. Envío gratis en 4–7 días hábiles a todo México.",
+          ctaLabel: "Ver tienda",
+          ctaHref: "/products",
+        },
+        {
+          image: `${BLADE_LANDING}/new-york-still.jpg`,
+          eyebrow: "El detalle",
+          titleTop: "El lujo está",
+          titleBottom: "en la piel.",
+          body: "Texturas cocodrilo, pitón y lizard trabajadas a mano. Sin producción en masa: solo el par que pediste.",
+          ctaLabel: "Descubre New York",
+          ctaHref: "/products/new-york?color=moka",
+        },
+        {
+          image: `${BLADE_LANDING}/manhattan-water.jpg`,
+          eyebrow: "Ligereza",
+          titleTop: "Perforado.",
+          titleBottom: "Ligero. Diario.",
+          body: "Piel perforada que respira y suela Phylon ultra ligera. Hecho para caminar todo el día.",
+          ctaLabel: "Descubre Manhattan",
+          ctaHref: "/products/manhattan?color=blanco",
+        },
+      ],
       features: [
         {
           eyebrow: "El detalle",
@@ -528,7 +559,6 @@ const BRANDS: Record<string, BrandConfig> = {
       // en la home es la misma falla que puso "Hecho sobre pedido" en un scooter.
     },
     pdp: {
-      layout: "showcase",
       valueProps: [
         { icon: "shield", label: "Distribuidor autorizado" },
         { icon: "truck", label: "Envíos a todo México" },

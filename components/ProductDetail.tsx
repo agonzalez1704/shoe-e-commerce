@@ -37,9 +37,10 @@ const ICONS: Record<string, typeof Truck> = {
 const VALUE_PROPS = activeBrand.pdp?.valueProps ?? [];
 const REASSURANCE = activeBrand.pdp?.reassurance;
 const ITEMS = activeBrand.copy?.itemPlural ?? "productos";
-// Layout de la PDP. Cambiarle el layout a una tienda que ya vende no es gratis,
-// así que se opta por marca en vez de imponerlo.
-const SHOWCASE = activeBrand.pdp?.layout === "showcase";
+// Layout de la PDP. El showcase es el default: sirve igual a un catálogo de una
+// foto y a uno con galería, y es lo que el cliente pidió para todas las tiendas.
+// "classic" queda como la salida explícita.
+const SHOWCASE = activeBrand.pdp?.layout !== "classic";
 
 export function ProductDetail({
   product,
@@ -207,6 +208,32 @@ export function ProductDetail({
       <div className="grid h-full w-full place-items-center text-sm text-muted">Sin foto por ahora</div>
     );
 
+  // Una sola foto casi siempre es el póster del proveedor sobre blanco: se
+  // encaja entera en un panel blanco. Con galería son fotos producidas y el
+  // recorte cerrado es el correcto.
+  const unaFoto = gallery.length === 1;
+
+  // La galería del showcase. Sin esto, una tienda con 13 fotos por producto
+  // mostraría una sola: el layout nació para un catálogo de una foto.
+  const galeria = (
+    <div className="order-1 md:order-2">
+      <div className={`aspect-square overflow-hidden rounded-3xl ${unaFoto ? "bg-white" : "border border-border bg-elevated"}`}>
+        {foto(unaFoto ? "contain" : "cover")}
+      </div>
+      {rest.length > 0 && (
+        <ul className="no-scrollbar mt-3 flex gap-2 overflow-x-auto overscroll-x-contain">
+          {rest.map((img, i) => (
+            <li key={i} className="w-16 shrink-0 sm:w-20">
+              <div className="aspect-square overflow-hidden rounded-xl border border-border bg-elevated">
+                <ZoomImage src={img.url} alt={img.alt ?? product.name} onClick={() => setLightbox(i + 1)} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
   // ---- showcase: bandas a sangre, nombre en escala editorial, cifras grandes.
   // Es la lectura del sitio de referencia que estos datos aguantan: una foto por
   // producto y dos a cuatro cifras. Va por marca porque cambiar el layout de una
@@ -238,11 +265,7 @@ export function ProductDetail({
                 Comprar
               </a>
             </div>
-            {/* El blanco de la foto se vuelve un panel deliberado en vez de un
-                accidente, igual que en las diapositivas del hero. */}
-            <div className="order-1 aspect-square overflow-hidden rounded-3xl bg-white md:order-2">
-              {foto("contain")}
-            </div>
+            {galeria}
           </div>
         </section>
 
@@ -278,10 +301,7 @@ export function ProductDetail({
       <div className="grid grid-cols-2 gap-3 self-start md:sticky md:top-24">
         {hero ? (
           <div className="col-span-2 aspect-square overflow-hidden rounded-2xl border border-border bg-elevated">
-            {/* One photo and nothing else usually means it is the supplier's
-                poster or a warehouse shot, not a styled square. Fit it whole
-                instead of cropping; a real gallery keeps the tighter crop. */}
-            {foto(gallery.length === 1 ? "contain" : "cover")}
+            {foto(unaFoto ? "contain" : "cover")}
           </div>
         ) : (
           <div className="col-span-2 grid aspect-square place-items-center rounded-2xl border border-border bg-elevated text-sm text-muted">
