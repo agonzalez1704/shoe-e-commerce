@@ -17,6 +17,7 @@ import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
+import { HeroCarousel } from "@/components/HeroCarousel";
 import { SITE_NAME } from "@/lib/site";
 
 // Icon keys → components. BrandConfig can only carry the key (it is plain data
@@ -45,6 +46,8 @@ const hero = home?.hero ?? {
   titleBottom: "", body: activeBrand.tagline,
 };
 const FEATURES: HomeFeature[] = home?.features ?? [];
+// Menos de dos: el hero estático de siempre, sin cromo de carrusel.
+const SLIDES = home?.slides ?? [];
 
 export default async function Home() {
   const [products, bestSellers] = await Promise.all([
@@ -60,7 +63,7 @@ export default async function Home() {
 
   return (
     <div className="reveal">
-      <Hero />
+      {SLIDES.length > 1 ? <HeroCarousel slides={SLIDES} /> : <Hero />}
       <Benefits />
       <BestSellers products={shelf} curated={curated} />
       {combos.length > 0 && <ComboBand picks={combos} />}

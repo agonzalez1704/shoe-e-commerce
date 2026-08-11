@@ -58,8 +58,28 @@ export type Warehouse = {
 // (`/dist/ssr` on the server, the client entry in "use client" files).
 export type IconRow = { icon: string; title: string; sub?: string };
 
+// Una diapositiva del hero. `fit: "contain"` es para una foto de catálogo
+// recortada sobre blanco: va sobre un campo de color en vez de llenar el marco,
+// porque recortarla a pantalla completa la vuelve un primer plano ilegible.
+// `focal` mueve el encuadre para que una sola imagen sirva en 4:5 y en 16:9 —
+// es la alternativa honesta a mantener arte distinto para móvil y escritorio.
+export type HeroSlide = {
+  image: string;
+  fit?: "cover" | "contain";
+  focal?: string;            // p. ej. "50% 30%"
+  eyebrow: string;
+  titleTop: string;
+  titleBottom?: string;
+  body?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+};
+
 export type HomeConfig = {
   hero: { image: string; eyebrow: string; titleTop: string; titleBottom: string; body: string };
+  // Con menos de dos diapositivas se pinta el hero estático de siempre, sin
+  // cromo de carrusel: Blade no cambia mientras no defina las suyas.
+  slides?: HeroSlide[];
   features: HomeFeature[];
   editorial: { img: string; name: string; href: string }[];
   editorialTitle?: string;
@@ -444,6 +464,47 @@ const BRANDS: Record<string, BrandConfig> = {
         titleBottom: "sin gasolina.",
         body: "Scooters, bicicletas y motos eléctricas. Distribuidor autorizado, con garantía y envío a todo México.",
       },
+      // La primera es la foto de ambiente; las demás son producto recortado
+      // sobre campo de color, que es lo único que el catálogo permite hoy sin
+      // inventar fotografía. Cada cifra sale de los attributes del producto.
+      slides: [
+        {
+          image: "/hero-honeywhale.webp",
+          eyebrow: "Movilidad eléctrica",
+          titleTop: "La ciudad,",
+          titleBottom: "sin gasolina.",
+          body: "Scooters, bicicletas y motos eléctricas. Distribuidor autorizado, con envío a todo México.",
+          ctaLabel: "Ver tienda",
+          ctaHref: "/products",
+        },
+        {
+          image: `${STORAGE}/honeywhale/motos-raptor-pro/motos-raptor-pro.webp`,
+          fit: "contain",
+          eyebrow: "Lo más potente",
+          titleTop: "RAPTOR PRO",
+          body: "La moto eléctrica tope de línea. Autonomía de sobra para la ciudad y para salir de ella.",
+          ctaLabel: "Ver la RAPTOR PRO",
+          ctaHref: "/products/motos-raptor-pro",
+        },
+        {
+          image: `${STORAGE}/honeywhale/f8/f8.webp`,
+          fit: "contain",
+          eyebrow: "90 km/h · 90 km de autonomía",
+          titleTop: "Scooter F8",
+          body: "El equipo tope de Honey Whale: velocidad y alcance de moto en formato scooter.",
+          ctaLabel: "Ver el F8",
+          ctaHref: "/products/f8",
+        },
+        {
+          image: `${STORAGE}/honeywhale/motos-dm-05/motos-dm-05.webp`,
+          fit: "contain",
+          eyebrow: "73 km/h · 61 km de autonomía",
+          titleTop: "TANK",
+          body: "Chasis ancho y postura baja. La que más se está llevando la gente.",
+          ctaLabel: "Ver la TANK",
+          ctaHref: "/products/motos-dm-05",
+        },
+      ],
       features: [],
       editorial: [],
       benefits: [

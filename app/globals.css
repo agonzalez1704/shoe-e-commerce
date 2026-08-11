@@ -177,3 +177,14 @@ input:-webkit-autofill:active {
 /* indeterminate progress bar (global async jobs) */
 @keyframes ajp-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
 .ajp-bar { animation: ajp-slide 1.1s ease-in-out infinite; }
+
+/* El carrusel del hero desplaza de verdad (scroll-snap nativo), así que hay que
+   ocultar su barra: es cromo de scroll dentro de una pieza de diseño. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Tras la guarda de movimiento reducido, como ya hace .reveal: el desplazamiento
+   suave del carrusel es animación y hay quien la tiene desactivada. */
+@media (prefers-reduced-motion: no-preference) {
+  .no-scrollbar { scroll-behavior: smooth; }
+}
