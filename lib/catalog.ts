@@ -161,6 +161,26 @@ export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCa
     .filter(Boolean);
 }
 
+// Hand-picked shelf, used only when there is no sales history to rank. Kept
+// separate from listBestSellers so the heading can differ: what the storefront
+// claims always matches where the list came from.
+export async function listFeatured(limit = 8): Promise<ProductCard[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("products")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents)")
+    .eq("status", "active")
+    .eq("featured", true)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  type Row = Parameters<typeof toVariantCards>[0];
+  const promo = await getPromoMap();
+  return ((data ?? []) as unknown as Row[])
+    .map((p) => toVariantCards(p, promo.get(p.id) ?? null)[0])
+    .filter(Boolean);
+}
+
 export type Category = { id: string; name: string; slug: string; description: string | null };
 
 export const getCategory = cache(async (slug: string): Promise<Category | null> => {

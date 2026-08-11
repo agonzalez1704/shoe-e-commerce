@@ -15,7 +15,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     supabase
       .from("products")
       .select(
-        "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, " +
+        "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, featured, " +
           "product_images(url, color, position), " +
           "variants(id, size_value, size_system, width, color, sku, price_cents, inventory(qty_on_hand))",
       )
@@ -30,6 +30,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     id: string; name: string; slug: string; brand_id: string | null; description: string | null;
     gender: string | null; base_price_cents: number; status: "draft" | "active" | "archived";
     made_to_order: boolean;
+    featured: boolean;
     product_images: { url: string; color: string | null; position: number }[];
     variants: {
       id: string; size_value: string; size_system: "US" | "EU" | "UK"; width: "narrow" | "medium" | "wide";
@@ -48,6 +49,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     base_price_cents: p.base_price_cents,
     status: p.status,
     made_to_order: p.made_to_order,
+    featured: p.featured,
     images: [...p.product_images].sort((a, b) => a.position - b.position).map((i) => ({ url: i.url, color: i.color })),
     variants: p.variants.map((v) => ({
       id: v.id,

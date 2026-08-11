@@ -34,6 +34,7 @@ export function ProductForm({
   const [gender, setGender] = useState(initial?.gender ?? "");
   const [status, setStatus] = useState<ProductInput["status"]>(initial?.status ?? "draft");
   const [madeToOrder, setMadeToOrder] = useState(initial?.made_to_order ?? true);
+  const [featured, setFeatured] = useState(initial?.featured ?? false);
   const [basePrice, setBasePrice] = useState(pesos(initial?.base_price_cents ?? null));
   const [description, setDescription] = useState(initial?.description ?? "");
   const [images, setImages] = useState<ProductImageInput[]>(initial?.images ?? []);
@@ -68,6 +69,7 @@ export function ProductForm({
       base_price_cents: toCents(basePrice) ?? 0,
       status,
       made_to_order: madeToOrder,
+      featured,
       images: images.filter((i) => i.url.trim()).map((i) => ({ url: i.url.trim(), color: i.color })),
       variants: variants.map((v) => ({
         id: v.id,
@@ -129,6 +131,13 @@ export function ProductForm({
           <span>
             Hecho sobre pedido
             <span className="block text-xs text-muted">Se puede ordenar sin stock; no se muestra disponibilidad. Desactiva cuando manejes inventario real.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm md:col-span-2">
+          <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
+          <span>
+            Destacado
+            <span className="block text-xs text-muted">Aparece en la portada mientras la tienda todavía no tiene ventas para calcular los más vendidos.</span>
           </span>
         </label>
       </section>

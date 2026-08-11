@@ -912,6 +912,7 @@ export type Database = {
           combo_price_cents: number | null
           created_at: string
           description: string | null
+          featured: boolean
           gender: string | null
           id: string
           made_to_order: boolean
@@ -929,6 +930,7 @@ export type Database = {
           combo_price_cents?: number | null
           created_at?: string
           description?: string | null
+          featured?: boolean
           gender?: string | null
           id?: string
           made_to_order?: boolean
@@ -946,6 +948,7 @@ export type Database = {
           combo_price_cents?: number | null
           created_at?: string
           description?: string | null
+          featured?: boolean
           gender?: string | null
           id?: string
           made_to_order?: boolean

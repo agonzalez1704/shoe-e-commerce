@@ -10,7 +10,7 @@ import {
   Hammer,
   Sparkle,
 } from "@phosphor-icons/react/dist/ssr";
-import { listProducts, listBestSellers, type ProductCard } from "@/lib/catalog";
+import { listProducts, listBestSellers, listFeatured, type ProductCard } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
@@ -32,6 +32,10 @@ export default async function Home() {
     listProducts({ sort: "newest" }),
     listBestSellers(8),
   ]);
+  // sin historial de ventas, una repisa elegida a mano bajo otro título — nunca
+  // lo más nuevo disfrazado de lo más vendido
+  const curated = bestSellers.length === 0;
+  const shelf = curated ? await listFeatured(8) : bestSellers;
   const featured = products.slice(0, 6);
   const combos = comboPicks(products);
 
@@ -39,9 +43,9 @@ export default async function Home() {
     <div className="reveal">
       <Hero />
       <Benefits />
+      <BestSellers products={shelf} curated={curated} />
       {combos.length > 0 && <ComboBand picks={combos} />}
       {FEATURES[0] && <EditorialFeature f={FEATURES[0]} />}
-      <BestSellers products={bestSellers} />
       <Featured products={featured} total={products.length} />
       {FEATURES[1] && <EditorialFeature f={FEATURES[1]} />}
       <Editorial />
@@ -142,16 +146,18 @@ function Benefits() {
 // Real best sellers, ranked by units actually sold. Rendered only when there is
 // enough history: a store with no orders yet gets nothing rather than its newest
 // arrivals dressed up as favourites.
-function BestSellers({ products }: { products: ProductCard[] }) {
+function BestSellers({ products, curated }: { products: ProductCard[]; curated: boolean }) {
   if (!products.length) return null;
   return (
     <section className="border-t border-border py-14 sm:py-20">
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">
-            Los más vendidos
+            {curated ? "Destacados" : "Los más vendidos"}
           </h2>
-          <p className="mt-2 text-sm text-muted">Lo que más se está llevando la gente.</p>
+          <p className="mt-2 text-sm text-muted">
+            {curated ? "Nuestra selección para empezar." : "Lo que más se está llevando la gente."}
+          </p>
         </div>
         <Link href="/products" className="group inline-flex items-center gap-1.5 text-sm font-medium text-accent">
           Ver todo

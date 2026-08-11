@@ -30,6 +30,7 @@ export type ProductInput = {
   base_price_cents: number;
   status: "draft" | "active" | "archived";
   made_to_order: boolean;
+  featured: boolean;
   images: ProductImageInput[];
   variants: VariantInput[];
 };
@@ -119,6 +120,7 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
     base_price_cents: input.base_price_cents,
     status: input.status,
     made_to_order: input.made_to_order,
+    featured: input.featured,
   };
 
   try {
