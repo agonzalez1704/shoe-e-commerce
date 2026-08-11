@@ -33,10 +33,14 @@ export const PARCEL = { length: 32, width: 22, height: 12, weight: 1.2 }; // cm 
 // Carta porte. Skydropx exige ambos al crear el envío — y los quiere a nivel de
 // shipment, no dentro del paquete: puestos en el parcel responde que "son
 // requeridos en todos los paquetes" aunque vayan ahí.
-//   4G       = caja de cartón
-//   53111600 = calzado en el catálogo de productos y servicios del SAT
+//   4G = caja de cartón
+//
+// La clave de producto sale de la marca (o de SKYDROPX_CONSIGNMENT_NOTE para
+// afinarla sin tocar código). Estaba fija en 53111600 —calzado—, así que la
+// carta porte de una moto eléctrica declaraba zapatos ante el SAT.
 export const PACKAGE_TYPE = "4G";
-export const CONSIGNMENT_NOTE = process.env.SKYDROPX_CONSIGNMENT_NOTE || "53111600";
+export const CONSIGNMENT_NOTE =
+  process.env.SKYDROPX_CONSIGNMENT_NOTE || activeBrand.sat?.consignmentCode || "";
 
 export type Address = {
   name: string;
@@ -146,6 +150,15 @@ export async function quote(to: Address): Promise<{ quotationId: string; rates: 
 
 // Create the shipment for a chosen rate → tracking + label PDF.
 export async function createShipment(quotationId: string, rate: Rate, to: Address): Promise<ShipmentResult> {
+  // Falla aquí y no en Skydropx: mandar la clave vacía devuelve un error de
+  // validación que no dice qué configurar, y mandar la de otra marca declara
+  // mercancía que no es la del envío.
+  if (!CONSIGNMENT_NOTE) {
+    throw new Error(
+      `Falta la clave de producto del SAT para la carta porte de "${activeBrand.key}". ` +
+        "Llena `sat.consignmentCode` en lib/brand.ts o define SKYDROPX_CONSIGNMENT_NOTE.",
+    );
+  }
   const j = await api("/shipments", {
     method: "POST",
     body: JSON.stringify({

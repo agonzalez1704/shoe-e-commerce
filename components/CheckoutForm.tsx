@@ -38,13 +38,21 @@ declare global {
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 // contact + shipping fields we persist on-device for the next purchase (no card, no fiscal)
-const SAVE_KEY = "blade_checkout";
+// La llave lleva la marca: dos tiendas en el mismo navegador se pisaban los
+// datos guardados del checkout.
+const SAVE_KEY = `${activeBrand.key}_checkout`;
 const SAVE_FIELDS = ["name", "email", "phone", "line1", "neighborhood", "city", "region", "postal"] as const;
 
+// Aplazo se ofrece sólo si la marca declara un proveedor de mensualidades. Iba
+// fijo, así que toda tienda mostraba el botón aunque su cuenta de Conekta no lo
+// tuviera habilitado: el comprador lo elegía y el cobro fallaba al final. Es la
+// misma señal que ya decide si la PDP anuncia "6 pagos de $X".
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
   { id: "oxxo", label: "Efectivo", hint: "+20,000 tiendas" },
-  { id: "aplazo", label: "Aplazo", hint: "Págalo en quincenas" },
+  ...(activeBrand.copy?.installments
+    ? [{ id: "aplazo" as Method, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }]
+    : []),
 ];
 // Only offered when MERCADOPAGO_ACCESS_TOKEN is configured (see checkout/page.tsx).
 const MP_METHOD = { id: "mercadopago" as Method, label: "Mercado Pago", hint: "Tarjeta, saldo o meses" };

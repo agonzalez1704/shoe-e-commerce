@@ -126,6 +126,16 @@ export type CatalogFeedConfig = {
   shippingWeight?: string;
 };
 
+// Códigos del catálogo del SAT. Van por marca porque describen QUÉ se vende:
+// 53111601 es calzado, y salía fijo en cada factura y en cada carta porte
+// —también las de una tienda de scooters—. Sin definir, ni el timbrado ni la
+// guía se generan, y el error dice qué falta: una factura con el producto
+// equivocado es un problema fiscal, no un detalle de copy.
+export type SatCodes = {
+  productCode: string;      // ClaveProdServ del CFDI
+  consignmentCode: string;  // clave de producto de la carta porte (Skydropx)
+};
+
 export type BrandConfig = {
   key: string;
   name: string;          // shown in header/footer/metadata, e.g. "sole&co"
@@ -140,6 +150,7 @@ export type BrandConfig = {
   pdp?: PdpConfig;       // product-page copy; each block hides when unset
   copy?: CopyConfig;     // phrases repeated across cart, checkout and email
   catalogFeed?: CatalogFeedConfig; // Meta Commerce feed claims
+  sat?: SatCodes;        // requerido para timbrar CFDI y para la carta porte
   logo?: { src: string; width: number; height: number; alt?: string; invertOnLight?: boolean }; // optional full image (mark+wordmark); falls back to wordmark
   markSrc?: { src: string; width: number; height: number }; // optional logo-mark IMAGE shown before the wordmark text (keeps its own colors in both themes)
   mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
@@ -291,6 +302,8 @@ const BRANDS: Record<string, BrandConfig> = {
       paymentNote: "Pagos con tarjeta, efectivo y Aplazo. Facturación disponible.",
       installments: { provider: "Aplazo", payments: 6 },
     },
+    // 53111601 calzado · 53111600 la clase de calzado en el catálogo del SAT
+    sat: { productCode: "53111601", consignmentCode: "53111600" },
     catalogFeed: {
       titleSuffix: "— Sneaker de piel",
       description: "{name} en piel genuina. Hecho a mano en México.",
@@ -469,6 +482,11 @@ const BRANDS: Record<string, BrandConfig> = {
       // de cambio confirmados. Omitirlos deja el carrito y el checkout sin
       // promesa, que es lo correcto mientras no exista una.
     },
+    // sat sin definir: el distribuidor todavía no da de alta su RFC, y las
+    // claves del SAT para scooters, bicicletas y motos no son las de calzado.
+    // Hasta que las entregue, el timbrado y la carta porte fallan diciendo qué
+    // falta en vez de declarar zapatos ante el SAT.
+    //
     // catalogFeed sin definir: el feed de Meta no está conectado para esta
     // tienda, y sin config no emite categoría, material ni peso en vez de
     // declararle a Facebook que un scooter es un zapato de piel.

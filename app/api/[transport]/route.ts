@@ -13,6 +13,7 @@ import {
   embudoCheckout,
   reenviarInstruccionesPago,
 } from "@/lib/analytics";
+import { activeBrand } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -64,8 +65,10 @@ const handler = createMcpHandler(
       "buscar_producto",
       "Busca productos por SKU o nombre. Devuelve marca, precio, stock, color, talla, " +
         "`disponible` y `entrega`. IMPORTANTE: los productos hecho sobre pedido (`disponible: true`, " +
-        "`stock: \"sobre pedido\"`) SIEMPRE se pueden vender aunque el stock sea 0 — nunca digas que están agotados; " +
-        "ofrécelos con entrega en 4-7 días hábiles.",
+        "`stock: \"sobre pedido\"`) SIEMPRE se pueden vender aunque el stock sea 0 — nunca digas que están agotados." +
+        // El plazo de entrega es una promesa de la tienda, no un hecho del
+        // inventario: iba fijo en "4-7 días hábiles" para cualquier marca.
+        (activeBrand.copy?.madeToOrderLine ? ` ${activeBrand.copy.madeToOrderLine}` : ""),
       { q: z.string().describe("SKU o nombre a buscar") },
       async ({ q }) => json(await buscarProducto(q)),
     );

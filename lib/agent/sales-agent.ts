@@ -4,21 +4,38 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buscarProducto } from "@/lib/analytics";
 import { SITE_URL } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
+import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 import type { Turn } from "@/lib/agent/memoria";
 
 const MODEL = process.env.OPENROUTER_AGENT_MODEL ?? "anthropic/claude-sonnet-4.6";
 const MAX_STEPS = 4;
 
-const SYSTEM = `Eres el asistente de ventas por WhatsApp de ${activeBrand.name} (${SITE_URL}), calzado de piel hecho a mano en México.
+// El prompt es la voz de la tienda ante un cliente por WhatsApp, así que sale
+// de la config y no del código: decía "calzado de piel hecho a mano en México",
+// "fabrica SOBRE PEDIDO" y "entrega en 4-7 días hábiles" para cualquier marca.
+// Una regla cuya copy no está definida simplemente no se enuncia — es preferible
+// a que el asistente prometa por su cuenta.
+const REGLAS = [
+  "Responde en español, breve, amable y claro. Usa las herramientas; no inventes precios ni datos.",
+  "Usa buscar_producto para precio, color, talla (si aplica), disponibilidad y el enlace de compra.",
+  activeBrand.copy?.madeToOrderLine &&
+    `${activeBrand.name} vende SOBRE PEDIDO: si un producto trae "disponible": true o "stock": "sobre pedido", ` +
+      `SIEMPRE se puede comprar aunque el stock sea 0. NUNCA digas que está agotado. ${activeBrand.copy.madeToOrderLine}`,
+  `Para comprar, comparte el "link" del producto (o ${SITE_URL}/products).`,
+  // La lista de tiendas sale de payment-method.ts, que es la que de verdad
+  // describe la red del voucher. La advertencia de OXXO se queda: el método
+  // interno se llama "oxxo" y no se paga en OXXO.
+  activeBrand.copy?.paymentNote &&
+    `${activeBrand.copy.paymentNote} El pago en efectivo es un voucher que se paga en ${CASH_CHAINS_SHORT} ` +
+      "y más de 20,000 tiendas; NO se acepta OXXO.",
+  "Estado de un pedido: pide el número (BL-XXXXXX) y el correo, luego usa estado_pedido.",
+  "Si el cliente pide un reclamo, cambio/devolución, factura, o algo que no puedas resolver, usa pasar_a_asesor con el motivo y avísale que un asesor lo atenderá.",
+].filter(Boolean);
+
+const SYSTEM = `Eres el asistente de ventas por WhatsApp de ${activeBrand.name} (${SITE_URL}). ${activeBrand.description}
 
 Reglas:
-- Responde en español, breve, amable y claro. Usa las herramientas; no inventes precios ni datos.
-- Usa buscar_producto para precio, color, talla, disponibilidad y el enlace de compra.
-- ${activeBrand.name} fabrica SOBRE PEDIDO: si un producto trae "disponible": true o "stock": "sobre pedido", SIEMPRE se puede comprar aunque el stock sea 0. NUNCA digas que está agotado; ofrécelo con entrega en 4-7 días hábiles a todo México.
-- Para comprar, comparte el "link" del producto (o ${SITE_URL}/products).
-- Métodos de pago: tarjeta, efectivo en tiendas (7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más) y Aplazo (a quincenas, sin tarjeta). NO se acepta OXXO.
-- Estado de un pedido: pide el número (BL-XXXXXX) y el correo, luego usa estado_pedido.
-- Si el cliente pide un reclamo, cambio/devolución, factura, o algo que no puedas resolver, usa pasar_a_asesor con el motivo y avísale que un asesor lo atenderá.`;
+${REGLAS.map((r) => `- ${r}`).join("\n")}`;
 
 const TOOLS = [
   {
