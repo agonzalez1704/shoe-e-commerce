@@ -82,6 +82,11 @@ export type PdpConfig = {
   shippingMadeToOrder?: string;
   shippingSized?: string;
   care?: { title: string; items: string[] }; // shown when a product has no specs
+  // The size chart is footwear-specific (MX / cm / US). It renders only for
+  // sized products AND only when the brand supplies one, so a store whose sized
+  // items are helmets does not publish a shoe conversion table.
+  sizeGuide?: { intro: string; note: string; rows: { mx: string; cm: string; us: string }[] };
+  sizeHint?: string;   // one line under the size picker
 };
 
 // The handful of phrases that recur across the cart, the checkout, the order
@@ -98,6 +103,9 @@ export type CopyConfig = {
   relatedNote?: string;     // subtitle over the related-products strip
   seoLine?: string;         // appended to a product's meta description
   paymentNote?: string;     // footer + Store JSON-LD; names the actual providers
+  // BNPL anchor under the price. It is a claim about a provider the store must
+  // actually have enabled, so it is per brand and hidden when unset.
+  installments?: { provider: string; payments: number };
 };
 
 // The Meta Commerce feed. Same problem as the PDP: every one of these fields is
@@ -242,6 +250,20 @@ const BRANDS: Record<string, BrandConfig> = {
       ],
       shippingMadeToOrder: "Hecho sobre pedido: se fabrica y entrega en *4 a 7 días hábiles*.",
       shippingSized: "Primer cambio de talla *sin costo*.",
+      sizeHint: "Queda fiel a tu talla — pide tu número habitual.",
+      sizeGuide: {
+        intro: "Nuestro calzado *queda fiel a tu talla*: pide tu número mexicano habitual.",
+        note: "Mide tu pie de talón a punta y elige el cm más cercano. ¿Dudas? Escríbenos.",
+        // MX sizing ≈ foot length in cm; US is an approximate conversion.
+        rows: [
+          { mx: "25", cm: "25.0", us: "7" },
+          { mx: "26", cm: "26.0", us: "8" },
+          { mx: "27", cm: "27.0", us: "9" },
+          { mx: "28", cm: "28.0", us: "10" },
+          { mx: "29", cm: "29.0", us: "11" },
+          { mx: "30", cm: "30.0", us: "12" },
+        ],
+      },
       care: {
         title: "Materiales y cuidado",
         items: [
@@ -261,6 +283,7 @@ const BRANDS: Record<string, BrandConfig> = {
       relatedNote: "Otros modelos hechos a mano, mismo envío gratis.",
       seoLine: "Calzado hecho sobre pedido, envío a todo México.",
       paymentNote: "Pagos con tarjeta, efectivo y Aplazo. Facturación disponible.",
+      installments: { provider: "Aplazo", payments: 6 },
     },
     catalogFeed: {
       titleSuffix: "— Sneaker de piel",

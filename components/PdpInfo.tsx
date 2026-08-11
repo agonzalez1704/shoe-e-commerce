@@ -35,16 +35,6 @@ function specValue(v: string | number | boolean, key = "") {
   return unit ? `${v} ${unit}`.replace(' "', '"') : String(v);
 }
 
-// MX sizing ≈ foot length in cm; US is an approximate conversion.
-const SIZE_ROWS = [
-  { mx: "25", cm: "25.0", us: "7" },
-  { mx: "26", cm: "26.0", us: "8" },
-  { mx: "27", cm: "27.0", us: "9" },
-  { mx: "28", cm: "28.0", us: "10" },
-  { mx: "29", cm: "29.0", us: "11" },
-  { mx: "30", cm: "30.0", us: "12" },
-];
-
 function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string; children: React.ReactNode }) {
   return (
     <details className="group border-b border-border py-1">
@@ -106,16 +96,18 @@ export function PdpInfo({
         </Section>
       )}
 
-      {sized && (
+      {/* Sized AND the brand has a chart: the MX/cm/US table is a shoe
+          conversion, so a store whose sized items are helmets shows none. */}
+      {sized && pdp?.sizeGuide && (
       <Section icon={Ruler} title="Guía de tallas">
-        <p>Nuestro calzado <span className="text-text">queda fiel a tu talla</span>: pide tu número mexicano habitual.</p>
+        <p>{em(pdp.sizeGuide.intro)}</p>
         <div className="mt-3 overflow-hidden rounded-xl border border-border">
           <table className="w-full text-left text-xs">
             <thead className="bg-elevated text-muted">
               <tr><th className="px-3 py-2">MX</th><th className="px-3 py-2">Largo (cm)</th><th className="px-3 py-2">US</th></tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {SIZE_ROWS.map((r) => (
+              {pdp.sizeGuide.rows.map((r) => (
                 <tr key={r.mx}>
                   <td className="nums px-3 py-2 font-medium text-text">{r.mx}</td>
                   <td className="nums px-3 py-2">{r.cm}</td>
@@ -125,7 +117,7 @@ export function PdpInfo({
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs">Mide tu pie de talón a punta y elige el cm más cercano. ¿Dudas? Escríbenos.</p>
+        <p className="mt-2 text-xs">{pdp.sizeGuide.note}</p>
       </Section>
       )}
 

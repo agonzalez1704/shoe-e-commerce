@@ -8,6 +8,7 @@ import { formatCents } from "@/lib/money";
 import { addToCart } from "@/app/cart/actions";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
+import { activeBrand } from "@/lib/brand";
 
 type Variant = {
   id: string;
@@ -138,7 +139,9 @@ export function VariantPicker({
           <legend className="text-xs font-medium uppercase tracking-wide text-muted">Talla</legend>
           <a href="#size-guide" className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline">Guía de tallas</a>
         </div>
-        <p className="mt-1 text-xs text-muted">Queda fiel a tu talla — pide tu número habitual.</p>
+        {activeBrand.pdp?.sizeHint && (
+          <p className="mt-1 text-xs text-muted">{activeBrand.pdp.sizeHint}</p>
+        )}
         <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
           {sizes.map((v) => {
             // made-to-order: never out of stock, no availability shown

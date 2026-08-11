@@ -18,8 +18,9 @@ import type { ProductDetail as Product } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
-// Aplazo installment anchor (approx). One place to tune.
-const APLAZO_PAYMENTS = 6;
+// BNPL anchor under the price. Per brand: naming a provider the store has not
+// enabled is a promise it cannot keep at checkout.
+const BNPL = activeBrand.copy?.installments;
 
 // Icon keys → components, resolved from the client entry point (this file is
 // "use client"). BrandConfig only carries the key; see lib/brand.ts.
@@ -136,8 +137,13 @@ export function ProductDetail({
           <p className="nums mt-3 text-2xl font-medium">{mxn(colorPriceCents)}</p>
         )}
         <p className="mt-1 text-xs text-muted">
-          Precio con IVA incluido · o {APLAZO_PAYMENTS} pagos de{" "}
-          <span className="font-medium text-text">{mxn(Math.round(precioEfectivo / APLAZO_PAYMENTS))}</span> con Aplazo
+          Precio con IVA incluido
+          {BNPL && (
+            <>
+              {" "}· o {BNPL.payments} pagos de{" "}
+              <span className="font-medium text-text">{mxn(Math.round(precioEfectivo / BNPL.payments))}</span> con {BNPL.provider}
+            </>
+          )}
         </p>
 
         {/* value props (trust row) */}
