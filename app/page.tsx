@@ -18,6 +18,8 @@ import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
 import { HeroCarousel } from "@/components/HeroCarousel";
+import { NoticiasBand } from "@/components/NoticiasBand";
+import { listNoticias } from "@/lib/noticias";
 import { SITE_NAME } from "@/lib/site";
 
 // Icon keys → components. BrandConfig can only carry the key (it is plain data
@@ -50,9 +52,10 @@ const FEATURES: HomeFeature[] = home?.features ?? [];
 const SLIDES = home?.slides ?? [];
 
 export default async function Home() {
-  const [products, bestSellers] = await Promise.all([
+  const [products, bestSellers, noticias] = await Promise.all([
     listProducts({ sort: "newest" }),
     listBestSellers(8),
+    listNoticias(3),
   ]);
   // sin historial de ventas, una repisa elegida a mano bajo otro título — nunca
   // lo más nuevo disfrazado de lo más vendido
@@ -70,6 +73,7 @@ export default async function Home() {
       {FEATURES[0] && <EditorialFeature f={FEATURES[0]} />}
       <Featured products={featured} total={products.length} />
       {FEATURES[1] && <EditorialFeature f={FEATURES[1]} />}
+      <NoticiasBand noticias={noticias} />
       <Editorial />
       <HowItWorks />
       <FinalCta />

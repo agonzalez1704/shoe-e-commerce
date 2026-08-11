@@ -15,6 +15,7 @@ export const PERMISOS = [
   "inventario_gestionar",
   "descuentos_gestionar",
   "promociones_gestionar",
+  "contenido_gestionar",
   "metricas_ver",
   "comisiones_ver",
   "usuarios_gestionar",
@@ -49,6 +50,7 @@ export const CATALOGO_PERMISOS: {
       { key: "descuentos_gestionar", label: "Gestionar descuentos", desc: "Crear y desactivar códigos de descuento." },
       { key: "promociones_gestionar", label: "Gestionar promociones", desc: "Programar promociones por porcentaje." },
       { key: "metricas_ver", label: "Ver métricas", desc: "Tráfico, fuentes y comportamiento de la tienda." },
+      { key: "contenido_gestionar", label: "Gestionar contenido", desc: "Publicar noticias y eventos en la tienda." },
     ],
   },
   {
