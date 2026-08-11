@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getCategory, listProductsByCategory } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
+import { Pagination, paginar } from "@/components/Pagination";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
 
@@ -24,10 +25,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { slug } = await params;
-  const [category, products] = await Promise.all([getCategory(slug), listProductsByCategory(slug)]);
+  const [category, products, sp] = await Promise.all([
+    getCategory(slug),
+    listProductsByCategory(slug),
+    searchParams,
+  ]);
   if (!category) notFound();
+
+  // Se corta después de mapear a tarjetas y no en SQL: una tarjeta es una
+  // combinación producto+color, así que un `range` en la consulta daría páginas
+  // de tamaño desigual. Con 130 productos la consulta es barata; si el catálogo
+  // creciera un orden de magnitud, ahí sí valdría paginar en la base.
+  const { pagina, items } = paginar(products, Number(sp.p));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -68,7 +85,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       {products.length === 0 ? (
         <p className="text-muted">Aún no hay productos en esta categoría.</p>
       ) : (
-        <ProductGrid products={products} />
+        <>
+          <ProductGrid products={items} />
+          <Pagination pagina={pagina} total={products.length} base={`/categoria/${slug}`} />
+        </>
       )}
     </div>
   );
