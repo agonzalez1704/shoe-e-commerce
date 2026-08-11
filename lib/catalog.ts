@@ -183,6 +183,33 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
 
 export type Category = { id: string; name: string; slug: string; description: string | null };
 
+export type CategoryLink = { name: string; slug: string; count: number };
+
+// Categories that actually have something to show, most-stocked first.
+//
+// The footer used to link /categoria/running|casual|trail, hardcoded. Those
+// three 404 on calzadoblade.com right now — the store has no categories at all
+// — and would have 404'd on every future brand too. Reading the real list is
+// the fix; patching the three hrefs would only move the problem to brand four.
+//
+// A category with no active products is dropped rather than linked to an empty
+// page, so the count doubles as the filter. Cached per request like
+// getCategory, since the header and the footer both call this.
+export const listCategories = cache(async (): Promise<CategoryLink[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("name, slug, product_categories(products!inner(id))")
+    .eq("product_categories.products.status", "active");
+  if (error) throw error;
+
+  type Row = { name: string; slug: string; product_categories: unknown[] | null };
+  return ((data ?? []) as Row[])
+    .map((c) => ({ name: c.name, slug: c.slug, count: c.product_categories?.length ?? 0 }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+});
+
 export const getCategory = cache(async (slug: string): Promise<Category | null> => {
   const supabase = await createClient();
   const { data } = await supabase

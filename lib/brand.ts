@@ -97,6 +97,7 @@ export type CopyConfig = {
   exchangeLine?: string;    // the cart's exchange reassurance
   relatedNote?: string;     // subtitle over the related-products strip
   seoLine?: string;         // appended to a product's meta description
+  paymentNote?: string;     // footer + Store JSON-LD; names the actual providers
 };
 
 // The Meta Commerce feed. Same problem as the PDP: every one of these fields is
@@ -259,6 +260,7 @@ const BRANDS: Record<string, BrandConfig> = {
       exchangeLine: "Si tu talla no queda como esperabas, el primer cambio es sin costo.",
       relatedNote: "Otros modelos hechos a mano, mismo envío gratis.",
       seoLine: "Calzado hecho sobre pedido, envío a todo México.",
+      paymentNote: "Pagos con tarjeta, efectivo y Aplazo. Facturación disponible.",
     },
     catalogFeed: {
       titleSuffix: "— Sneaker de piel",
@@ -432,6 +434,7 @@ const BRANDS: Record<string, BrandConfig> = {
       itemSingular: "producto",
       itemPlural: "productos",
       seoLine: "Envíos a todo México.",
+      paymentNote: "Pagos con tarjeta, efectivo y transferencia.",
       // deliveryLine / madeToOrderLine / exchangeLine: sin tiempos ni política
       // de cambio confirmados. Omitirlos deja el carrito y el checkout sin
       // promesa, que es lo correcto mientras no exista una.

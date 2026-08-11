@@ -10,6 +10,8 @@ import { ViewTransition } from "@/components/ViewTransition";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorefrontOnly } from "@/components/StorefrontOnly";
 import { Logo } from "@/components/Logo";
+import { SiteHeader } from "@/components/SiteHeader";
+import { listCategories } from "@/lib/catalog";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import { activeBrand, brandThemeCss } from "@/lib/brand";
 import "./globals.css";
@@ -17,7 +19,7 @@ import "./globals.css";
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", weight: ["400", "500", "600", "700"] });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", weight: ["400", "500"] });
 
-const SEO_TITLE = `${SITE_NAME} — ${activeBrand.seoSuffix ?? "calzado hecho en México"}`;
+const SEO_TITLE = activeBrand.seoSuffix ? `${SITE_NAME} — ${activeBrand.seoSuffix}` : SITE_NAME;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -46,7 +48,7 @@ const orgJsonLd = {
   description: SITE_DESCRIPTION,
   areaServed: "MX",
   currenciesAccepted: "MXN",
-  paymentAccepted: "Tarjeta, efectivo, Aplazo",
+  paymentAccepted: activeBrand.copy?.paymentNote,
 };
 const siteJsonLd = {
   "@context": "https://schema.org",
@@ -63,7 +65,11 @@ const siteJsonLd = {
 // set theme before paint to avoid a flash of the wrong mode
 const themeScript = `(function(){try{var t=localStorage.getItem('theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}catch(e){}})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Header and footer share one fetch per request (listCategories is cache()d).
+  // A store with no categories yet — Blade today — gets neither the menu nor the
+  // footer column, rather than three links to pages that do not exist.
+  const categories = await listCategories();
   return (
     <html lang="es-MX" className={`${outfit.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
@@ -90,18 +96,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {activeBrand.announcement ?? "Envíos a todo México"}
             </p>
           </Link>
-          <header className="sticky top-0 z-50 border-b border-border bg-bg/80 backdrop-blur-md">
-            <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+          <SiteHeader
+            categories={categories}
+            logo={
               <Link href="/" aria-label={SITE_NAME}>
                 <Logo />
               </Link>
-              <div className="flex items-center gap-1">
-                <Link
-                  href="/products"
-                  className="rounded-full px-3 py-2 text-sm text-muted transition-colors hover:text-text"
-                >
-                  Tienda
-                </Link>
+            }
+            actions={
+              <>
                 <ThemeToggle />
                 <Link
                   href="/cuenta"
@@ -117,9 +120,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 >
                   <CartBadge />
                 </Link>
-              </div>
-            </nav>
-          </header>
+              </>
+            }
+          />
           </StorefrontOnly>
 
           <ViewTransition>
@@ -132,14 +135,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div className="text-muted">
                 <p className="font-medium text-text">{SITE_NAME}</p>
                 <p className="mt-2">{SITE_DESCRIPTION}</p>
-                <p className="mt-4 text-xs">Pagos con tarjeta, efectivo y Aplazo. Facturación disponible.</p>
+                {activeBrand.copy?.paymentNote && <p className="mt-4 text-xs">{activeBrand.copy.paymentNote}</p>}
               </div>
-              <nav className="flex flex-col gap-2">
-                <p className="font-medium text-text">Categorías</p>
-                <Link href="/categoria/running" className="text-muted transition-colors hover:text-text">Running</Link>
-                <Link href="/categoria/casual" className="text-muted transition-colors hover:text-text">Casual</Link>
-                <Link href="/categoria/trail" className="text-muted transition-colors hover:text-text">Trail</Link>
-              </nav>
+              {categories.length > 0 && (
+                <nav className="flex flex-col gap-2">
+                  <p className="font-medium text-text">Categorías</p>
+                  {categories.map((c) => (
+                    <Link key={c.slug} href={`/categoria/${c.slug}`} className="text-muted transition-colors hover:text-text">
+                      {c.name}
+                    </Link>
+                  ))}
+                </nav>
+              )}
               <nav className="flex flex-col gap-2">
                 <p className="font-medium text-text">Tienda</p>
                 <Link href="/products" className="text-muted transition-colors hover:text-text">Toda la tienda</Link>
