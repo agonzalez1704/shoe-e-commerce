@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { activeBrand } from "@/lib/brand";
 
 // ============================================================
 // CFDI 4.0 stamping via Facturama PAC.
@@ -14,7 +15,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Prices are IVA-inclusive (16%); we back the IVA out per line for the breakdown.
 // ============================================================
 
-const SAT_PRODUCT_CODE = "53111601"; // calzado (footwear) — make per-product later
+// Fija en "53111601" (calzado) hasta ahora: cada factura de cada tienda salía
+// declarando zapatos. Va por marca; sin ella no se timbra. Sigue siendo una
+// clave por catálogo, no por producto — un catálogo mixto necesitará la
+// columna por producto, pero declarar la clase equivocada es peor que pedirla.
 const UNIT_CODE = "H87"; // Pieza
 const IVA_RATE = 0.16;
 
@@ -57,6 +61,14 @@ export async function stampOrderCfdi(orderId: string): Promise<StampResult> {
     return recordFailure("PAC no configurado (PAC_BASE_URL / PAC_API_USER / PAC_API_PASSWORD)");
   }
 
+  const satProductCode = activeBrand.sat?.productCode;
+  if (!satProductCode) {
+    return recordFailure(
+      `Falta la clave del SAT (ClaveProdServ) para la marca "${activeBrand.key}". ` +
+        "Llena `sat` en lib/brand.ts: sin ella la factura declararía un producto que no es el que se vendió.",
+    );
+  }
+
   // gather order + items + fiscal data
   const [{ data: order }, { data: items }, { data: fiscal }] = await Promise.all([
     admin.from("orders").select("payment_method, total_cents").eq("id", orderId).maybeSingle(),
@@ -71,7 +83,7 @@ export async function stampOrderCfdi(orderId: string): Promise<StampResult> {
   const lineItems = items.map((it) => {
     const f = lineFiscal(it.unit_price_cents, it.quantity);
     return {
-      ProductCode: SAT_PRODUCT_CODE,
+      ProductCode: satProductCode,
       Description: it.product_name,
       Unit: "Pieza",
       UnitCode: UNIT_CODE,

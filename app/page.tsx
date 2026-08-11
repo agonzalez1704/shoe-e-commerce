@@ -9,12 +9,34 @@ import {
   PencilSimpleLine,
   Hammer,
   Sparkle,
+  ShieldCheck,
+  Lightning,
 } from "@phosphor-icons/react/dist/ssr";
 import { listProducts, listBestSellers, listFeatured, type ProductCard } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
+import { EditorialFeature } from "@/components/EditorialFeature";
+import { HeroCarousel } from "@/components/HeroCarousel";
+import { NoticiasBand } from "@/components/NoticiasBand";
+import { listNoticias } from "@/lib/noticias";
 import { SITE_NAME } from "@/lib/site";
+
+// Icon keys → components. BrandConfig can only carry the key (it is plain data
+// shared with client files), and the server page resolves it from the `/ssr`
+// entry point. An unknown key falls back rather than crashing the homepage.
+const ICONS: Record<string, typeof Package> = {
+  package: Package,
+  truck: Truck,
+  card: CreditCard,
+  pin: MapPin,
+  pencil: PencilSimpleLine,
+  hammer: Hammer,
+  sparkle: Sparkle,
+  shield: ShieldCheck,
+  lightning: Lightning,
+};
+const icon = (k: string) => ICONS[k] ?? Sparkle;
 
 export const revalidate = 60;
 
@@ -26,11 +48,14 @@ const hero = home?.hero ?? {
   titleBottom: "", body: activeBrand.tagline,
 };
 const FEATURES: HomeFeature[] = home?.features ?? [];
+// Menos de dos: el hero estático de siempre, sin cromo de carrusel.
+const SLIDES = home?.slides ?? [];
 
 export default async function Home() {
-  const [products, bestSellers] = await Promise.all([
+  const [products, bestSellers, noticias] = await Promise.all([
     listProducts({ sort: "newest" }),
     listBestSellers(8),
+    listNoticias(3),
   ]);
   // sin historial de ventas, una repisa elegida a mano bajo otro título — nunca
   // lo más nuevo disfrazado de lo más vendido
@@ -41,13 +66,14 @@ export default async function Home() {
 
   return (
     <div className="reveal">
-      <Hero />
+      {SLIDES.length > 1 ? <HeroCarousel slides={SLIDES} /> : <Hero />}
       <Benefits />
       <BestSellers products={shelf} curated={curated} />
       {combos.length > 0 && <ComboBand picks={combos} />}
       {FEATURES[0] && <EditorialFeature f={FEATURES[0]} />}
       <Featured products={featured} total={products.length} />
       {FEATURES[1] && <EditorialFeature f={FEATURES[1]} />}
+      <NoticiasBand noticias={noticias} />
       <Editorial />
       <HowItWorks />
       <FinalCta />
@@ -119,16 +145,17 @@ function Hero() {
 
 /* ---------------- benefits strip ---------------- */
 function Benefits() {
-  const items = [
-    { icon: Package, title: "Hecho sobre pedido", sub: "Fabricado a mano para ti" },
-    { icon: Truck, title: "Envío gratis", sub: "Entrega en 4–7 días hábiles" },
-    { icon: CreditCard, title: "Paga como quieras", sub: "Tarjeta, efectivo o Aplazo" },
-    { icon: MapPin, title: "Todo México", sub: "Con factura disponible" },
-  ];
+  const items = home?.benefits ?? [];
+  if (!items.length) return null;
+  // The count is per brand now, so a fixed 4-column grid would leave a
+  // border-coloured hole on a store that lists three.
+  const cols = items.length % 4 === 0 ? "md:grid-cols-4" : items.length % 3 === 0 ? "md:grid-cols-3" : "md:grid-cols-2";
   return (
     <section className="border-b border-border">
-      <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-4">
-        {items.map(({ icon: Icon, title, sub }) => (
+      <div className={`grid grid-cols-2 gap-px bg-border ${cols}`}>
+        {items.map(({ icon: k, title, sub }) => {
+          const Icon = icon(k);
+          return (
           <div key={title} className="flex items-start gap-3 bg-bg px-4 py-6 sm:px-6">
             <Icon size={22} weight="bold" className="mt-0.5 shrink-0 text-accent" />
             <div>
@@ -136,7 +163,8 @@ function Benefits() {
               <p className="mt-0.5 text-xs text-muted">{sub}</p>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -189,67 +217,15 @@ function Featured({ products, total }: { products: ProductCard[]; total: number 
   );
 }
 
-/* ---------------- editorial feature (diptych split, Nuvé-style) ---------------- */
-
-
-function EditorialFeature({ f }: { f: HomeFeature }) {
-  const media = (
-    <div className="relative">
-      <div className="absolute -inset-3 -z-10 rounded-3xl bg-accent-soft" aria-hidden />
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl ring-1 ring-border">
-        <Image src={f.main} alt={f.alt} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-      </div>
-      {/* framed macro-detail accent, overlapping the corner */}
-      <div className={`absolute -bottom-6 w-28 overflow-hidden rounded-2xl shadow-[var(--shadow-md)] ring-4 ring-bg sm:w-36 ${f.flip ? "-left-4" : "-right-4"}`}>
-        <div className="relative aspect-square w-full">
-          <Image src={f.macro} alt="" fill sizes="144px" className="object-cover" />
-        </div>
-      </div>
-    </div>
-  );
-  const copy = (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">{f.eyebrow}</p>
-      <h2 className="mt-3 text-4xl font-semibold uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">{f.titleTop}<br />{f.titleBottom}</h2>
-      <p className="mt-5 max-w-md text-sm leading-relaxed text-muted">{f.body}</p>
-      <ul className="mt-6 space-y-2.5">
-        {f.points.map((t) => (
-          <li key={t} className="flex items-center gap-3 text-sm">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            {t}
-          </li>
-        ))}
-      </ul>
-      <Link
-        href={f.ctaHref}
-        className="group mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
-      >
-        {f.ctaLabel}
-        <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    </div>
-  );
-  return (
-    <section className="py-14 sm:py-20">
-      <div className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
-        {f.flip ? <>{copy}{media}</> : <>{media}{copy}</>}
-      </div>
-    </section>
-  );
-}
-
-
 /* ---------------- editorial / lifestyle gallery ---------------- */
 function Editorial() {
-  const shots = activeBrand.home?.editorial ?? [];
+  const shots = home?.editorial ?? [];
   if (!shots.length) return null;   // a store without lifestyle shots just skips the band
   return (
     <section className="border-t border-border py-14 sm:py-20">
       <div className="mb-8 max-w-xl">
-        <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">Hechos para la vida diaria</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Piel que combina con todo — de la oficina al café. Así se ven en el día a día.
-        </p>
+        <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">{home?.editorialTitle}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{home?.editorialBody}</p>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
         {shots.map((s, i) => (
@@ -263,7 +239,7 @@ function Editorial() {
             <div className={`relative ${i === 0 ? "aspect-[16/10] md:aspect-[4/5]" : "aspect-[4/5]"}`}>
               <Image
                 src={s.img}
-                alt={`Blade ${s.name} en uso`}
+                alt={`${SITE_NAME} ${s.name} en uso`}
                 fill
                 sizes="(max-width: 768px) 50vw, 33vw"
                 className="object-cover transition-transform duration-[600ms] ease-out group-hover:scale-105"
@@ -285,17 +261,16 @@ function Editorial() {
 
 /* ---------------- how it works ---------------- */
 function HowItWorks() {
-  const steps = [
-    { icon: PencilSimpleLine, title: "Eliges tu par", sub: "Modelo, color y talla MX 25–30." },
-    { icon: Hammer, title: "Lo fabricamos a mano", sub: "Cada par se hace especialmente para ti." },
-    { icon: Sparkle, title: "Llega en 4–7 días", sub: "Envío gratis a todo México, con factura." },
-  ];
+  const cfg = home?.howItWorks;
+  if (!cfg?.steps.length) return null;
   return (
     <section className="border-t border-border py-14 sm:py-20">
-      <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">Cómo funciona</h2>
-      <p className="mt-2 text-sm text-muted">Sin inventario muerto. Piel de verdad, hecha a pedido.</p>
+      <h2 className="text-3xl font-semibold uppercase tracking-tight sm:text-4xl md:text-5xl">{cfg.title}</h2>
+      <p className="mt-2 text-sm text-muted">{cfg.sub}</p>
       <div className="mt-8 grid gap-5 sm:grid-cols-3">
-        {steps.map(({ icon: Icon, title, sub }, i) => (
+        {cfg.steps.map(({ icon: k, title, sub }, i) => {
+          const Icon = icon(k);
+          return (
           <div key={title} className="rounded-2xl border border-border bg-surface p-6">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
@@ -306,7 +281,8 @@ function HowItWorks() {
             <p className="mt-4 font-semibold">{title}</p>
             <p className="mt-1 text-sm leading-relaxed text-muted">{sub}</p>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -314,20 +290,20 @@ function HowItWorks() {
 
 /* ---------------- final CTA ---------------- */
 function FinalCta() {
+  const cta = home?.finalCta;
+  if (!cta) return null;
   return (
     <section className="pb-16">
       <div className="flex flex-col items-center gap-5 rounded-3xl bg-text px-6 py-14 text-center text-bg">
         <h2 className="max-w-2xl text-3xl font-semibold uppercase tracking-tight sm:text-5xl md:text-6xl">
-          Tu próximo par te está esperando.
+          {cta.title}
         </h2>
-        <p className="max-w-md text-sm text-bg/70">
-          Piel, filo y comodidad — hechos a tu medida. Envío gratis a todo México.
-        </p>
+        <p className="max-w-md text-sm text-bg/70">{cta.body}</p>
         <Link
-          href="/products"
+          href={cta.ctaHref}
           className="group inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3.5 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98]"
         >
-          Ver toda la tienda
+          {cta.ctaLabel}
           <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>

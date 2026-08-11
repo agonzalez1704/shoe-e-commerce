@@ -7,6 +7,7 @@ import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
+import { activeBrand } from "@/lib/brand";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
 import { checkout, previewDiscount, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
@@ -37,13 +38,21 @@ declare global {
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
 // contact + shipping fields we persist on-device for the next purchase (no card, no fiscal)
-const SAVE_KEY = "blade_checkout";
+// La llave lleva la marca: dos tiendas en el mismo navegador se pisaban los
+// datos guardados del checkout.
+const SAVE_KEY = `${activeBrand.key}_checkout`;
 const SAVE_FIELDS = ["name", "email", "phone", "line1", "neighborhood", "city", "region", "postal"] as const;
 
+// Aplazo se ofrece sólo si la marca declara un proveedor de mensualidades. Iba
+// fijo, así que toda tienda mostraba el botón aunque su cuenta de Conekta no lo
+// tuviera habilitado: el comprador lo elegía y el cobro fallaba al final. Es la
+// misma señal que ya decide si la PDP anuncia "6 pagos de $X".
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
   { id: "oxxo", label: "Efectivo", hint: "+20,000 tiendas" },
-  { id: "aplazo", label: "Aplazo", hint: "Págalo en quincenas" },
+  ...(activeBrand.copy?.installments
+    ? [{ id: "aplazo" as Method, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }]
+    : []),
 ];
 // Only offered when MERCADOPAGO_ACCESS_TOKEN is configured (see checkout/page.tsx).
 const MP_METHOD = { id: "mercadopago" as Method, label: "Mercado Pago", hint: "Tarjeta, saldo o meses" };
@@ -428,9 +437,11 @@ export function CheckoutForm({
                 <Field name="region" label="Estado" autoComplete="address-level1" defaultValue={defaults.region} />
                 <Field name="postal" label="C.P." autoComplete="postal-code" inputMode="numeric" maxLength={5} defaultValue={defaults.postal} />
               </div>
-              <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
-                <Truck size={14} /> Envío gratis a todo México en 4–7 días hábiles.
-              </p>
+              {activeBrand.copy?.deliveryLine && (
+                <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
+                  <Truck size={14} /> {activeBrand.copy.deliveryLine}
+                </p>
+              )}
               <label className="flex cursor-pointer items-center gap-2 pt-1 text-sm text-muted">
                 <input
                   type="checkbox"

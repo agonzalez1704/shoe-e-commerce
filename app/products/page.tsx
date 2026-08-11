@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listProducts, type ProductFilters } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
+import { Pagination, paginar } from "@/components/Pagination";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand } from "@/lib/brand";
 
@@ -26,6 +27,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
     sort: (sp.sort as ProductFilters["sort"]) ?? "newest",
   };
   const products = await listProducts(filters);
+  const { pagina, items } = paginar(products, Number(sp.p));
 
   return (
     <div className="reveal py-8 sm:py-10">
@@ -45,7 +47,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
       ) : (
         <>
           <ComboBand picks={comboPicks(products)} />
-          <ProductGrid products={products} />
+          <ProductGrid products={items} />
+          <Pagination
+            pagina={pagina}
+            total={products.length}
+            base="/products"
+            params={{ brand: sp.brand, gender: sp.gender, sort: sp.sort }}
+          />
         </>
       )}
     </div>

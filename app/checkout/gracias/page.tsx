@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { restoreCartFromOrder } from "@/app/cart/actions";
 import { isDeclined, isSet } from "@/lib/provider-return";
 import { SITE_URL } from "@/lib/site";
+import { activeBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +129,7 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
           />
           <p className="mt-8 max-w-md text-sm text-muted">
             {paid
-              ? "Tu pago está confirmado. Tu calzado se fabrica sobre pedido y se envía en 4 a 7 días hábiles."
+              ? ["Tu pago está confirmado.", activeBrand.copy?.madeToOrderLine].filter(Boolean).join(" ")
               : notAttempted
                 ? "Apartamos tu pedido, pero aún no recibimos el pago. Puedes completarlo ahora — no se ha hecho ningún cargo."
                 : "Estamos confirmando tu pago. Te enviaremos un correo en cuanto se acredite — si no se completa, no se hará ningún cargo."}
@@ -146,8 +147,8 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
         <div className="max-w-md">
           <h1 className="text-2xl font-semibold tracking-tight">¡Gracias por tu compra!</h1>
           <p className="mt-4 text-sm text-muted">
-            Estamos confirmando tu pago. Te enviaremos un correo en cuanto se acredite. Tu calzado se fabrica
-            sobre pedido y se envía en 4 a 7 días hábiles.
+            Estamos confirmando tu pago. Te enviaremos un correo en cuanto se acredite.{" "}
+            {activeBrand.copy?.madeToOrderLine}
           </p>
         </div>
       )}

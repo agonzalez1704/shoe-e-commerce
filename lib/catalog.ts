@@ -183,6 +183,33 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
 
 export type Category = { id: string; name: string; slug: string; description: string | null };
 
+export type CategoryLink = { name: string; slug: string; count: number };
+
+// Categories that actually have something to show, most-stocked first.
+//
+// The footer used to link /categoria/running|casual|trail, hardcoded. Those
+// three 404 on calzadoblade.com right now — the store has no categories at all
+// — and would have 404'd on every future brand too. Reading the real list is
+// the fix; patching the three hrefs would only move the problem to brand four.
+//
+// A category with no active products is dropped rather than linked to an empty
+// page, so the count doubles as the filter. Cached per request like
+// getCategory, since the header and the footer both call this.
+export const listCategories = cache(async (): Promise<CategoryLink[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("name, slug, product_categories(products!inner(id))")
+    .eq("product_categories.products.status", "active");
+  if (error) throw error;
+
+  type Row = { name: string; slug: string; product_categories: unknown[] | null };
+  return ((data ?? []) as Row[])
+    .map((c) => ({ name: c.name, slug: c.slug, count: c.product_categories?.length ?? 0 }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+});
+
 export const getCategory = cache(async (slug: string): Promise<Category | null> => {
   const supabase = await createClient();
   const { data } = await supabase
@@ -220,6 +247,10 @@ export type ProductDetail = {
   base_price_cents: number;
   brand: string | null;
   images: { url: string; alt: string | null; color: string | null }[];
+  // Used to pick the brand's per-category feature blocks. One asset set covers
+  // all 40 scooters, which is a request a client can actually fill — unlike one
+  // bespoke set per model.
+  categorySlugs: string[];
   variants: {
     id: string;
     sku: string;
@@ -251,6 +282,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
       "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, attributes, " +
         "brands(name), " +
         "product_images(url, alt, color, position), " +
+        "product_categories(categories(slug)), " +
         "variants(id, sku, size_value, size_system, width, color, price_cents, status)",
     )
     .eq("slug", slug)
@@ -267,6 +299,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     attributes: Record<string, string | number | boolean> | null;
     brands: { name: string } | null;
     product_images: { url: string; alt: string | null; color: string | null; position: number }[];
+    product_categories: { categories: { slug: string } | null }[] | null;
     variants: {
       id: string; sku: string; size_value: string | null; size_system: string | null;
       width: string | null; color: string; price_cents: number | null; status: string;
@@ -299,6 +332,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     images: [...(p.product_images ?? [])]
       .sort((a, b) => a.position - b.position)
       .map(({ url, alt, color }) => ({ url, alt, color })),
+    categorySlugs: (p.product_categories ?? []).map((c) => c.categories?.slug).filter(Boolean) as string[],
     variants: activeVariants.map((v) => ({
       id: v.id,
       sku: v.sku,

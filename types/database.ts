@@ -528,6 +528,39 @@ export type Database = {
           },
         ]
       }
+      noticias: {
+        Row: {
+          categoria: string | null
+          cover_url: string | null
+          created_at: string
+          cuerpo: string | null
+          id: string
+          published_at: string | null
+          slug: string
+          titulo: string
+        }
+        Insert: {
+          categoria?: string | null
+          cover_url?: string | null
+          created_at?: string
+          cuerpo?: string | null
+          id?: string
+          published_at?: string | null
+          slug: string
+          titulo: string
+        }
+        Update: {
+          categoria?: string | null
+          cover_url?: string | null
+          created_at?: string
+          cuerpo?: string | null
+          id?: string
+          published_at?: string | null
+          slug?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       order_fiscal_data: {
         Row: {
           cfdi_use: string

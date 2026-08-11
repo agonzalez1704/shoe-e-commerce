@@ -5,6 +5,8 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev",
+    "dev:honeywhale": "node scripts/dev-brand.mjs honeywhale 3009",
+    "dev:blade": "NEXT_PUBLIC_BRAND=blade next dev -p 3008",
     "build": "next build",
     "start": "next start",
     "gen:types": "SUPABASE_ACCESS_TOKEN=${SUPABASE_ACCESS_TOKEN:-sbp_dummy_local} supabase gen types typescript --local > types/database.ts",
@@ -15,7 +17,8 @@
     "db:reset": "supabase db reset && pnpm gen:types && pnpm seed:images",
     "seed:images": "node --env-file=.env.local scripts/seed-images.mjs",
     "kapso:register": "node --env-file=.env.local scripts/register-kapso-webhook.mjs",
-    "setup": "supabase start && supabase db reset && pnpm gen:types && pnpm seed:images"
+    "setup": "supabase start && supabase db reset && pnpm gen:types && pnpm seed:images",
+    "dev:honeywhale-local": "NEXT_PUBLIC_BRAND=honeywhale next dev -p 3010"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

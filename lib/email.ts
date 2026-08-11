@@ -4,6 +4,12 @@ import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 
+// Brand promises, not email plumbing: a lead time written for made-to-order
+// footwear was going out to every store's customers. Unset means the sentence
+// is simply omitted.
+const LEAD_TIME = activeBrand.copy?.madeToOrderLine ?? "";
+const ITEM = activeBrand.copy?.itemSingular ?? "pedido";
+
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const FROM = process.env.EMAIL_FROM ?? activeBrand.emailFrom;
 const ACCENT = activeBrand.theme.light.accent;
@@ -107,7 +113,7 @@ export async function sendVoucherEmail(
        ${instructions}
        ${expires ? `<p style="color:#a1a1aa;font-size:13px;margin-top:12px">Vence el ${expires}.</p>` : ""}
        ${summary(a.lines, a.breakdown, a.totalCents)}
-       <p style="color:#71717a">Confirmaremos tu pedido en cuanto se reciba el pago. Tu calzado se fabrica sobre pedido y se envía en 4 a 7 días hábiles.</p>`),
+       <p style="color:#71717a">Confirmaremos tu pedido en cuanto se reciba el pago. ${LEAD_TIME}</p>`),
   );
 }
 
@@ -126,7 +132,7 @@ export async function sendPaymentReminderEmail(
     a.to,
     `Completa tu pago — pedido ${a.orderNumber}`,
     shell(`Tu pedido sigue apartado`,
-      `<p>Aún no recibimos el pago de tu pedido <strong>${a.orderNumber}</strong> por <strong>${mxn(a.totalCents)}</strong>. Complétalo antes de que venza para asegurar tu calzado.</p>
+      `<p>Aún no recibimos el pago de tu pedido <strong>${a.orderNumber}</strong> por <strong>${mxn(a.totalCents)}</strong>. Complétalo antes de que venza para asegurar tu pedido.</p>
        ${detail}
        ${expires ? `<p style="color:#a1a1aa;font-size:13px;margin-top:10px">Vence el ${expires}.</p>` : ""}
        <p style="margin-top:16px">${button(a.trackUrl, "Ver mi pedido")}</p>`),
@@ -141,7 +147,7 @@ export async function sendPaidEmail(a: Base) {
     shell(`¡Pago confirmado!`,
       `<p>Tu pedido <strong>${a.orderNumber}</strong> está confirmado y en preparación.</p>
        ${summary(a.lines, a.breakdown, a.totalCents)}
-       <p style="color:#71717a">Se fabrica sobre pedido; te avisaremos cuando se envíe (4 a 7 días hábiles).</p>`),
+       ${LEAD_TIME ? `<p style="color:#71717a">${LEAD_TIME}</p>` : ""}`),
   );
 }
 
@@ -161,8 +167,8 @@ export async function sendDeliveredEmail(a: { to: string; orderNumber: string })
   await send(
     a.to,
     `Tu pedido ${a.orderNumber} fue entregado`,
-    shell("¡Llegó tu Blade! 🎉",
-      `<p>Tu pedido <strong>${a.orderNumber}</strong> fue entregado. Gracias por confiar en Blade — esperamos que lo disfrutes en cada paso.</p>
+    shell(`¡Llegó tu pedido de ${activeBrand.name}! 🎉`,
+      `<p>Tu pedido <strong>${a.orderNumber}</strong> fue entregado. Gracias por confiar en ${activeBrand.name} — esperamos que lo disfrutes.</p>
        <p style="color:#71717a">En unos días te pediremos tu opinión; nos ayuda muchísimo.</p>`),
   );
 }
@@ -174,7 +180,7 @@ export async function sendExpiredEmail(a: { to: string; orderNumber: string; sho
     `Tu pedido ${a.orderNumber} venció`,
     shell("Tu referencia de pago venció",
       `<p>No recibimos el pago de tu pedido <strong>${a.orderNumber}</strong> antes de la fecha límite, así que lo liberamos. No se hizo ningún cargo.</p>
-       <p>Si aún lo quieres, puedes volver a ordenarlo — tu calzado se fabrica sobre pedido.</p>
+       <p>Si aún lo quieres, puedes volver a ordenarlo.</p>
        <p style="margin-top:16px">${button(a.shopUrl, "Volver a la tienda")}</p>`),
   );
 }
@@ -183,9 +189,9 @@ export async function sendExpiredEmail(a: { to: string; orderNumber: string; sho
 export async function sendAbandonedCartEmail(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {
   await send(
     a.to,
-    "Dejaste algo en tu carrito 👟",
-    shell("Tu par te está esperando",
-      `<p>Hola${a.name ? ` ${a.name}` : ""}, guardamos lo que agregaste. Cada Blade se hace a mano sobre pedido — termina tu compra antes de que se agote tu talla.</p>
+    "Dejaste algo en tu carrito",
+    shell(`Tu ${ITEM} te está esperando`,
+      `<p>Hola${a.name ? ` ${a.name}` : ""}, guardamos lo que agregaste. Termina tu compra antes de que se agote.</p>
        ${summary(a.lines)}
        <p style="margin-top:18px">${button(a.cartUrl, "Terminar mi compra")}</p>`),
   );

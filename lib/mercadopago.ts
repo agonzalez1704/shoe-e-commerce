@@ -1,5 +1,15 @@
 import "server-only";
 
+import { activeBrand } from "@/lib/brand";
+
+// The name a buyer sees on the checkout line and on the bank statement. It was
+// hardcoded to "CALZADO BLADE", so a second store's customers would have been
+// charged under another company's name — a chargeback waiting to happen.
+// MercadoPago caps statement_descriptor at 16 chars and rejects accents.
+const DESCRIPTOR = activeBrand.name
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .toUpperCase().slice(0, 16);
+
 // Minimal MercadoPago REST wrapper for Checkout Pro (hosted redirect). Amounts
 // in centavos internally; MP wants pesos. Docs: https://www.mercadopago.com.mx/developers
 const BASE = "https://api.mercadopago.com";
@@ -48,7 +58,7 @@ export async function createMpPreference(a: PreferenceArgs): Promise<MpPreferenc
     body: JSON.stringify({
       items: [
         {
-          title: `Calzado Blade · Pedido ${a.orderNumber}`,
+          title: `${activeBrand.name} · Pedido ${a.orderNumber}`,
           description: a.itemsSummary,
           quantity: 1,
           unit_price: a.amountCents / 100,
@@ -60,7 +70,7 @@ export async function createMpPreference(a: PreferenceArgs): Promise<MpPreferenc
       back_urls: { success: a.successUrl, failure: a.failureUrl, pending: a.successUrl },
       auto_return: "approved",
       notification_url: a.notificationUrl,
-      statement_descriptor: "CALZADO BLADE",
+      statement_descriptor: DESCRIPTOR,
     }),
   });
 }

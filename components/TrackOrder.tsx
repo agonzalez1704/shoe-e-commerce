@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { CheckCircle, Circle } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { lookupOrder, type TrackedOrder } from "@/app/rastrear/actions";
+import { activeBrand } from "@/lib/brand";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
+const ITEMS_ORDERED = `${activeBrand.copy?.itemPlural ?? "Productos"} pedidos`.replace(/^./, (c) => c.toUpperCase());
 const STEPS = [
   { key: "pending", label: "Pendiente de pago" },
   { key: "paid", label: "Pagado · en preparación" },
@@ -41,7 +43,9 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
   return (
     <div className="mx-auto max-w-lg">
       <form onSubmit={onSubmit} className="space-y-3">
-        <input name="o" defaultValue={defaultOrder} placeholder="Número de pedido (BL-001234)" required className={INPUT} />
+        <input name="o" defaultValue={defaultOrder} // Sin ejemplo: el prefijo vive en la BD (settings.order_prefix) y ponerlo
+// también aquí sería una segunda fuente de verdad que se desincroniza.
+placeholder="Número de pedido" required className={INPUT} />
         <input name="e" type="email" placeholder="Correo del pedido" required className={INPUT} />
         {error && <p className="text-sm text-accent">{error}</p>}
         <button
@@ -91,7 +95,7 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
           )}
 
           <div className="mt-4 border-t border-border pt-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">Pares pedidos</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{ITEMS_ORDERED}</p>
             <ul className="mt-1.5 space-y-1 text-sm text-muted">
               {result.items.map((it, i) => (
                 <li key={i} className="capitalize">{it.name} × {it.quantity}</li>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getProduct, listRelatedProducts } from "@/lib/catalog";
+import { activeBrand } from "@/lib/brand";
+import { EditorialFeature } from "@/components/EditorialFeature";
 import { getProductReviews } from "@/lib/reviews";
 import { ProductDetail } from "@/components/ProductDetail";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -26,7 +28,7 @@ export async function generateMetadata({
 
   const desc =
     product.description?.slice(0, 155) ??
-    `${product.name}${product.brand ? ` de ${product.brand}` : ""}. Calzado hecho sobre pedido, envío a todo México.`;
+    `${product.name}${product.brand ? ` de ${product.brand}` : ""}.${activeBrand.copy?.seoLine ? ` ${activeBrand.copy.seoLine}` : ""}`;
   const url = `${SITE_URL}/products/${slug}`;
 
   // Pre-rendered 1200x630 JPEG share card. The product photos themselves are
@@ -89,6 +91,11 @@ export default async function ProductPage({
       itemCondition: "https://schema.org/NewCondition",
     },
   };
+  // First matching category wins. A product in two categories would otherwise
+  // stack both sets of bands and read as a page that repeats itself.
+  const byCategory = activeBrand.pdp?.categoryFeatures ?? {};
+  const categoryFeatures = product.categorySlugs.map((s) => byCategory[s]).find(Boolean) ?? [];
+
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -110,12 +117,21 @@ export default async function ProductPage({
 
       <ProductDetail product={product} initialColor={color} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
 
+      {/* Editorial bands for whichever category this product belongs to. Nothing
+          renders until the brand supplies the art, so a store without it just
+          ends at the buy box. */}
+      {categoryFeatures.map((f, i) => (
+        <EditorialFeature key={`${f.eyebrow}-${i}`} f={f} />
+      ))}
+
       {related.length > 0 && (
         <section className="mt-16 border-t border-border pt-10">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Combínalo con</h2>
-              <p className="mt-1 text-sm text-muted">Otros modelos hechos a mano, mismo envío gratis.</p>
+              {activeBrand.copy?.relatedNote && (
+                <p className="mt-1 text-sm text-muted">{activeBrand.copy.relatedNote}</p>
+              )}
             </div>
             <Link href="/products" className="text-sm font-medium text-accent hover:underline">Ver todo</Link>
           </div>
