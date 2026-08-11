@@ -43,7 +43,9 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
   return (
     <div className="mx-auto max-w-lg">
       <form onSubmit={onSubmit} className="space-y-3">
-        <input name="o" defaultValue={defaultOrder} placeholder="Número de pedido (BL-001234)" required className={INPUT} />
+        <input name="o" defaultValue={defaultOrder} // Sin ejemplo: el prefijo vive en la BD (settings.order_prefix) y ponerlo
+// también aquí sería una segunda fuente de verdad que se desincroniza.
+placeholder="Número de pedido" required className={INPUT} />
         <input name="e" type="email" placeholder="Correo del pedido" required className={INPUT} />
         {error && <p className="text-sm text-accent">{error}</p>}
         <button

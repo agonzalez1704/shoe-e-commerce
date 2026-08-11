@@ -28,7 +28,7 @@ const REGLAS = [
   activeBrand.copy?.paymentNote &&
     `${activeBrand.copy.paymentNote} El pago en efectivo es un voucher que se paga en ${CASH_CHAINS_SHORT} ` +
       "y más de 20,000 tiendas; NO se acepta OXXO.",
-  "Estado de un pedido: pide el número (BL-XXXXXX) y el correo, luego usa estado_pedido.",
+  "Estado de un pedido: pide el número de pedido tal como viene en su correo de confirmación, y el correo; luego usa estado_pedido.",
   "Si el cliente pide un reclamo, cambio/devolución, factura, o algo que no puedas resolver, usa pasar_a_asesor con el motivo y avísale que un asesor lo atenderá.",
 ].filter(Boolean);
 
@@ -50,7 +50,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "estado_pedido",
-      description: "Consulta el estado de un pedido por número (BL-XXXXXX) y correo.",
+      description: "Consulta el estado de un pedido por número de pedido y correo.",
       parameters: {
         type: "object",
         properties: { order_number: { type: "string" }, email: { type: "string" } },
