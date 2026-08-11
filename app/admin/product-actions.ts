@@ -31,6 +31,7 @@ export type ProductInput = {
   status: "draft" | "active" | "archived";
   made_to_order: boolean;
   featured: boolean;
+  attributes: Record<string, string>;
   images: ProductImageInput[];
   variants: VariantInput[];
 };
@@ -121,6 +122,14 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
     status: input.status,
     made_to_order: input.made_to_order,
     featured: input.featured,
+    // Specs were write-only from SQL until now: the form never sent them, so
+    // battery sat at 38% coverage with no way to raise it from the admin.
+    // Blank keys and blank values are dropped rather than stored as "".
+    attributes: Object.fromEntries(
+      Object.entries(input.attributes)
+        .map(([k, v]) => [k.trim(), String(v).trim()])
+        .filter(([k, v]) => k && v),
+    ),
   };
 
   try {

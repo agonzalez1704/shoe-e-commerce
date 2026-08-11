@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { saveProduct, deleteProduct, type ProductInput, type VariantInput, type ProductImageInput } from "@/app/admin/product-actions";
 import { ImageUploader } from "@/components/ImageUploader";
+import { SPEC_LABELS, specLabel } from "@/lib/specs";
 
 type Brand = { id: string; name: string };
 
@@ -16,6 +17,12 @@ const toCents = (p: string) => (p.trim() === "" ? null : Math.round(parseFloat(p
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
+
+// Specs are a key/value repeater, not a fixed set of inputs: the vocabulary in
+// SPEC_LABELS is a set of *known* keys, and the storefront already humanises an
+// unknown one, so a new category can add a spec without a code change.
+type SpecRow = { key: string; value: string };
+const blankSpec = (): SpecRow => ({ key: "", value: "" });
 
 const blankVariant = (): VariantRow => ({
   size_value: "", size_system: "MX", width: "medium", color: "", sku: "", price: "", qty_on_hand: 0,
@@ -38,6 +45,9 @@ export function ProductForm({
   const [basePrice, setBasePrice] = useState(pesos(initial?.base_price_cents ?? null));
   const [description, setDescription] = useState(initial?.description ?? "");
   const [images, setImages] = useState<ProductImageInput[]>(initial?.images ?? []);
+  const [specs, setSpecs] = useState<SpecRow[]>(
+    Object.entries(initial?.attributes ?? {}).map(([key, value]) => ({ key, value: String(value) })),
+  );
   const [variants, setVariants] = useState<VariantRow[]>(
     initial?.variants.map((v) => ({ ...v, price: pesos(v.price_cents) })) ?? [blankVariant()],
   );
@@ -70,6 +80,7 @@ export function ProductForm({
       status,
       made_to_order: madeToOrder,
       featured,
+      attributes: Object.fromEntries(specs.map((r) => [r.key, r.value])),
       images: images.filter((i) => i.url.trim()).map((i) => ({ url: i.url.trim(), color: i.color })),
       variants: variants.map((v) => ({
         id: v.id,
@@ -140,6 +151,59 @@ export function ProductForm({
             <span className="block text-xs text-muted">Aparece en la portada mientras la tienda todavía no tiene ventas para calcular los más vendidos.</span>
           </span>
         </label>
+      </section>
+
+      {/* specs */}
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">Especificaciones</h2>
+          <button onClick={() => setSpecs((r) => [...r, blankSpec()])} className="inline-flex items-center gap-1 text-sm text-accent">
+            <Plus size={14} weight="bold" /> Agregar
+          </button>
+        </div>
+        <p className="mb-3 text-xs text-muted">
+          Las cuatro primeras conocidas (motor, velocidad, autonomía, batería) salen en grande arriba del precio;
+          el resto van en la tabla de la ficha. Un producto con menos de dos no muestra el bloque.
+        </p>
+        {specs.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted">
+            Sin especificaciones.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {specs.map((r, i) => (
+              <div key={i} className="flex gap-2">
+                {/* datalist, not a select: an unknown key is valid and the
+                    storefront humanises it, so the list suggests without limiting */}
+                <input
+                  value={r.key}
+                  onChange={(e) => setSpecs((rs) => rs.map((x, idx) => (idx === i ? { ...x, key: e.target.value } : x)))}
+                  list="spec-keys"
+                  placeholder="clave"
+                  className={`${INPUT} w-1/2`}
+                />
+                <input
+                  value={r.value}
+                  onChange={(e) => setSpecs((rs) => rs.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
+                  placeholder={r.key && SPEC_LABELS[r.key] ? specLabel(r.key) : "valor"}
+                  className={`${INPUT} w-1/2`}
+                />
+                <button
+                  onClick={() => setSpecs((rs) => rs.filter((_, idx) => idx !== i))}
+                  aria-label="Quitar especificación"
+                  className="shrink-0 rounded-lg px-2 text-muted hover:text-accent"
+                >
+                  <Trash size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <datalist id="spec-keys">
+          {Object.keys(SPEC_LABELS).map((k) => (
+            <option key={k} value={k}>{SPEC_LABELS[k]}</option>
+          ))}
+        </datalist>
       </section>
 
       {/* variants */}

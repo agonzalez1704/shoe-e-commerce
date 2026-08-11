@@ -8,6 +8,7 @@ import { activeBrand } from "@/lib/brand";
 import { formatCents } from "@/lib/money";
 import { comboOf, precioConPromo } from "@/lib/pricing";
 import { PdpInfo } from "@/components/PdpInfo";
+import { SpecHighlights } from "@/components/SpecHighlights";
 import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
@@ -94,9 +95,22 @@ export function ProductDetail({
   return (
     <div className="grid gap-10 md:grid-cols-2 md:gap-14">
       <div className="grid grid-cols-2 gap-3 self-start md:sticky md:top-24">
-        {hero && (
+        {hero ? (
           <div className="col-span-2 aspect-square overflow-hidden rounded-2xl border border-border bg-elevated">
-            <ZoomImage src={hero.url} alt={hero.alt ?? product.name} priority onClick={() => setLightbox(0)} />
+            {/* One photo and nothing else usually means it is the supplier's
+                poster or a warehouse shot, not a styled square. Fit it whole
+                instead of cropping; a real gallery keeps the tighter crop. */}
+            <ZoomImage
+              src={hero.url}
+              alt={hero.alt ?? product.name}
+              priority
+              fit={gallery.length === 1 ? "contain" : "cover"}
+              onClick={() => setLightbox(0)}
+            />
+          </div>
+        ) : (
+          <div className="col-span-2 grid aspect-square place-items-center rounded-2xl border border-border bg-elevated text-sm text-muted">
+            Sin foto por ahora
           </div>
         )}
         {rest.map((img, i) => (
@@ -147,8 +161,10 @@ export function ProductDetail({
         </p>
 
         {/* value props (trust row) */}
+        {/* The count is per brand now, so an odd one out would sit alone in a
+            half-width tile; it stretches across instead. */}
         {VALUE_PROPS.length > 0 && (
-          <ul className="mt-4 grid grid-cols-2 gap-2">
+          <ul className="mt-4 grid grid-cols-2 gap-2 [&>li:last-child:nth-child(odd)]:col-span-2">
             {VALUE_PROPS.map(({ icon: k, label }) => {
               const Icon = ICONS[k] ?? ShieldCheck;
               return (
@@ -160,6 +176,8 @@ export function ProductDetail({
             })}
           </ul>
         )}
+
+        <SpecHighlights attributes={product.attributes} />
 
         {combo && (
           <div className="mt-6 rounded-2xl border border-accent/30 bg-accent-soft/60 p-4">

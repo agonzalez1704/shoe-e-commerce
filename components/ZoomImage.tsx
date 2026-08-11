@@ -9,11 +9,16 @@ export function ZoomImage({
   alt,
   priority,
   onClick,
+  // `contain` for a product whose only photo is a poster or a warehouse shot:
+  // cropping it to a square eats the edges of one and centres the other on
+  // nothing. Catalogue photography stays on `cover`.
+  fit = "cover",
 }: {
   src: string;
   alt: string;
   priority?: boolean;
   onClick?: () => void;
+  fit?: "cover" | "contain";
 }) {
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -36,7 +41,7 @@ export function ZoomImage({
         height={800}
         priority={priority}
         sizes="(max-width: 768px) 100vw, 50vw"
-        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.9]"
+        className={`h-full w-full transition-transform duration-300 ease-out group-hover:scale-[1.9] ${fit === "contain" ? "object-contain" : "object-cover"}`}
       />
     </div>
   );

@@ -1,39 +1,6 @@
 import { CaretDown, Truck, Ruler, Leaf, Gauge } from "@phosphor-icons/react/dist/ssr";
 import { activeBrand } from "@/lib/brand";
-
-// Spec keys are stored as they are authored (motor_w, autonomia_km). Known ones
-// get a proper label and unit; anything else is humanised rather than dropped,
-// so a new category can add specs without a code change.
-const SPEC_LABELS: Record<string, string> = {
-  motor_w: "Motor",
-  velocidad_max_kmh: "Velocidad máxima",
-  autonomia_km: "Autonomía",
-  bateria: "Batería",
-  capacidad_kg: "Capacidad de carga",
-  llanta_pulgadas: "Llantas",
-  peso_kg: "Peso",
-  plegable: "Plegable",
-  tiempo_carga_h: "Tiempo de carga",
-  frenos: "Frenos",
-};
-const SPEC_UNITS: Record<string, string> = {
-  motor_w: "W",
-  velocidad_max_kmh: "km/h",
-  autonomia_km: "km",
-  capacidad_kg: "kg",
-  llanta_pulgadas: '"',
-  peso_kg: "kg",
-  tiempo_carga_h: "h",
-};
-
-const specLabel = (k: string) =>
-  SPEC_LABELS[k] ?? k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
-
-function specValue(v: string | number | boolean, key = "") {
-  if (typeof v === "boolean") return v ? "Sí" : "No";
-  const unit = SPEC_UNITS[key];
-  return unit ? `${v} ${unit}`.replace(' "', '"') : String(v);
-}
+import { specLabel, specValue, sortedSpecs } from "@/lib/specs";
 
 function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string; children: React.ReactNode }) {
   return (
@@ -70,13 +37,7 @@ export function PdpInfo({
   madeToOrder?: boolean;
   attributes?: Record<string, string | number | boolean>;
 }) {
-  // JSONB gives no key order, so the table would shuffle between products.
-  // Known specs follow SPEC_LABELS (headline figures first); the rest trail it.
-  const order = Object.keys(SPEC_LABELS);
-  const rank = (k: string) => (order.indexOf(k) === -1 ? order.length : order.indexOf(k));
-  const specs = Object.entries(attributes)
-    .filter(([, v]) => v !== null && v !== "")
-    .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+  const specs = sortedSpecs(attributes);
   const pdp = activeBrand.pdp;
   // The lead-time and size-exchange lines only apply to the kind of product they
   // describe; the rest are brand-wide. Order matches what shipped before.
