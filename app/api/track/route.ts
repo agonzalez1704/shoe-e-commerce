@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const type = body.type === "click" ? "click" : body.type === "pageview" ? "pageview" : null;
+  const ALLOWED = ["click", "pageview", "checkout"] as const;
+  const type = ALLOWED.find((t) => t === body.type) ?? null;
   const path = str(body.path, 300);
   const sessionId = str(body.sid, 60);
   if (!type || !path || !sessionId) return NextResponse.json({ ok: false }, { status: 400 });

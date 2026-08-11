@@ -55,6 +55,14 @@ function send(payload: Record<string, unknown>) {
   }
 }
 
+// Checkout instrumentation. Exported so the form can report where a shopper
+// gives up: `start`, `method:card`, `invalid:neighborhood`, `submit`,
+// `error:…`, `abandon:city`. sendBeacon keeps the abandon event alive past
+// unload, which is the whole point — that is the one nothing else records.
+export function trackCheckout(step: string) {
+  send({ type: "checkout", path: "/checkout", target: step.slice(0, 60) });
+}
+
 export function AnalyticsBeacon() {
   const pathname = usePathname();
 

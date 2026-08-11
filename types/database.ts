@@ -1665,6 +1665,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      checkout_dropoff: {
+        Args: { p_days?: number }
+        Returns: {
+          eventos: number
+          paso: string
+          sesiones: number
+        }[]
+      }
       checkout_funnel: {
         Args: { p_desde: string }
         Returns: {

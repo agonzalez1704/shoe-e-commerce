@@ -13,6 +13,7 @@ import type { CartLine } from "@/app/cart/actions";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { trackMeta } from "@/components/MetaPixel";
+import { trackCheckout } from "@/components/AnalyticsBeacon";
 import { metaContentId } from "@/lib/meta-content";
 import { CASH_CHAINS } from "@/lib/payment-method";
 
@@ -154,6 +155,48 @@ export function CheckoutForm({
   // the page instead of redirecting). A ref blocks the second call immediately.
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The 49 who leave without submitting are the biggest loss and the only one
+  // that records nothing today: no order, no payment, no error. Report the last
+  // field they touched and how many required ones were still empty, once per
+  // visit, on the way out. sendBeacon survives unload; a fetch would not.
+  const lastFieldRef = useRef<string>("ninguno");
+  const doneRef = useRef(false);
+  useEffect(() => {
+    trackCheckout("start");
+    const remember = (e: Event) => {
+      const t = e.target as HTMLInputElement | null;
+      if (t?.name) lastFieldRef.current = t.name;
+    };
+    const onLeave = () => {
+      if (doneRef.current || document.visibilityState !== "hidden") return;
+      doneRef.current = true;
+      const form = formRef.current;
+      const empty = form
+        ? [...form.querySelectorAll<HTMLInputElement>("input[required]")].filter((i) => !i.value.trim()).length
+        : -1;
+      trackCheckout(`abandon:${lastFieldRef.current}:faltaban${empty}`);
+    };
+    // `invalid` no burbujea y el navegador bloquea el submit antes de que
+    // corra onSubmit, así que este es el único punto donde se ve qué campo
+    // detuvo a la persona. Sólo el primero por intento: los demás son ruido.
+    let reportedAt = 0;
+    const onInvalid = (e: Event) => {
+      const t = e.target as HTMLInputElement | null;
+      const now = Date.now();
+      if (!t?.name || now - reportedAt < 400) return;
+      reportedAt = now;
+      trackCheckout(`invalid:${t.name}`);
+    };
+    document.addEventListener("invalid", onInvalid, true);
+    document.addEventListener("focusin", remember);
+    document.addEventListener("visibilitychange", onLeave);
+    return () => {
+      document.removeEventListener("invalid", onInvalid, true);
+      document.removeEventListener("focusin", remember);
+      document.removeEventListener("visibilitychange", onLeave);
+    };
+  }, []);
   const [result, setResult] = useState<CheckoutResult | null>(null);
 
   // controlled card state drives the react-credit-cards-2 live preview
@@ -251,11 +294,13 @@ export function CheckoutForm({
     // Point at the offending field instead of just refusing to continue: buyers
     // filled everything they could see (typing the colonia inside the street
     // line, say) and had no way to tell which required field was still empty.
-    if (!form.reportValidity()) return;
+    if (!form.reportValidity()) return;   // el evento `invalid` ya lo reportó
     if (method === "card") {
       const bad = cardError();
-      if (bad) { setError(bad); return; }
+      if (bad) { setError(bad); trackCheckout("invalid:tarjeta"); return; }
     }
+    trackCheckout(`submit:${method}`);
+    doneRef.current = true;   // enviado: lo que siga no es abandono
 
     submittingRef.current = true;
     setLoading(true);
@@ -294,6 +339,7 @@ export function CheckoutForm({
       const res = await checkout(input);
       if ("error" in res) {
         setError(res.error);
+        trackCheckout("error:servidor");
         return;
       }
       // Meta: only a card that cleared right now is a real purchase. Cash, SPEI
@@ -318,6 +364,7 @@ export function CheckoutForm({
       setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : "el pago falló");
+      trackCheckout("error:excepcion");
     } finally {
       setLoading(false);
       submittingRef.current = false;
