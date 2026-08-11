@@ -69,7 +69,19 @@ export function SiteHeader({
           {logo}
         </div>
         <div className="flex items-center gap-1">
-          {has ? (
+          {/* Tienda es un destino, no un contenedor: llevaba dentro las
+              categorías y para ver todo el catálogo había que abrir un menú.
+              Ahora es un enlace directo y las categorías tienen el suyo. */}
+          <Link
+            href="/products"
+            // En móvil sobra: la hamburguesa ya lleva "Toda la tienda", y
+            // ponerlo también en la barra parte el logo en dos líneas. Sin
+            // categorías no hay hamburguesa, así que ahí sí tiene que verse.
+            className={`rounded-full px-3 py-2 text-sm text-muted transition-colors hover:text-text ${has ? "hidden md:block" : ""}`}
+          >
+            Tienda
+          </Link>
+          {has && (
             <div className="relative hidden md:block">
               <button
                 type="button"
@@ -78,7 +90,7 @@ export function SiteHeader({
                 aria-controls="nav-categorias-md"
                 className="flex items-center gap-1 rounded-full px-3 py-2 text-sm text-muted transition-colors hover:text-text"
               >
-                Tienda
+                Categorías
                 <CaretDown size={13} weight="bold" className={open ? "rotate-180 transition-transform" : "transition-transform"} />
               </button>
               {/* click to open, not hover: a hover menu is a dead end on touch
@@ -88,17 +100,12 @@ export function SiteHeader({
                   id="nav-categorias-md"
                   className="absolute right-0 top-full mt-1 min-w-56 rounded-2xl border border-border bg-surface p-1.5 shadow-[var(--shadow-md)]"
                 >
-                  <Row href="/products" label="Ver todo" />
                   {categories.map((c) => (
                     <Row key={c.slug} href={`/categoria/${c.slug}`} label={c.name} count={c.count} />
                   ))}
                 </div>
               )}
             </div>
-          ) : (
-            <Link href="/products" className="rounded-full px-3 py-2 text-sm text-muted transition-colors hover:text-text">
-              Tienda
-            </Link>
           )}
           {actions}
         </div>
@@ -109,11 +116,14 @@ export function SiteHeader({
       {has && (
         <div id="nav-categorias" hidden={!open} className="border-t border-border bg-bg md:hidden">
           <div className="mx-auto max-w-6xl px-2 py-2">
-            <Row href="/products" label="Ver todo" />
+            <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              Categorías
+            </p>
             {categories.map((c) => (
               <Row key={c.slug} href={`/categoria/${c.slug}`} label={c.name} count={c.count} />
             ))}
             <div className="my-1.5 border-t border-border" />
+            <Row href="/products" label="Toda la tienda" />
             <Row href="/rastrear" label="Rastrear pedido" />
             <Row href="/cuenta" label="Mi cuenta" />
           </div>
