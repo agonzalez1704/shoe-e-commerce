@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { LegalPending, shippingConfigured } from "@/components/LegalGate";
 import { activeBrand } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -9,6 +10,18 @@ export const metadata: Metadata = {
 };
 
 export default function EnviosPage() {
+  // El cuerpo de abajo promete envío gratis y fabricación sobre pedido. Sin
+  // términos propios, una segunda tienda publicaba esa promesa como suya.
+  if (!shippingConfigured()) {
+    return (
+      <LegalPending
+        page="Política de Envíos"
+        heading="Falta configurar la política de envíos"
+        body="Esta página promete cobertura, costo y tiempos de entrega. La marca no los tiene definidos, así que no se publican los de otra tienda."
+        field="pdp.shipping"
+      />
+    );
+  }
   return (
     <LegalPage title="Política de Envíos" updated="16 de julio de 2026">
       <h2>Cobertura y costo</h2>

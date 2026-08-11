@@ -142,7 +142,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </nav>
               <nav className="flex flex-col gap-2">
                 <p className="font-medium text-text">Tienda</p>
-                <Link href="/products" className="text-muted transition-colors hover:text-text">Todo el calzado</Link>
+                <Link href="/products" className="text-muted transition-colors hover:text-text">Toda la tienda</Link>
                 <Link href="/products?gender=mens" className="text-muted transition-colors hover:text-text">Hombre</Link>
                 <Link href="/products?gender=womens" className="text-muted transition-colors hover:text-text">Mujer</Link>
                 <Link href="/rastrear" className="text-muted transition-colors hover:text-text">Rastrear pedido</Link>

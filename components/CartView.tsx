@@ -8,19 +8,24 @@ import { Trash, ShoppingBag, ArrowsClockwise, Truck, Tag } from "@phosphor-icons
 import { formatCents } from "@/lib/money";
 import { updateCartItem, removeFromCart, type CartSummary } from "@/app/cart/actions";
 import { notifyCartChanged } from "@/components/CartBadge";
+import { activeBrand } from "@/lib/brand";
+
+const COPY = activeBrand.copy ?? {};
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
+// Both lines are brand promises, not cart mechanics. A store that has not
+// settled its exchange policy or its lead time shows neither, rather than
+// inheriting a shoemaker's.
 function MadeToOrderNotice() {
+  const { exchangeLine, deliveryLine } = COPY;
+  if (!exchangeLine) return null;
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3.5">
       <ArrowsClockwise size={22} weight="bold" className="mt-0.5 shrink-0 text-accent" />
       <div className="text-sm">
-        <p className="font-medium">¿No te queda? Te lo cambiamos</p>
-        <p className="mt-0.5 text-muted">
-          Si tu talla no queda como esperabas, el primer cambio es sin costo. Envío gratis y entrega en{" "}
-          <span className="font-medium text-text">4 a 7 días hábiles</span> a todo México.
-        </p>
+        <p className="font-medium">{activeBrand.pdp?.reassurance?.title ?? "Cambios y devoluciones"}</p>
+        <p className="mt-0.5 text-muted">{[exchangeLine, deliveryLine].filter(Boolean).join(" ")}</p>
       </div>
     </div>
   );
@@ -172,10 +177,12 @@ export function CartView({ initial }: { initial: CartSummary }) {
             <span className="nums text-xl font-semibold">{mxn(initial.totalCents)}</span>
           </div>
 
-          <p className="flex items-start gap-1.5 rounded-lg bg-elevated px-3 py-2 text-xs text-muted">
-            <Truck size={14} className="mt-0.5 shrink-0" />
-            Envío gratis · entrega en 4 a 7 días hábiles a todo México.
-          </p>
+          {COPY.deliveryLine && (
+            <p className="flex items-start gap-1.5 rounded-lg bg-elevated px-3 py-2 text-xs text-muted">
+              <Truck size={14} className="mt-0.5 shrink-0" />
+              {COPY.deliveryLine}
+            </p>
+          )}
 
           <Link
             href="/checkout"

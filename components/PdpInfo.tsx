@@ -1,4 +1,5 @@
 import { CaretDown, Truck, Ruler, Leaf, Gauge } from "@phosphor-icons/react/dist/ssr";
+import { activeBrand } from "@/lib/brand";
 
 // Spec keys are stored as they are authored (motor_w, autonomia_km). Known ones
 // get a proper label and unit; anything else is humanised rather than dropped,
@@ -57,10 +58,19 @@ function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ 
   );
 }
 
-// `sized` / `madeToOrder` come from the product because these blocks are shoe
-// copy: a size chart in MX/cm and a made-to-order lead time mean nothing on a
-// scooter. Gating them is the stopgap — the real fix is moving this copy into
-// BrandConfig alongside the homepage blocks.
+// Emphasis inside a config string: *gratis* → <span class="text-text">gratis</span>.
+// The bullets carried inline JSX before they moved to BrandConfig, and dropping
+// the highlight would have quietly restyled Blade's live PDP.
+function em(s: string) {
+  return s.split(/\*([^*]+)\*/g).map((part, i) =>
+    i % 2 ? <span key={i} className="text-text">{part}</span> : part,
+  );
+}
+
+// `sized` / `madeToOrder` stay product-level: a size chart in MX/cm and a
+// made-to-order lead time are facts about the item, not about the store. The
+// brand-level copy around them now comes from BrandConfig, and a block whose
+// copy is unset does not render at all.
 export function PdpInfo({
   sized = true,
   madeToOrder = true,
@@ -77,18 +87,24 @@ export function PdpInfo({
   const specs = Object.entries(attributes)
     .filter(([, v]) => v !== null && v !== "")
     .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+  const pdp = activeBrand.pdp;
+  // The lead-time and size-exchange lines only apply to the kind of product they
+  // describe; the rest are brand-wide. Order matches what shipped before.
+  const bullets = [
+    pdp?.shipping?.[0],
+    madeToOrder ? pdp?.shippingMadeToOrder : null,
+    sized ? pdp?.shippingSized : null,
+    ...(pdp?.shipping?.slice(1) ?? []),
+  ].filter(Boolean) as string[];
   return (
     <div className="mt-8" id="size-guide">
-      <Section icon={Truck} title="Envío y devoluciones">
-        <ul className="space-y-1.5">
-          <li>Envío <span className="text-text">gratis</span> a todo México.</li>
-          {madeToOrder && (
-            <li>Hecho sobre pedido: se fabrica y entrega en <span className="text-text">4 a 7 días hábiles</span>.</li>
-          )}
-          {sized && <li>Primer cambio de talla <span className="text-text">sin costo</span>.</li>}
-          <li>Devoluciones dentro de los 30 días posteriores a la entrega.</li>
-        </ul>
-      </Section>
+      {bullets.length > 0 && (
+        <Section icon={Truck} title="Envío y devoluciones">
+          <ul className="space-y-1.5">
+            {bullets.map((b) => <li key={b}>{em(b)}</li>)}
+          </ul>
+        </Section>
+      )}
 
       {sized && (
       <Section icon={Ruler} title="Guía de tallas">
@@ -124,16 +140,13 @@ export function PdpInfo({
             ))}
           </dl>
         </Section>
-      ) : (
-        <Section icon={Leaf} title="Materiales y cuidado">
+      ) : pdp?.care ? (
+        <Section icon={Leaf} title={pdp.care.title}>
           <ul className="space-y-1.5">
-            <li>Piel <span className="text-text">genuina</span>, hecha a mano.</li>
-            <li>Suela Phylon ultra ligera.</li>
-            <li>Limpia con un paño suave húmedo; evita sol directo y calor.</li>
-            <li>Usa horma y guarda en lugar fresco y seco para conservar la forma.</li>
+            {pdp.care.items.map((t) => <li key={t}>{em(t)}</li>)}
           </ul>
         </Section>
-      )}
+      ) : null}
     </div>
   );
 }

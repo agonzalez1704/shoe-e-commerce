@@ -52,10 +52,63 @@ export type Warehouse = {
   state: string; city: string; neighborhood: string; postalCode: string;
 };
 
+// An icon row. `icon` is a KEY, not a component: BrandConfig is imported by
+// server and client files alike, so it has to stay plain data. Each consumer
+// resolves the key against its own local map, from its own Phosphor entry point
+// (`/dist/ssr` on the server, the client entry in "use client" files).
+export type IconRow = { icon: string; title: string; sub?: string };
+
 export type HomeConfig = {
   hero: { image: string; eyebrow: string; titleTop: string; titleBottom: string; body: string };
   features: HomeFeature[];
   editorial: { img: string; name: string; href: string }[];
+  editorialTitle?: string;
+  editorialBody?: string;
+  benefits?: IconRow[];
+  howItWorks?: { title: string; sub: string; steps: IconRow[] };
+  finalCta?: { title: string; body: string; ctaLabel: string; ctaHref: string };
+};
+
+// PDP copy. Every field optional, and absent means the block does not render —
+// a store that has not settled its shipping terms shows no shipping promise,
+// rather than inheriting someone else's. This is what was publishing "Piel
+// genuina · Primer cambio sin costo" on a scooter.
+export type PdpConfig = {
+  valueProps?: { icon: string; label: string }[];
+  reassurance?: { title: string; body: string };
+  shipping?: string[];                       // "Envío y devoluciones" bullets
+  // Two bullets that depend on the product, not the brand: a lead time only
+  // applies to made-to-order items, a size-exchange promise only to sized ones.
+  shippingMadeToOrder?: string;
+  shippingSized?: string;
+  care?: { title: string; items: string[] }; // shown when a product has no specs
+};
+
+// The handful of phrases that recur across the cart, the checkout, the order
+// pages and the transactional emails. They are the same two claims repeated —
+// what the store sells, and how fast it arrives — and both were written for
+// shoes, so a scooter buyer was told his order was "hecho a mano sobre pedido"
+// on the thank-you page and again by email. Unset means the line is omitted.
+export type CopyConfig = {
+  itemSingular?: string;    // "par" → "unidad"; used in headings and counters
+  itemPlural?: string;
+  deliveryLine?: string;    // one-line delivery promise, cart + checkout
+  madeToOrderLine?: string; // lead time for made-to-order items, order + email
+  exchangeLine?: string;    // the cart's exchange reassurance
+  relatedNote?: string;     // subtitle over the related-products strip
+  seoLine?: string;         // appended to a product's meta description
+};
+
+// The Meta Commerce feed. Same problem as the PDP: every one of these fields is
+// a claim made to Facebook about what is in the box.
+export type CatalogFeedConfig = {
+  titleSuffix?: string;      // appended after "<name> <color>"
+  description?: string;      // fallback for products with no description; {name} is replaced
+  googleCategory?: string;
+  material?: string;
+  ageGroup?: string;
+  shipping?: string;         // Meta's "MX::Label:0.00 MXN" shipping string
+  shippingWeight?: string;
 };
 
 export type BrandConfig = {
@@ -69,6 +122,9 @@ export type BrandConfig = {
   legal: LegalEntity;
   warehouse?: Warehouse;   // required to quote shipping labels
   home?: HomeConfig;     // storefront editorial; falls back to a bare hero
+  pdp?: PdpConfig;       // product-page copy; each block hides when unset
+  copy?: CopyConfig;     // phrases repeated across cart, checkout and email
+  catalogFeed?: CatalogFeedConfig; // Meta Commerce feed claims
   logo?: { src: string; width: number; height: number; alt?: string; invertOnLight?: boolean }; // optional full image (mark+wordmark); falls back to wordmark
   markSrc?: { src: string; width: number; height: number }; // optional logo-mark IMAGE shown before the wordmark text (keeps its own colors in both themes)
   mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
@@ -142,6 +198,76 @@ const BRANDS: Record<string, BrandConfig> = {
         { img: `${BLADE_ASSETS}/londres/londres-lifestyle-1.jpg`, name: "Londres", href: "/products/londres?color=negro" },
         { img: `${BLADE_ASSETS}/new-jersey/new-jersey-cafe-social-1.png`, name: "New Jersey", href: "/products/new-jersey?color=caf%C3%A9" },
       ],
+      editorialTitle: "Hechos para la vida diaria",
+      editorialBody: "Piel que combina con todo — de la oficina al café. Así se ven en el día a día.",
+      benefits: [
+        { icon: "package", title: "Hecho sobre pedido", sub: "Fabricado a mano para ti" },
+        { icon: "truck", title: "Envío gratis", sub: "Entrega en 4–7 días hábiles" },
+        { icon: "card", title: "Paga como quieras", sub: "Tarjeta, efectivo o Aplazo" },
+        { icon: "pin", title: "Todo México", sub: "Con factura disponible" },
+      ],
+      howItWorks: {
+        title: "Cómo funciona",
+        sub: "Sin inventario muerto. Piel de verdad, hecha a pedido.",
+        steps: [
+          { icon: "pencil", title: "Eliges tu par", sub: "Modelo, color y talla MX 25–30." },
+          { icon: "hammer", title: "Lo fabricamos a mano", sub: "Cada par se hace especialmente para ti." },
+          { icon: "sparkle", title: "Llega en 4–7 días", sub: "Envío gratis a todo México, con factura." },
+        ],
+      },
+      finalCta: {
+        title: "Tu próximo par te está esperando.",
+        body: "Piel, filo y comodidad — hechos a tu medida. Envío gratis a todo México.",
+        ctaLabel: "Ver toda la tienda",
+        ctaHref: "/products",
+      },
+    },
+    pdp: {
+      valueProps: [
+        { icon: "truck", label: "Envío gratis" },
+        { icon: "exchange", label: "Primer cambio sin costo" },
+        { icon: "shield", label: "Garantía 6 meses" },
+        { icon: "hammer", label: "Hecho a mano" },
+      ],
+      reassurance: {
+        title: "¿No te queda? Te lo cambiamos",
+        body: "Si tu talla no queda como esperabas, el primer cambio es sin costo. Piel genuina, envío gratis y entrega en 4-7 días hábiles.",
+      },
+      // *asteriscos* marcan énfasis: el bullet llevaba <span> en línea antes de
+      // moverse aquí, y perderlo habría restilado la PDP viva de Blade.
+      shipping: [
+        "Envío *gratis* a todo México.",
+        "Devoluciones dentro de los 30 días posteriores a la entrega.",
+      ],
+      shippingMadeToOrder: "Hecho sobre pedido: se fabrica y entrega en *4 a 7 días hábiles*.",
+      shippingSized: "Primer cambio de talla *sin costo*.",
+      care: {
+        title: "Materiales y cuidado",
+        items: [
+          "Piel *genuina*, hecha a mano.",
+          "Suela Phylon ultra ligera.",
+          "Limpia con un paño suave húmedo; evita sol directo y calor.",
+          "Usa horma y guarda en lugar fresco y seco para conservar la forma.",
+        ],
+      },
+    },
+    copy: {
+      itemSingular: "par",
+      itemPlural: "pares",
+      deliveryLine: "Envío gratis · entrega en 4 a 7 días hábiles a todo México.",
+      madeToOrderLine: "Tu calzado se fabrica sobre pedido y se envía en 4 a 7 días hábiles.",
+      exchangeLine: "Si tu talla no queda como esperabas, el primer cambio es sin costo.",
+      relatedNote: "Otros modelos hechos a mano, mismo envío gratis.",
+      seoLine: "Calzado hecho sobre pedido, envío a todo México.",
+    },
+    catalogFeed: {
+      titleSuffix: "— Sneaker de piel",
+      description: "{name} en piel genuina. Hecho a mano en México.",
+      googleCategory: "Apparel & Accessories > Shoes",
+      material: "piel genuina",
+      ageGroup: "adult",
+      shipping: "MX::Envío gratis:0.00 MXN",
+      shippingWeight: "1.2 kg",
     },
     tagline: "Filo en cada paso.",
     description:
@@ -188,6 +314,44 @@ const BRANDS: Record<string, BrandConfig> = {
     // muestran un aviso de "pendiente" en vez de inventar un RFC.
     legal: { operator: "", rfc: "", address: "", supportEmail: "ventas@shoesart.com.mx" },
     name: "Shoes Art",
+    // Sin `home.hero`: cae al hero desnudo. Los bloques de abajo sí se definen
+    // porque, sin ellos, esta tienda venía pintando la copy de Blade — "hecho
+    // sobre pedido", "piel genuina" — sobre calzado infantil de temporada.
+    home: {
+      hero: {
+        image: "/hero-moto.jpg",
+        eyebrow: "Nuevas colecciones",
+        titleTop: "La tendencia",
+        titleBottom: "en cada paso.",
+        body: "Calzado infantil y juvenil de moda. Envíos a todo México.",
+      },
+      features: [],
+      editorial: [],
+      benefits: [
+        { icon: "sparkle", title: "Colecciones nuevas", sub: "Cada temporada" },
+        { icon: "truck", title: "Envíos a todo México", sub: "Con guía y rastreo" },
+        { icon: "card", title: "Pago seguro", sub: "En línea" },
+      ],
+      finalCta: {
+        title: "Encuentra su próximo par.",
+        body: "Calzado infantil y juvenil de moda, con envíos a todo México.",
+        ctaLabel: "Ver toda la tienda",
+        ctaHref: "/products",
+      },
+    },
+    pdp: {
+      valueProps: [
+        { icon: "truck", label: "Envíos a todo México" },
+        { icon: "sparkle", label: "Colecciones de temporada" },
+      ],
+      // shipping / reassurance / care sin definir: esta tienda no ha fijado sus
+      // términos, y heredarlos de otra marca es justo lo que se está corrigiendo.
+    },
+    copy: {
+      itemSingular: "par",
+      itemPlural: "pares",
+      seoLine: "Envíos a todo México.",
+    },
     tagline: "La tendencia que marca la pauta en tu estilo.",
     description:
       "Calzado infantil y juvenil de moda. Colecciones comerciales alineadas a la tendencia urbana. Envíos a todo México.",
@@ -238,7 +402,43 @@ const BRANDS: Record<string, BrandConfig> = {
       },
       features: [],
       editorial: [],
+      benefits: [
+        { icon: "shield", title: "Distribuidor autorizado", sub: "Productos originales" },
+        { icon: "truck", title: "Envíos a todo México", sub: "Con guía y rastreo" },
+        { icon: "card", title: "Pago seguro", sub: "En línea, a meses o de contado" },
+        { icon: "lightning", title: "100% eléctrico", sub: "Cero emisiones" },
+      ],
+      finalCta: {
+        title: "Muévete distinto.",
+        body: "Scooters, bicicletas y motos eléctricas. Envíos a todo México.",
+        ctaLabel: "Ver toda la tienda",
+        ctaHref: "/products",
+      },
+      // howItWorks / editorialTitle: sin definir a propósito. No hay tiempos de
+      // entrega ni proceso confirmados por el cliente, y una promesa inventada
+      // en la home es la misma falla que puso "Hecho sobre pedido" en un scooter.
     },
+    pdp: {
+      valueProps: [
+        { icon: "shield", label: "Distribuidor autorizado" },
+        { icon: "truck", label: "Envíos a todo México" },
+        { icon: "lightning", label: "100% eléctrico" },
+      ],
+      // reassurance / shipping / care: vacíos hasta que el cliente entregue sus
+      // términos reales de envío, garantía y devolución. Sin ellos los bloques
+      // no se pintan — es preferible a heredar los de una zapatería.
+    },
+    copy: {
+      itemSingular: "producto",
+      itemPlural: "productos",
+      seoLine: "Envíos a todo México.",
+      // deliveryLine / madeToOrderLine / exchangeLine: sin tiempos ni política
+      // de cambio confirmados. Omitirlos deja el carrito y el checkout sin
+      // promesa, que es lo correcto mientras no exista una.
+    },
+    // catalogFeed sin definir: el feed de Meta no está conectado para esta
+    // tienda, y sin config no emite categoría, material ni peso en vez de
+    // declararle a Facebook que un scooter es un zapato de piel.
     tagline: "Movilidad eléctrica para la ciudad.",
     description:
       "Scooters, bicicletas y motos eléctricas. Distribuidor autorizado. Envíos a todo México.",

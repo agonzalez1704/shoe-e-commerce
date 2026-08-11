@@ -5,6 +5,7 @@ import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getCategory, listProductsByCategory } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
+import { activeBrand } from "@/lib/brand";
 
 export const revalidate = 300;
 
@@ -12,7 +13,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const category = await getCategory(slug);
   if (!category) return { title: "Categoría no encontrada" };
-  const desc = category.description?.slice(0, 155) ?? `Calzado de la categoría ${category.name}. Envío a todo México.`;
+  const desc =
+    category.description?.slice(0, 155) ??
+    `${category.name} en ${activeBrand.name}.${activeBrand.copy?.seoLine ? ` ${activeBrand.copy.seoLine}` : ""}`;
   return {
     title: category.name,
     description: desc,

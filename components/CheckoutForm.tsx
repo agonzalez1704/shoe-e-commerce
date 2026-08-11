@@ -7,6 +7,7 @@ import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
+import { activeBrand } from "@/lib/brand";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
 import { checkout, previewDiscount, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
@@ -428,9 +429,11 @@ export function CheckoutForm({
                 <Field name="region" label="Estado" autoComplete="address-level1" defaultValue={defaults.region} />
                 <Field name="postal" label="C.P." autoComplete="postal-code" inputMode="numeric" maxLength={5} defaultValue={defaults.postal} />
               </div>
-              <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
-                <Truck size={14} /> Envío gratis a todo México en 4–7 días hábiles.
-              </p>
+              {activeBrand.copy?.deliveryLine && (
+                <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
+                  <Truck size={14} /> {activeBrand.copy.deliveryLine}
+                </p>
+              )}
               <label className="flex cursor-pointer items-center gap-2 pt-1 text-sm text-muted">
                 <input
                   type="checkbox"

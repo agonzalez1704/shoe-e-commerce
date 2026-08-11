@@ -4,10 +4,12 @@ import { customerSignOut } from "@/app/cuenta/actions";
 import { AuthForms } from "@/components/AuthForms";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatCents } from "@/lib/money";
+import { activeBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
+const ITEMS_ORDERED = `${activeBrand.copy?.itemPlural ?? "Productos"} pedidos`.replace(/^./, (c) => c.toUpperCase());
 
 export default async function CuentaPage({ searchParams }: { searchParams: Promise<{ error?: string; msg?: string }> }) {
   const { error, msg } = await searchParams;
@@ -76,7 +78,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                   <summary className="text-xs font-medium text-accent">Ver detalle</summary>
                   <div className="mt-2 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">Pares pedidos</p>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">{ITEMS_ORDERED}</p>
                       <ul className="mt-1.5 space-y-0.5 text-muted">
                         {items.map((it, i) => (
                           <li key={i} className="capitalize">{it.product_name} ({it.variant_label}) × {it.quantity}</li>

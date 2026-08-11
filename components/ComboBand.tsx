@@ -4,8 +4,11 @@ import { ArrowRight, Tag } from "@phosphor-icons/react/dist/ssr";
 import { comboOf, comboLabel } from "@/lib/pricing";
 import { formatCents } from "@/lib/money";
 import type { ProductCard } from "@/lib/catalog";
+import { activeBrand } from "@/lib/brand";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
+// "pares" only reads right in a shoe store; a combo is a generic promo.
+const ITEMS = activeBrand.copy?.itemPlural ?? "productos";
 
 // Up to n distinct combo-eligible models (one card per model).
 export function comboPicks(products: ProductCard[], n = 2): ProductCard[] {
@@ -28,11 +31,11 @@ export function ComboBand({ picks }: { picks: ProductCard[] }) {
               <Tag size={13} weight="fill" /> Combo
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Llévate 2 pares
+              Llévate 2 {ITEMS}
               {combo && <> por <span className="text-accent">{mxn(combo.priceCents)}</span></>}
             </h2>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-              Combina 2 pares de los modelos del combo — mismo o distinto modelo, cualquier color.
+              Combina 2 {ITEMS} de los modelos del combo — mismo o distinto modelo, cualquier color.
               El descuento se aplica solo al agregar 2 al carrito.
             </p>
             <Link

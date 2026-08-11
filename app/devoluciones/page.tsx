@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { LegalPending, shippingConfigured } from "@/components/LegalGate";
 import { activeBrand } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -12,6 +13,19 @@ export const metadata: Metadata = {
 // el sitio (PDP dice: primer cambio sin costo · 30 días · garantía 6 meses).
 // Ajusta si tus condiciones reales son distintas.
 export default function DevolucionesPage() {
+  // Misma razón que /envios: plazos, cambios y garantía son promesas de esta
+  // tienda, y la nota de arriba exige que coincidan con la PDP. Si la PDP no
+  // las declara (pdp.shipping vacío), esta página no puede declararlas sola.
+  if (!shippingConfigured()) {
+    return (
+      <LegalPending
+        page="Devoluciones y Cambios"
+        heading="Falta configurar la política de devoluciones"
+        body="Esta página fija plazos, cambios y garantía. La marca no los tiene definidos, así que no se publican los de otra tienda."
+        field="pdp.shipping"
+      />
+    );
+  }
   return (
     <LegalPage title="Devoluciones y Cambios" updated="16 de julio de 2026">
       <p>

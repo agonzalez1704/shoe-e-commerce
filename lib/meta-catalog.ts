@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { metaContentId } from "@/lib/meta-content";
 import { cdnImage } from "@/lib/cdn-image";
+import { activeBrand } from "@/lib/brand";
 
 // Meta Commerce product feed, generated live from the DB. Meta re-fetches this on
 // a schedule, so a sale (availability) or a product add/remove is reflected
@@ -27,6 +28,11 @@ type Row = Partial<Record<(typeof COLS)[number], string | number>>;
 
 export async function buildMetaCatalogCsv(): Promise<string> {
   const db = createAdminClient();
+  // Every one of these is a claim made to Facebook about what is in the box:
+  // category, material, weight, the "Sneaker de piel" in the title. They were
+  // hardcoded, so a second store's catalogue would have gone out described as
+  // handmade leather footwear. Unset means the column ships empty.
+  const feed = activeBrand.catalogFeed ?? {};
 
   const { data: products } = await db
     .from("products")
@@ -76,8 +82,8 @@ export async function buildMetaCatalogCsv(): Promise<string> {
 
       const row: Row = {
         id: metaContentId(p.slug, color),
-        title: `${p.name} ${color} — Sneaker de piel`.slice(0, 200),
-        description: p.description ?? `${p.name} en piel genuina. Hecho a mano en México.`,
+        title: `${p.name} ${color}${feed.titleSuffix ? ` ${feed.titleSuffix}` : ""}`.slice(0, 200),
+        description: p.description ?? feed.description?.replace("{name}", p.name) ?? p.name,
         availability: inStock ? "in stock" : "out of stock",
         condition: "new",
         price: `${price} MXN`,
@@ -86,16 +92,16 @@ export async function buildMetaCatalogCsv(): Promise<string> {
         // feed often and each pull was billed as Supabase egress
         image_link: cdnImage(img),
         brand,
-        google_product_category: "Apparel & Accessories > Shoes",
+        google_product_category: feed.googleCategory,
         quantity_to_sell_on_facebook: p.made_to_order ? 100 : variants.filter((v) => v.color === color).reduce((n, v) => n + (stock.get(v.id) ?? 0), 0),
         item_group_id: p.slug,
         gender,
         color,
         size: sizes.length ? `MX ${sizes[0]}-${sizes[sizes.length - 1]}` : "",
-        age_group: "adult",
-        material: "piel genuina",
-        shipping: "MX::Envío gratis:0.00 MXN",
-        shipping_weight: "1.2 kg",
+        age_group: feed.ageGroup,
+        material: feed.material,
+        shipping: feed.shipping,
+        shipping_weight: feed.shippingWeight,
         "product_tags[0]": p.name,
       };
       rows.push(COLS.map((c) => cell(row[c])).join(","));

@@ -157,7 +157,7 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
       )}
 
       <p className="mt-6 text-xs text-muted">
-        Te enviaremos un correo en cuanto se acredite. Tu calzado se fabrica sobre pedido y se envía en 4 a 7 días hábiles.
+        Te enviaremos un correo en cuanto se acredite. {activeBrand.copy?.madeToOrderLine}
       </p>
 
       <div className="mt-8 flex gap-3">
