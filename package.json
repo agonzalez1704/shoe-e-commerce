@@ -18,7 +18,9 @@
     "seed:images": "node --env-file=.env.local scripts/seed-images.mjs",
     "kapso:register": "node --env-file=.env.local scripts/register-kapso-webhook.mjs",
     "setup": "supabase start && supabase db reset && pnpm gen:types && pnpm seed:images",
-    "dev:honeywhale-local": "NEXT_PUBLIC_BRAND=honeywhale next dev -p 3010"
+    "dev:honeywhale-local": "NEXT_PUBLIC_BRAND=honeywhale next dev -p 3010",
+    "db:push:blade": "node scripts/db-push.mjs .env.prod",
+    "db:push:honeywhale": "node scripts/db-push.mjs .env.honeywhale"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
