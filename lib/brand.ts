@@ -107,6 +107,10 @@ export type PdpConfig = {
   // items are helmets does not publish a shoe conversion table.
   sizeGuide?: { intro: string; note: string; rows: { mx: string; cm: string; us: string }[] };
   sizeHint?: string;   // one line under the size picker
+  // "showcase": bandas a sangre, el nombre del modelo en escala editorial y las
+  // cifras en grande, como el sitio de referencia del cliente. Ausente = el
+  // layout clásico de dos columnas.
+  layout?: "classic" | "showcase";
   // Editorial bands on the product page, keyed by category slug. Per CATEGORY,
   // not per model: the reference site runs ~8 bespoke blocks per model, which
   // at 130 models is roughly a thousand photos nobody is going to shoot. Six
@@ -524,6 +528,7 @@ const BRANDS: Record<string, BrandConfig> = {
       // en la home es la misma falla que puso "Hecho sobre pedido" en un scooter.
     },
     pdp: {
+      layout: "showcase",
       valueProps: [
         { icon: "shield", label: "Distribuidor autorizado" },
         { icon: "truck", label: "Envíos a todo México" },

@@ -10,8 +10,12 @@ import { HEADLINE_SPECS, SPEC_LABELS, SPEC_UNITS } from "@/lib/specs";
 // absent block reads as a product that simply has no headline figures.
 export function SpecHighlights({
   attributes = {},
+  variant = "tiles",
 }: {
   attributes?: Record<string, string | number | boolean>;
+  // "band" is the full-bleed treatment on the showcase layout: the same data,
+  // set at the scale the reference site gives it. Same source, one component.
+  variant?: "tiles" | "band";
 }) {
   const tiles = HEADLINE_SPECS.flatMap((key) => {
     const raw = attributes[key];
@@ -20,6 +24,29 @@ export function SpecHighlights({
   }).slice(0, 4);
 
   if (tiles.length < 2) return null;
+
+  if (variant === "band") {
+    return (
+      <ul className={`grid grid-cols-2 ${tiles.length > 2 ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
+        {tiles.map((t) => (
+          <li
+            key={t.key}
+            // Hairlines only between cells, never on the outer edge: the band
+            // runs to the viewport edge and a border there reads as a mistake.
+            className="border-b border-r border-border/60 px-5 py-7 last:border-r-0 sm:px-8 sm:py-10 md:border-b-0 [&:nth-child(2n)]:border-r-0 md:[&:nth-child(2n)]:border-r [&:last-child]:border-r-0"
+          >
+            <p className="flex items-baseline gap-1.5">
+              <span className={`nums font-semibold leading-none tracking-tight ${t.figure.length > 4 ? "text-2xl sm:text-4xl" : "text-4xl sm:text-6xl"}`}>
+                {t.figure}
+              </span>
+              {t.unit && <span className="text-sm font-medium text-muted sm:text-base">{t.unit}</span>}
+            </p>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-muted sm:text-xs">{t.label}</p>
+          </li>
+        ))}
+      </ul>
+    );
+  }
 
   return (
     <ul className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
