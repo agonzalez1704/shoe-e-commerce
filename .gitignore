@@ -15,3 +15,6 @@ supabase/.temp
 
 # stray local artifacts
 *.log
+
+# respaldos de limpieza de datos (originales; no van al repo)
+descripciones-respaldo-*.json
