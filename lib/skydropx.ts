@@ -123,10 +123,10 @@ export async function quote(to: Address): Promise<{ quotationId: string; rates: 
 
   const rates: Rate[] = (data.rates ?? [])
     .filter((r: { success?: boolean; total?: string | number }) => r.success && r.total != null)
-    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; total: string; days: number | null }) => ({
+    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; provider_service_name?: string | null; total: string; days: number | null }) => ({
       id: r.id,
       provider_name: r.provider_name,
-      service: r.provider_service_level_name,
+      service: r.provider_service_level_name ?? r.provider_service_name ?? null,
       total: Number(r.total),
       days: r.days,
     }))
@@ -169,10 +169,10 @@ export async function rateById(quotationId: string, rateId: string): Promise<Rat
   const data = await api(`/quotations/${quotationId}`);
   const rates: Rate[] = (data.rates ?? [])
     .filter((r: { success?: boolean; total?: string | number }) => r.success && r.total != null)
-    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; total: string; days: number | null }) => ({
+    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; provider_service_name?: string | null; total: string; days: number | null }) => ({
       id: r.id,
       provider_name: r.provider_name,
-      service: r.provider_service_level_name,
+      service: r.provider_service_level_name ?? r.provider_service_name ?? null,
       total: Number(r.total),
       days: r.days,
     }));

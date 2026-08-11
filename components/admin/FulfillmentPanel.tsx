@@ -6,6 +6,9 @@ import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from
 import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
+// Los envíos son pesos cerrados; los centavos sólo estorban al comparar.
+const mxn0 = (n: number) => `$${n.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`;
+
 type Order = {
   id: string;
   paymentStatus: string;
@@ -44,6 +47,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
   type Rate = { id: string; provider_name: string; service: string | null; total: number; days: number | null };
   const [rates, setRates] = useState<Rate[] | null>(null);
   const [quotationId, setQuotationId] = useState("");
+  const [sortBy, setSortBy] = useState<"precio" | "tiempo">("precio");
   const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
       setErr(null);
@@ -102,8 +106,15 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         })}
       </ol>
 
-      {/* Tracking form */}
-      <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+      {/* Captura manual: la vía de excepción (guía fuera de Skydropx, o
+          corregir una existente). Va plegada para que no compita con la
+          cotización, que es lo que se usa a diario. */}
+      <details className="border-t border-border pt-4" open={!!(carrier || tracking)}>
+        <summary className="cursor-pointer list-none text-xs font-medium text-muted transition-colors hover:text-text [&::-webkit-details-marker]:hidden">
+          Capturar guía manualmente
+          <span className="ml-1.5 font-normal opacity-70">— si la enviaste fuera de Skydropx</span>
+        </summary>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-xs text-muted">
           Paquetería
           <select
@@ -145,6 +156,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
           />
         </label>
       </div>
+      </details>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         {autoUrl ? (
@@ -175,51 +187,87 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         </div>
       </div>
 
-      {rates && (
-        <div className="rounded-xl border border-border">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+      {rates && (() => {
+        // La decisión real es precio contra tiempo, no precio a secas: una lista
+        // ordenada sólo por precio esconde que $27 más pueden ser tres días menos.
+        const conDias = rates.filter((r) => r.days != null);
+        const barata = rates.reduce((a, b) => (b.total < a.total ? b : a), rates[0]);
+        const rapida = conDias.length ? conDias.reduce((a, b) => (b.days! < a.days! ? b : a), conDias[0]) : null;
+        const orden = [...rates].sort((a, b) =>
+          sortBy === "precio"
+            ? a.total - b.total
+            : (a.days ?? 99) - (b.days ?? 99) || a.total - b.total,
+        );
+        return (
+        <div className="overflow-hidden rounded-xl border border-border">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-elevated px-3 py-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {rates.length} {rates.length === 1 ? "opción" : "opciones"} · ordenadas por precio
+              {rates.length} {rates.length === 1 ? "opción" : "opciones"}
             </p>
-            <button onClick={() => setRates(null)} className="text-xs text-muted hover:text-text">Cerrar</button>
+            <div className="flex items-center gap-1">
+              {(["precio", "tiempo"] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setSortBy(k)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                    sortBy === k ? "bg-text text-bg" : "text-muted hover:text-text"
+                  }`}
+                >
+                  {k === "precio" ? "Más barata" : "Más rápida"}
+                </button>
+              ))}
+              <button onClick={() => setRates(null)} className="ml-2 text-xs text-muted hover:text-text">Cerrar</button>
+            </div>
           </div>
+
           {rates.length === 0 && (
-            <p className="px-3 py-4 text-sm text-muted">
+            <p className="px-3 py-5 text-sm text-muted">
               Ninguna paquetería cotizó esta dirección. Revisa el código postal y la colonia.
             </p>
           )}
+
           <ul className="divide-y divide-border">
-            {rates.map((r, i) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium capitalize">
-                    {r.provider_name.toLowerCase()}
-                    {r.service && <span className="ml-1.5 font-normal text-muted">{r.service}</span>}
-                    {/* la más barata ya viene primero: marcarla evita compararlas a ojo */}
-                    {i === 0 && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">más barata</span>}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {r.days != null ? `Entrega en ${r.days} ${r.days === 1 ? "día" : "días"}` : "Tiempo de entrega no informado"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="nums text-sm font-semibold">${r.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-                  <button
-                    disabled={isPending}
-                    onClick={() => run(async () => {
-                      await createSkydropxLabel(order.id, quotationId, r.id);
-                      setRates(null);
-                    })}
-                    className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-contrast disabled:opacity-50"
-                  >
-                    {isPending ? "…" : "Generar guía"}
-                  </button>
-                </div>
-              </li>
-            ))}
+            {orden.map((r) => {
+              const extra = r.total - barata.total;
+              const ahorro = barata.days != null && r.days != null ? barata.days - r.days : 0;
+              return (
+                <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-3 transition-colors hover:bg-elevated/50">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-medium capitalize">
+                      {r.provider_name.toLowerCase()}
+                      {r.service && <span className="font-normal normal-case text-muted">{r.service}</span>}
+                      {r.id === barata.id && (
+                        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">más barata</span>
+                      )}
+                      {rapida && r.id === rapida.id && r.id !== barata.id && (
+                        <span className="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text">más rápida</span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {r.days != null ? `Entrega en ${r.days} ${r.days === 1 ? "día" : "días"}` : "Tiempo no informado"}
+                      {/* el intercambio, escrito: cuánto cuesta ganar cada día */}
+                      {extra > 0 && ahorro > 0 && (
+                        <span className="text-text"> · +{mxn0(extra)} por {ahorro} {ahorro === 1 ? "día" : "días"} menos</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="nums text-sm font-semibold">{mxn0(r.total)}</span>
+                    <button
+                      disabled={isPending}
+                      onClick={() => run(async () => { await createSkydropxLabel(order.id, quotationId, r.id); setRates(null); })}
+                      className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-contrast transition-transform active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {isPending ? "…" : "Generar guía"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
-      )}
+        );
+      })()}
 
       {err && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">{err}</p>}
       {order.shipping_label_url && (
