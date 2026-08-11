@@ -125,24 +125,31 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
   // white type on a white rectangle. Those get a split instead — picture and
   // copy in separate bands, no overlap and nothing to make legible.
   const split = s.fit === "contain";
+  // Una diapositiva-póster trae el titular horneado en la imagen y deja estos
+  // campos vacíos. Sin la guarda se pintaría un <h2> sin contenido, que es un
+  // encabezado vacío para un lector de pantalla y para el buscador.
   const copy = (
     <>
-      <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${split ? "text-accent" : "text-white/80"}`}>
-        {s.eyebrow}
-      </p>
-      <h2
-        className={`mt-2 max-w-2xl text-3xl font-semibold leading-[1.02] tracking-tight sm:mt-3 sm:text-5xl md:text-6xl ${
-          split ? "text-text" : "text-white drop-shadow-sm"
-        }`}
-      >
-        {s.titleTop}
-        {s.titleBottom && (
-          <>
-            <br />
-            {s.titleBottom}
-          </>
-        )}
-      </h2>
+      {s.eyebrow && (
+        <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${split ? "text-accent" : "text-white/80"}`}>
+          {s.eyebrow}
+        </p>
+      )}
+      {s.titleTop && (
+        <h2
+          className={`mt-2 max-w-2xl text-3xl font-semibold leading-[1.02] tracking-tight sm:mt-3 sm:text-5xl md:text-6xl ${
+            split ? "text-text" : "text-white drop-shadow-sm"
+          }`}
+        >
+          {s.titleTop}
+          {s.titleBottom && (
+            <>
+              <br />
+              {s.titleBottom}
+            </>
+          )}
+        </h2>
+      )}
       {s.body && (
         <p
           className={`mt-2.5 max-w-sm text-sm leading-relaxed sm:mt-4 sm:max-w-md sm:text-base ${
@@ -183,6 +190,20 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
 
   return (
     <>
+      {/* Dos <Image> con clases de breakpoint y no un <picture>: next/image no
+          hace art direction, y así cada pieza conserva su optimización. El
+          navegador solo descarga la que su media query deja visible. */}
+      {s.imageMobile && (
+        <Image
+          src={s.imageMobile}
+          alt=""
+          fill
+          priority={priority}
+          sizes="100vw"
+          style={s.focal ? { objectPosition: s.focal } : undefined}
+          className="object-cover object-center sm:hidden"
+        />
+      )}
       <Image
         src={s.image}
         alt=""
@@ -190,7 +211,7 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
         priority={priority}
         sizes="100vw"
         style={s.focal ? { objectPosition: s.focal } : undefined}
-        className="object-cover object-center"
+        className={`object-cover object-center ${s.imageMobile ? "hidden sm:block" : ""}`}
       />
       {/* legibility scrim: darker toward the lower-left where the copy sits */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />

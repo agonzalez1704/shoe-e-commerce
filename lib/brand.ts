@@ -65,6 +65,12 @@ export type IconRow = { icon: string; title: string; sub?: string };
 // es la alternativa honesta a mantener arte distinto para móvil y escritorio.
 export type HeroSlide = {
   image: string;
+  // Arte distinto para móvil. Se corta a propósito en casi todos los casos —
+  // mantener dos piezas por diapositiva es el drift que sufre el sitio de
+  // referencia, y `focal` resuelve el encuadre con una sola imagen. Solo vale
+  // cuando la composición no sobrevive al recorte: cuatro figuras en fila no
+  // caben en vertical, y un 4:5 se come las dos de los extremos.
+  imageMobile?: string;
   fit?: "cover" | "contain";
   focal?: string;            // p. ej. "50% 30%"
   eyebrow: string;
@@ -225,6 +231,18 @@ const BRANDS: Record<string, BrandConfig> = {
           titleTop: "Piel con filo,",
           titleBottom: "hecha a tu paso.",
           body: "Sneakers de piel fabricados a mano cuando los pides. Envío gratis en 4–7 días hábiles a todo México.",
+          ctaLabel: "Ver tienda",
+          ctaHref: "/products",
+        },
+        {
+          // Póster: trae el logo y el eslogan horneados, así que no lleva texto
+          // DOM encima — lo contrario duplicaría el mensaje. Es la excepción
+          // que justifica `imageMobile`: cuatro figuras en fila no sobreviven
+          // al recorte 4:5, así que la pieza de móvil es otra toma, en círculo.
+          image: "/blade-hero-estilos.webp",
+          imageMobile: "/blade-hero-estilos-movil.webp",
+          eyebrow: "",
+          titleTop: "",
           ctaLabel: "Ver tienda",
           ctaHref: "/products",
         },
