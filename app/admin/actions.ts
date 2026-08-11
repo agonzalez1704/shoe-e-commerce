@@ -154,8 +154,76 @@ const CARRIER_MAP: Record<string, string> = {
   paquetexpress: "paquetexpress", ninetynineminutes: "99minutos", correos: "correos",
 };
 
-// Generate the shipping guía + label for an order via Skydropx (cheapest rate)
-// and store carrier / tracking / label URL on the order.
+// Build the destination from the order itself. Both the quote and the label
+// derive it here rather than accepting one from the browser: an address that
+// arrives with the request is an address an attacker chose.
+async function shipTo(supabase: Awaited<ReturnType<typeof requirePermiso>>, orderId: string) {
+  const { data: o } = await supabase
+    .from("orders")
+    .select("shipping_address, email")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!o?.shipping_address) throw new Error("El pedido no tiene dirección de envío.");
+  const s = o.shipping_address as Record<string, string>;
+  return {
+    name: s.name || "Cliente",
+    phone: s.phone || "",
+    email: o.email,
+    street1: s.line1 || "",
+    area_level1: s.region || "",
+    area_level2: s.city || "",
+    area_level3: s.neighborhood || "",
+    postal_code: s.postal || "",
+    country_code: "MX",
+  };
+}
+
+// León is delivered by us, so it never goes to Skydropx.
+const esLeon = (to: { postal_code: string; area_level2: string }) =>
+  to.postal_code.startsWith("37") || /le[oó]n/i.test(to.area_level2);
+
+// Ask Skydropx what the couriers charge and how long they take. Creates
+// nothing: the label is a separate, deliberate second step, so the operator
+// picks on price and delivery time instead of always getting the cheapest.
+export async function quoteSkydropxRates(orderId: string) {
+  const supabase = await requirePermiso("pedidos_gestionar");
+  const to = await shipTo(supabase, orderId);
+  if (esLeon(to)) return { local: true as const, rates: [], quotationId: "" };
+  if (!to.area_level3 || !to.phone) {
+    throw new Error("Falta colonia o teléfono en la dirección (pedido anterior a la actualización). Captúralos manualmente.");
+  }
+  const { quote } = await import("@/lib/skydropx");
+  const { quotationId, rates } = await quote(to);
+  return { local: false as const, quotationId, rates };
+}
+
+// Create the shipment for the rate the operator chose. The rate is refetched
+// from Skydropx by id — the browser sends only which one, never its price.
+export async function createSkydropxLabel(orderId: string, quotationId: string, rateId: string) {
+  const supabase = await requirePermiso("pedidos_gestionar");
+  const to = await shipTo(supabase, orderId);
+  const { rateById, createShipment } = await import("@/lib/skydropx");
+  const rate = await rateById(quotationId, rateId);
+  if (!rate) throw new Error("Esa tarifa ya no está disponible. Vuelve a cotizar.");
+
+  const r = await createShipment(quotationId, rate, to);
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      carrier: CARRIER_MAP[r.carrier] ?? "other",
+      tracking_number: r.trackingNumber || null,
+      tracking_url: r.trackingUrl,
+      shipping_label_url: r.labelUrl,
+    })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
+}
+
+// Kept for the León path and as a one-shot fallback: quote, take the cheapest,
+// ship. Everything else should go through quote → choose → create.
 export async function generateSkydropxLabel(orderId: string) {
   const supabase = await requirePermiso("pedidos_gestionar");
   const { data: o } = await supabase

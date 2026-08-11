@@ -158,6 +158,27 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
   return { carrier: rate.provider_name, trackingNumber, trackingUrl, labelUrl };
 }
 
+// Re-read a resolved quotation and find one rate by id.
+//
+// The chosen rate id travels through the browser, so the shipment must not be
+// built from whatever comes back: this refetches the quotation from Skydropx
+// and returns the real rate, or null if that id is not part of it. It also
+// gives us provider_name and total, which the caller needs and the client
+// should not be trusted to supply.
+export async function rateById(quotationId: string, rateId: string): Promise<Rate | null> {
+  const data = await api(`/quotations/${quotationId}`);
+  const rates: Rate[] = (data.rates ?? [])
+    .filter((r: { success?: boolean; total?: string | number }) => r.success && r.total != null)
+    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; total: string; days: number | null }) => ({
+      id: r.id,
+      provider_name: r.provider_name,
+      service: r.provider_service_level_name,
+      total: Number(r.total),
+      days: r.days,
+    }));
+  return rates.find((r) => String(r.id) === String(rateId)) ?? null;
+}
+
 // One-shot: quote → cheapest rate → shipment. Throws if no rates.
 export async function generateLabel(to: Address): Promise<ShipmentResult> {
   const { quotationId, rates } = await quote(to);

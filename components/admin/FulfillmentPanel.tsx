@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
-import { saveTracking, setFulfillmentStage, generateSkydropxLabel } from "@/app/admin/actions";
+import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
 type Order = {
@@ -41,6 +41,9 @@ export function FulfillmentPanel({ order }: { order: Order }) {
   const isPaid = order.paymentStatus === "paid" || order.paymentStatus === "fulfilled";
 
   const [err, setErr] = useState<string | null>(null);
+  type Rate = { id: string; provider_name: string; service: string | null; total: number; days: number | null };
+  const [rates, setRates] = useState<Rate[] | null>(null);
+  const [quotationId, setQuotationId] = useState("");
   const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
       setErr(null);
@@ -152,10 +155,15 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         <div className="flex items-center gap-2">
           <button
             disabled={isPending}
-            onClick={() => run(async () => { await generateSkydropxLabel(order.id); })}
+            onClick={() => run(async () => {
+              const q = await quoteSkydropxRates(order.id);
+              if (q.local) { await generateSkydropxLabel(order.id); return; }  // León lo entregamos nosotros
+              setQuotationId(q.quotationId);
+              setRates(q.rates as Rate[]);
+            })}
             className="inline-flex items-center gap-1.5 rounded-full bg-text px-4 py-2 text-sm font-medium text-bg transition-transform active:scale-[0.98] disabled:opacity-50"
           >
-            <Truck size={14} weight="bold" /> {isPending ? "Generando…" : "Generar guía (Skydropx)"}
+            <Truck size={14} weight="bold" /> {isPending ? "Cotizando…" : "Cotizar paqueterías"}
           </button>
           <button
             disabled={isPending}
@@ -166,6 +174,52 @@ export function FulfillmentPanel({ order }: { order: Order }) {
           </button>
         </div>
       </div>
+
+      {rates && (
+        <div className="rounded-xl border border-border">
+          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              {rates.length} {rates.length === 1 ? "opción" : "opciones"} · ordenadas por precio
+            </p>
+            <button onClick={() => setRates(null)} className="text-xs text-muted hover:text-text">Cerrar</button>
+          </div>
+          {rates.length === 0 && (
+            <p className="px-3 py-4 text-sm text-muted">
+              Ninguna paquetería cotizó esta dirección. Revisa el código postal y la colonia.
+            </p>
+          )}
+          <ul className="divide-y divide-border">
+            {rates.map((r, i) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium capitalize">
+                    {r.provider_name.toLowerCase()}
+                    {r.service && <span className="ml-1.5 font-normal text-muted">{r.service}</span>}
+                    {/* la más barata ya viene primero: marcarla evita compararlas a ojo */}
+                    {i === 0 && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">más barata</span>}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {r.days != null ? `Entrega en ${r.days} ${r.days === 1 ? "día" : "días"}` : "Tiempo de entrega no informado"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="nums text-sm font-semibold">${r.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                  <button
+                    disabled={isPending}
+                    onClick={() => run(async () => {
+                      await createSkydropxLabel(order.id, quotationId, r.id);
+                      setRates(null);
+                    })}
+                    className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-contrast disabled:opacity-50"
+                  >
+                    {isPending ? "…" : "Generar guía"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {err && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">{err}</p>}
       {order.shipping_label_url && (
