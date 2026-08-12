@@ -531,20 +531,24 @@ const BRANDS: Record<string, BrandConfig> = {
           ctaHref: "/products",
         },
         {
-          image: `${STORAGE}/honeywhale/motos-raptor-pro/motos-raptor-pro.webp`,
-          fit: "contain",
+          // Foto de ambiente en vez del recorte de catálogo sobre fondo: el
+          // producto se generó a partir de la foto del proveedor, con su
+          // logotipo enmascarado antes de pasarla como referencia — es lo que
+          // evitó el branding falso que salió en la bici.
+          image: "/hw-hero-raptor.webp",
+          imageMobile: "/hw-hero-raptor-movil.webp",
           eyebrow: "Lo más potente",
           titleTop: "RAPTOR PRO",
-          body: "La moto eléctrica tope de línea. Autonomía de sobra para la ciudad y para salir de ella.",
+          body: "La moto eléctrica tope de línea del catálogo.",
           ctaLabel: "Ver la RAPTOR PRO",
           ctaHref: "/products/motos-raptor-pro",
         },
         {
-          image: `${STORAGE}/honeywhale/f8/f8.webp`,
-          fit: "contain",
+          image: "/hw-hero-f8.webp",
+          imageMobile: "/hw-hero-f8-movil.webp",
           eyebrow: "90 km/h · 90 km de autonomía",
           titleTop: "Scooter F8",
-          body: "El equipo tope de Honey Whale: velocidad y alcance de moto en formato scooter.",
+          body: "Velocidad y alcance de moto, en formato scooter.",
           ctaLabel: "Ver el F8",
           ctaHref: "/products/f8",
         },
