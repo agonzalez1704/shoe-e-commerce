@@ -5,14 +5,10 @@ import { CheckCircle, Circle } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { lookupOrder, type TrackedOrder } from "@/app/rastrear/actions";
 import { activeBrand } from "@/lib/brand";
+import { PASOS_CLIENTE, pasoCliente, carrierName, trackingUrlFor, fechaEntrega } from "@/lib/fulfillment";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const ITEMS_ORDERED = `${activeBrand.copy?.itemPlural ?? "Productos"} pedidos`.replace(/^./, (c) => c.toUpperCase());
-const STEPS = [
-  { key: "pending", label: "Pendiente de pago" },
-  { key: "paid", label: "Pagado · en preparación" },
-  { key: "fulfilled", label: "Enviado" },
-];
 const INPUT = "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-text";
 
 export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
@@ -37,15 +33,20 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
     });
   }
 
-  const stepIndex = result ? STEPS.findIndex((s) => s.key === result.status) : -1;
+  // Antes se derivaba sólo de `status`, así que un pedido ya recogido por la
+  // paquetería le decía al comprador "Pagado · en preparación", y el número de
+  // guía no se mostraba en ninguna pantalla del cliente.
+  const stepIndex = result ? pasoCliente(result.status, result.stage) : -1;
+  const rastreoUrl = result ? trackingUrlFor(result.carrier, result.trackingNumber, result.trackingUrl) : null;
   const terminal = result && (result.status === "cancelled" || result.status === "refunded");
 
   return (
     <div className="mx-auto max-w-lg">
       <form onSubmit={onSubmit} className="space-y-3">
-        <input name="o" defaultValue={defaultOrder} // Sin ejemplo: el prefijo vive en la BD (settings.order_prefix) y ponerlo
-// también aquí sería una segunda fuente de verdad que se desincroniza.
-placeholder="Número de pedido" required className={INPUT} />
+        {/* Sin ejemplo en el placeholder: el prefijo vive en la BD
+            (settings.order_prefix) y repetirlo aquí sería una segunda fuente de
+            verdad que se desincroniza. */}
+        <input name="o" defaultValue={defaultOrder} placeholder="Número de pedido" required className={INPUT} />
         <input name="e" type="email" placeholder="Correo del pedido" required className={INPUT} />
         {error && <p className="text-sm text-accent">{error}</p>}
         <button
@@ -69,7 +70,7 @@ placeholder="Número de pedido" required className={INPUT} />
             </p>
           ) : (
             <ol className="mt-5 space-y-3">
-              {STEPS.map((s, i) => {
+              {PASOS_CLIENTE.map((s, i) => {
                 const done = i <= stepIndex;
                 return (
                   <li key={s.key} className={`flex items-center gap-2 text-sm ${done ? "text-text" : "text-muted"}`}>
@@ -79,6 +80,32 @@ placeholder="Número de pedido" required className={INPUT} />
                 );
               })}
             </ol>
+          )}
+
+          {/* La guía: lo que el comprador viene a buscar. Se captura en el
+              admin desde hace tiempo y no se mostraba en ninguna pantalla suya. */}
+          {!terminal && (result.trackingNumber || result.estimatedDelivery) && (
+            <div className="mt-4 rounded-lg border border-border bg-elevated/60 p-3 text-sm">
+              {result.trackingNumber && (
+                <p className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-muted">{carrierName(result.carrier) ?? "Paquetería"}</span>
+                  <span className="nums font-medium text-text">{result.trackingNumber}</span>
+                </p>
+              )}
+              {result.estimatedDelivery && (
+                <p className="mt-1 text-muted">
+                  Entrega estimada:{" "}
+                  <span className="text-text">
+                    {fechaEntrega(result.estimatedDelivery)}
+                  </span>
+                </p>
+              )}
+              {rastreoUrl && (
+                <a href={rastreoUrl} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-block font-medium text-accent underline">
+                  Rastrear con la paquetería →
+                </a>
+              )}
+            </div>
           )}
 
           {result.status === "pending" && result.payment && (

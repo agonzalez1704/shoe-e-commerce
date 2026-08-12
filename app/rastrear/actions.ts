@@ -6,6 +6,11 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
 export type TrackedOrder = {
   orderNumber: string;
   status: string;
+  stage: string | null;
+  carrier: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  estimatedDelivery: string | null;
   paymentMethod: string | null;
   totalCents: number;
   createdAt: string;
@@ -27,7 +32,7 @@ export async function lookupOrder(
   const admin = createAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("id, order_number, status, payment_method, total_cents, created_at, shipping_address")
+    .select("id, order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, payment_method, total_cents, created_at, shipping_address")
     .eq("order_number", orderNumber.trim().toUpperCase())
     .ilike("email", email.trim())
     .maybeSingle();
@@ -48,6 +53,11 @@ export async function lookupOrder(
   return {
     order: {
       orderNumber: order.order_number,
+      stage: order.fulfillment_stage,
+      carrier: order.carrier,
+      trackingNumber: order.tracking_number,
+      trackingUrl: order.tracking_url,
+      estimatedDelivery: order.estimated_delivery,
       status: order.status,
       paymentMethod: order.payment_method,
       totalCents: order.total_cents,
