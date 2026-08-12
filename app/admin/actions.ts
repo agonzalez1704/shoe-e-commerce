@@ -95,9 +95,32 @@ export async function saveTracking(
 export async function setFulfillmentStage(orderId: string, stage: FulfillmentStage) {
   const supabase = await requirePermiso("pedidos_gestionar");
 
-  const patch: { fulfillment_stage: FulfillmentStage; shipped_at?: string; delivered_at?: string } = { fulfillment_stage: stage };
+  const patch: {
+    fulfillment_stage: FulfillmentStage;
+    shipped_at?: string;
+    delivered_at?: string;
+    status?: OrderStatus;
+  } = { fulfillment_stage: stage };
   if (stage === "shipped") patch.shipped_at = new Date().toISOString();
   if (stage === "delivered") patch.delivered_at = new Date().toISOString();
+
+  // La sincronía entre las dos columnas era de una sola vía: updateOrderStatus
+  // movía la etapa, pero mover la etapa no movía el estado. Un pedido acababa
+  // Entregado y con status `paid` para siempre — nunca contaba como completado
+  // en métricas ni en comisiones, y el filtro de Pago no lo distinguía de uno
+  // que sigue fabricándose.
+  //
+  // Sólo desde `paid`: marcar entregado un pedido sin pagar no puede afirmar
+  // que se cobró, y uno cancelado o reembolsado no vuelve a la vida. Y sólo
+  // hacia adelante — retroceder la etapa no degrada el estado.
+  //
+  // No manda correo: el de envío ya lo despacha la rama `shipped` de abajo y el
+  // de entrega la rama `delivered`; el cron de reseñas se dispara con
+  // delivered_at/shipped_at, no con el estado.
+  if (stage === "shipped" || stage === "delivered") {
+    const { data: cur } = await supabase.from("orders").select("status").eq("id", orderId).maybeSingle();
+    if (cur?.status === "paid") patch.status = "fulfilled";
+  }
 
   const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
   if (error) throw new Error(error.message);
