@@ -106,13 +106,14 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         })}
       </ol>
 
-      {/* Captura manual: la vía de excepción (guía fuera de Skydropx, o
-          corregir una existente). Va plegada para que no compita con la
-          cotización, que es lo que se usa a diario. */}
-      <details className="border-t border-border pt-4" open={!!(carrier || tracking)}>
-        <summary className="cursor-pointer list-none text-xs font-medium text-muted transition-colors hover:text-text [&::-webkit-details-marker]:hidden">
+      {/* Abierto por defecto. Antes se plegaba salvo que ya hubiera datos —
+          es decir, estaba cerrado justo la primera vez que hacía falta — y el
+          botón "Guardar" quedaba visible abajo sin nada que guardar. Ningún
+          pedido llegó a tener guía capturada. */}
+      <details className="border-t border-border pt-4" open>
+        <summary className="cursor-pointer list-none text-xs font-medium text-text transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
           Capturar guía manualmente
-          <span className="ml-1.5 font-normal opacity-70">— si la enviaste fuera de Skydropx</span>
+          <span className="ml-1.5 font-normal text-muted">— paquetería y número de guía</span>
         </summary>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-xs text-muted">

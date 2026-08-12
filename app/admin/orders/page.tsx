@@ -5,6 +5,7 @@ import { formatCents } from "@/lib/money";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StageBadge } from "@/components/StageBadge";
 import { requirePagePermiso } from "@/lib/permisos-guard";
+import { STAGES, type FulfillmentStage } from "@/lib/fulfillment";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +14,22 @@ const shortDate = (s: string) => new Date(s).toLocaleDateString("es-MX", { day: 
 const STATUSES = ["all", "pending", "paid", "fulfilled", "cancelled", "refunded"] as const;
 type Status = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
+// El estado de pago y la etapa de entrega son columnas distintas y se mueven por
+// separado: un pedido puede estar `paid` y ya recogido por el courier. Sin filtro
+// por etapa había que buscar a ojo entre decenas de pedidos, casi todos cancelados.
+const ETAPAS = ["all", ...STAGES.map((s) => s.key)] as const;
+
 const PER_PAGE = 25;
 
 export default async function AdminOrders({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; etapa?: string; q?: string; page?: string }>;
 }) {
   await requirePagePermiso("pedidos_ver");
-  const { status, q, page } = await searchParams;
+  const { status, etapa, q, page } = await searchParams;
   const active = status ?? "all";
+  const activeEtapa = etapa ?? "all";
   // strip chars that would break the PostgREST .or() filter syntax
   const query = (q ?? "").trim().replace(/[,()%*\\]/g, "").slice(0, 60);
   const current = Math.max(1, Number(page) || 1);
@@ -38,6 +45,7 @@ export default async function AdminOrders({
     .order("created_at", { ascending: false })
     .range(from, from + PER_PAGE - 1);
   if (active !== "all") sb = sb.eq("status", active as Status);
+  if (activeEtapa !== "all") sb = sb.eq("fulfillment_stage", activeEtapa as FulfillmentStage);
   // search the buyer's name too — it lives in the shipping address, and looking
   // someone up by name is the usual way a customer message arrives
   if (query) {
@@ -49,9 +57,23 @@ export default async function AdminOrders({
 
   const total = count ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  // Cambiar un filtro conserva el otro y la búsqueda, y vuelve a la página 1:
+  // seguir en la página 3 de otro filtro deja la lista vacía sin explicación.
+  const chipHref = (cambio: { status?: string; etapa?: string }) => {
+    const sp = new URLSearchParams();
+    const st = cambio.status ?? active;
+    const et = cambio.etapa ?? activeEtapa;
+    if (st !== "all") sp.set("status", st);
+    if (et !== "all") sp.set("etapa", et);
+    if (query) sp.set("q", query);
+    const s = sp.toString();
+    return `/admin/orders${s ? `?${s}` : ""}`;
+  };
+
   const hrefFor = (p: number) => {
     const sp = new URLSearchParams();
     if (active !== "all") sp.set("status", active);
+    if (activeEtapa !== "all") sp.set("etapa", activeEtapa);
     if (query) sp.set("q", query);
     if (p > 1) sp.set("page", String(p));
     const s = sp.toString();
@@ -64,6 +86,7 @@ export default async function AdminOrders({
         <h1 className="text-xl font-semibold tracking-tight">Pedidos</h1>
         <form className="relative">
           {active !== "all" && <input type="hidden" name="status" value={active} />}
+          {activeEtapa !== "all" && <input type="hidden" name="etapa" value={activeEtapa} />}
           <MagnifyingGlass size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             name="q"
@@ -74,18 +97,35 @@ export default async function AdminOrders({
         </form>
       </div>
 
-      <div className="flex flex-wrap gap-1 rounded-full border border-border p-1">
-        {STATUSES.map((s) => (
-          <Link
-            key={s}
-            href={s === "all" ? "/admin/orders" : `/admin/orders?status=${s}`}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-              active === s ? "bg-text text-bg" : "text-muted hover:text-text"
-            }`}
-          >
-            {s}
-          </Link>
-        ))}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-wrap items-center gap-1 rounded-full border border-border p-1">
+          <span className="px-2 text-[11px] uppercase tracking-wide text-muted">Pago</span>
+          {STATUSES.map((s) => (
+            <Link
+              key={s}
+              href={chipHref({ status: s })}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                active === s ? "bg-text text-bg" : "text-muted hover:text-text"
+              }`}
+            >
+              {s}
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1 rounded-full border border-border p-1">
+          <span className="px-2 text-[11px] uppercase tracking-wide text-muted">Entrega</span>
+          {ETAPAS.map((e) => (
+            <Link
+              key={e}
+              href={chipHref({ etapa: e })}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeEtapa === e ? "bg-text text-bg" : "text-muted hover:text-text"
+              }`}
+            >
+              {e === "all" ? "all" : STAGES.find((s) => s.key === e)!.short}
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border">
