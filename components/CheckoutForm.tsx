@@ -646,6 +646,7 @@ export function CheckoutForm({
               that is still missing (see onSubmit) instead of dead-ending them. */}
           <button
             disabled={loading}
+            data-pay-cta
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Procesando…" : <><Lock size={15} weight="fill" /> {cta}</>}

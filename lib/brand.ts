@@ -29,6 +29,14 @@ export type LegalEntity = {
   whatsapp?: string;     // digits only, country code included: "5214771234567"
 };
 
+// "524773791352" → "477 379 1352". El número se guarda en el formato que pide
+// wa.me y se muestra como lo escribe la gente; antes vivía escrito a mano en
+// /terminos y /devoluciones, así que honeywhale publicaba el WhatsApp de Blade.
+export function whatsappDisplay(n?: string): string | null {
+  const local = n?.replace(/^52(1)?/, "") ?? "";
+  return local.length === 10 ? `${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}` : null;
+}
+
 // The storefront's editorial content. It's the most brand-specific screen, so
 // it's data: a new store fills this in instead of editing the page.
 export type HomeFeature = {
@@ -209,6 +217,7 @@ const BRANDS: Record<string, BrandConfig> = {
       rfc: "CIHL580621SK1",
       address: "Blvd. Mariano Escobedo Ote. 221-A, Col. San Juan de Dios, C.P. 37004, León, Guanajuato",
       supportEmail: "pedidos@calzadoblade.com",
+      whatsapp: "524773791352",
     },
     warehouse: {
       name: "Blade", phone: "4773791352", street1: "Tres Guerras 213-B",

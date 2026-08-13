@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 import { LegalPending, shippingConfigured } from "@/components/LegalGate";
-import { activeBrand } from "@/lib/brand";
+import { activeBrand, whatsappDisplay } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Devoluciones y Cambios",
@@ -61,8 +61,11 @@ export default function DevolucionesPage() {
 
       <h2>Cómo iniciar</h2>
       <p>
-        Escríbenos a <a href={`mailto:${activeBrand.legal.supportEmail}`}>{activeBrand.legal.supportEmail}</a> o por WhatsApp{" "}
-        <strong>477 379 1352</strong> con tu número de pedido. Te guiamos en el proceso y te compartimos la guía de
+        Escríbenos a <a href={`mailto:${activeBrand.legal.supportEmail}`}>{activeBrand.legal.supportEmail}</a>
+        {whatsappDisplay(activeBrand.legal.whatsapp) && (
+          <> o por WhatsApp <strong>{whatsappDisplay(activeBrand.legal.whatsapp)}</strong></>
+        )}{" "}
+        con tu número de pedido. Te guiamos en el proceso y te compartimos la guía de
         retorno cuando aplique.
       </p>
 

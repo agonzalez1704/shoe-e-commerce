@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
-import { activeBrand } from "@/lib/brand";
+import { activeBrand, whatsappDisplay } from "@/lib/brand";
 import { legalConfigured, LegalPending } from "@/components/LegalGate";
 
 const L = activeBrand.legal;
@@ -88,8 +88,8 @@ export default function TerminosPage() {
 
       <h2>11. Contacto</h2>
       <p>
-        Dudas o aclaraciones: <a href={`mailto:${L.supportEmail}`}>{L.supportEmail}</a>{" "}
-        · WhatsApp <strong>477 379 1352</strong>.
+        Dudas o aclaraciones: <a href={`mailto:${L.supportEmail}`}>{L.supportEmail}</a>
+        {whatsappDisplay(L.whatsapp) && <> · WhatsApp <strong>{whatsappDisplay(L.whatsapp)}</strong></>}.
       </p>
     </LegalPage>
   );

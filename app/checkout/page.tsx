@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCart } from "@/app/cart/actions";
 import { CheckoutForm, type CheckoutDefaults } from "@/components/CheckoutForm";
+import { WhatsAppFab } from "@/components/WhatsAppFab";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,9 @@ export default async function CheckoutPage() {
         googleAuth={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"}
         mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
       />
+      {/* Sólo en el checkout: es donde el embudo pierde gente sin dejar rastro.
+          No se pinta si la marca no tiene número de WhatsApp configurado. */}
+      <WhatsAppFab />
     </div>
   );
 }
