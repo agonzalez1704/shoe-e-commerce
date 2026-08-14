@@ -100,18 +100,53 @@ async function api(path: string, init: RequestInit = {}) {
   return j;
 }
 
+// Límites de Skydropx, medidos contra la API con cotizaciones de prueba (que no
+// cuestan) en vez de descubrirlos de uno en uno con pedidos de clientes. Los
+// campos de colonia, ciudad y estado no tienen tope. Pasarse devuelve un 422 y
+// deja el pedido sin poder cotizar.
+export const LIMITES = { name: 30, street1: 45, reference: 40 };
+
+// Corta en el espacio anterior al límite para no partir una palabra a la mitad;
+// si es un solo token larguísimo, corta duro.
+function recorta(texto: string, max: number): string {
+  const t = texto.trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  const cortado = t.slice(0, max);
+  const esp = cortado.lastIndexOf(" ");
+  return esp > max / 2 ? cortado.slice(0, esp) : cortado;
+}
+
+// Un nombre mexicano completo se pasa de 30 con facilidad ("JOSE TRINIDAD
+// CERVANTES VELAZQUEZ" son 33). Truncar a secas parte el apellido a media
+// palabra en la etiqueta física, así que primero se sueltan los nombres de en
+// medio y se conservan el primero y los dos apellidos, que es lo que la
+// paquetería necesita para entregar.
+export function recortaNombre(nombre: string, max = LIMITES.name): string {
+  const n = nombre.trim().replace(/\s+/g, " ");
+  if (n.length <= max) return n;
+
+  const partes = n.split(" ");
+  // Quita de en medio, de izquierda a derecha, mientras queden nombres que no
+  // sean el primero ni los dos últimos.
+  for (let i = 1; partes.length > 3 && i < partes.length - 2; ) {
+    partes.splice(i, 1);
+    if (partes.join(" ").length <= max) return partes.join(" ");
+  }
+  return recorta(partes.join(" "), max);
+}
+
 const addrPayload = (a: Address) => ({
   country_code: a.country_code ?? "MX",
   postal_code: a.postal_code,
   area_level1: a.area_level1,
   area_level2: a.area_level2,
   area_level3: a.area_level3,
-  name: a.name,
+  name: recortaNombre(a.name),
   phone: a.phone,
   email: a.email,
-  street1: a.street1,
+  street1: recorta(a.street1, LIMITES.street1),
   // Skydropx rechaza una referencia vacía en cualquiera de las dos direcciones
-  reference: a.reference?.trim() || "Sin referencia",
+  reference: recorta(a.reference?.trim() || "Sin referencia", LIMITES.reference),
 });
 
 // Create a quotation and poll until the rates resolve. Returns successful rates
