@@ -239,6 +239,10 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
     if (!rate) return { ok: false as const, error: "Esa tarifa ya no está disponible. Vuelve a cotizar." };
 
     const r = await createShipment(quotationId, rate, to);
+
+    // A partir de aquí el envío YA está cobrado. Lo que llegue se guarda antes
+    // de juzgar si vino completo: perder la guía de un envío pagado cuesta
+    // dinero, y es exactamente lo que pasó con BL-001074.
     const { error } = await supabase
       .from("orders")
       .update({
@@ -248,9 +252,21 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
         shipping_label_url: r.labelUrl,
       })
       .eq("id", orderId);
-    if (error) return { ok: false as const, error: error.message };
+
+    const rastro = `Envío ${r.shipmentId ?? "?"}${r.trackingNumber ? ` · guía ${r.trackingNumber}` : ""}`;
+    if (error) {
+      return { ok: false as const, error: `El envío se creó y se cobró, pero no se pudo guardar: ${error.message}. ${rastro} — anótala.` };
+    }
+    // Cobrado y sin guía es una falla, no un éxito. Antes se guardaban nulls y
+    // se devolvía ok, así que la pantalla no tenía nada que mostrar.
+    if (!r.trackingNumber) {
+      return { ok: false as const, error: `Skydropx cobró el envío pero no devolvió guía. ${rastro} — revísalo en Skydropx antes de reintentar o lo pagarás dos veces.` };
+    }
 
     revalidatePath(`/admin/orders/${orderId}`);
+    if (!r.labelUrl) {
+      return { ok: false as const, error: `Guía ${r.trackingNumber} creada, pero la etiqueta aún no está lista en Skydropx. Recarga en un minuto; no vuelvas a generar.` };
+    }
     return { ok: true as const, carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "Falló la generación de guía" };
@@ -304,7 +320,9 @@ export async function generateSkydropxLabel(orderId: string) {
       shipping_label_url: r.labelUrl,
     })
     .eq("id", orderId);
-  if (error) throw new Error(error.message);
+  // El envío ya se cobró: el mensaje carga la guía para poder rescatarla.
+  if (error) throw new Error(`Envío cobrado (${r.shipmentId ?? "?"}, guía ${r.trackingNumber || "sin guía"}) pero no se guardó: ${error.message}`);
+  if (!r.trackingNumber) throw new Error(`Skydropx cobró el envío ${r.shipmentId ?? "?"} sin devolver guía. Revísalo antes de reintentar.`);
 
   revalidatePath(`/admin/orders/${orderId}`);
   return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };

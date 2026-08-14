@@ -68,6 +68,7 @@ export type ShipmentResult = {
   trackingNumber: string;
   trackingUrl: string | null;
   labelUrl: string | null;
+  shipmentId: string | null; // para rastrear el envío ya cobrado si algo falla después
 };
 
 let cachedToken: { value: string; exp: number } | null = null;
@@ -175,11 +176,41 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
     }),
   });
 
-  const d = j.data ?? j;
-  const labelUrl: string | null = d.label_urls?.[0] ?? d.label_url ?? null;
-  const trackingNumber: string = d.tracking_number ?? d.master_tracking_number ?? "";
-  const trackingUrl: string | null = d.tracking_url ?? d.tracking_url_provider ?? null;
-  return { carrier: rate.provider_name, trackingNumber, trackingUrl, labelUrl };
+  const id: string | null = j.data?.id ?? j.id ?? null;
+  return { carrier: rate.provider_name, ...(await esperaEtiqueta(id)) };
+}
+
+// Skydropx responde JSON:API: los datos del envío van en `data.attributes` y la
+// guía, el rastreo y la etiqueta en `included`, dentro del paquete. Se leían un
+// nivel arriba (`j.data.label_url`, `j.data.tracking_number`), que es
+// `undefined` en los tres. El envío se cobraba, el pedido se guardaba con
+// `null` en guía y etiqueta, y como nada lanzaba, la acción devolvía ok: sin
+// error, sin log, y la guía comprada perdida (pasó con BL-001074).
+function leeEnvio(j: Record<string, any>) {
+  const a = j.data?.attributes ?? j.data ?? j;
+  const pkg = (j.included ?? []).find((i: { type?: string }) => i.type === "package")?.attributes ?? {};
+  return {
+    trackingNumber: String(pkg.tracking_number || a.master_tracking_number || ""),
+    trackingUrl: (pkg.tracking_url_provider || a.tracking_url || null) as string | null,
+    labelUrl: (pkg.label_url || a.label_urls?.[0] || null) as string | null,
+    shipmentId: (a.id ?? j.data?.id ?? null) as string | null,
+    fallo: (a.error_detail ?? null) as string | null,
+  };
+}
+
+// La etiqueta no viene en la respuesta del POST: Skydropx la genera aparte y
+// tarda un par de minutos (en BL-001074, dos y medio). Se relee el envío hasta
+// que aparece, igual que ya se hace al cotizar.
+async function esperaEtiqueta(shipmentId: string | null) {
+  if (!shipmentId) return { trackingNumber: "", trackingUrl: null, labelUrl: null, shipmentId: null };
+  let d = leeEnvio(await api(`/shipments/${shipmentId}`));
+  for (let i = 0; i < 12 && !d.labelUrl && !d.fallo; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    d = leeEnvio(await api(`/shipments/${shipmentId}`));
+  }
+  // El envío ya está pagado, así que un fallo aquí no puede tirar lo que sí
+  // llegó: se devuelve la guía aunque falte la etiqueta y quien llama decide.
+  return { trackingNumber: d.trackingNumber, trackingUrl: d.trackingUrl, labelUrl: d.labelUrl, shipmentId };
 }
 
 // Re-read a resolved quotation and find one rate by id.
