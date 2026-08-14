@@ -42,6 +42,9 @@ export function FulfillmentPanel({ order }: { order: Order }) {
   const next = STAGES[curIdx + 1]?.key as FulfillmentStage | undefined;
   const autoUrl = trackingUrlFor(carrier, tracking, trackUrl || null);
   const isPaid = order.paymentStatus === "paid" || order.paymentStatus === "fulfilled";
+  // Se mira lo guardado, no el campo del formulario: si se leyera `tracking`,
+  // teclear un dígito escondería el botón de cotizar a media captura.
+  const conGuia = !!order.tracking_number;
 
   const [err, setErr] = useState<string | null>(null);
   type Rate = { id: string; provider_name: string; service: string | null; total: number; days: number | null };
@@ -106,13 +109,13 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         })}
       </ol>
 
-      {/* Abierto por defecto. Antes se plegaba salvo que ya hubiera datos —
-          es decir, estaba cerrado justo la primera vez que hacía falta — y el
-          botón "Guardar" quedaba visible abajo sin nada que guardar. Ningún
-          pedido llegó a tener guía capturada. */}
-      <details className="border-t border-border pt-4" open>
+      {/* Abierto mientras no haya guía, que es cuando hace falta. Con guía ya
+          generada el envío está en manos de la paquetería, así que el formulario
+          se pliega: queda a un clic para corregir un dato, sin invitar a
+          recapturar lo que ya está bien. */}
+      <details className="border-t border-border pt-4" open={!conGuia}>
         <summary className="cursor-pointer list-none text-xs font-medium text-text transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
-          Capturar guía manualmente
+          {conGuia ? "Corregir guía" : "Capturar guía manualmente"}
           <span className="ml-1.5 font-normal text-muted">— paquetería y número de guía</span>
         </summary>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -157,6 +160,16 @@ export function FulfillmentPanel({ order }: { order: Order }) {
           />
         </label>
       </div>
+      {/* "Guardar" vive dentro del desplegable: es lo que guarda estos campos y
+          fuera quedaba suelto abajo, sin nada que guardar cuando el formulario
+          estaba cerrado. */}
+      <button
+        disabled={isPending}
+        onClick={() => run(() => saveTracking(order.id, { carrier: carrier || null, trackingNumber: tracking || null, trackingUrl: trackUrl || null, estimatedDelivery: eta || null }))}
+        className="mt-3 rounded-full border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-elevated disabled:opacity-50"
+      >
+        Guardar
+      </button>
       </details>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -165,7 +178,10 @@ export function FulfillmentPanel({ order }: { order: Order }) {
             Ver rastreo <ArrowSquareOut size={12} />
           </a>
         ) : <span />}
-        <div className="flex items-center gap-2">
+        {/* Con guía ya generada no se cotiza: el envío está pagado y en manos de
+            la paquetería, y volver a cotizar sólo lleva a generar una segunda
+            guía y pagarla otra vez. Para reemplazarla hay que borrar la actual. */}
+        {!conGuia && (
           <button
             disabled={isPending}
             onClick={() => run(async () => {
@@ -179,14 +195,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
           >
             <Truck size={14} weight="bold" /> {isPending ? "Cotizando…" : "Cotizar paqueterías"}
           </button>
-          <button
-            disabled={isPending}
-            onClick={() => run(() => saveTracking(order.id, { carrier: carrier || null, trackingNumber: tracking || null, trackingUrl: trackUrl || null, estimatedDelivery: eta || null }))}
-            className="rounded-full border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-elevated disabled:opacity-50"
-          >
-            Guardar
-          </button>
-        </div>
+        )}
       </div>
 
       {rates && (() => {
