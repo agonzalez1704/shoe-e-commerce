@@ -6,8 +6,12 @@ import { SITE_URL } from "@/lib/site";
 const HOURS_AFTER_CREATED = 12;
 const BATCH = 50;
 
-// Abandoned-checkout recovery: nudge pending OXXO/SPEI orders that are still
-// payable but unpaid after N hours, once each. Bearer CRON_SECRET gated.
+// Abandoned-checkout recovery: nudge pending orders that are still payable but
+// unpaid after N hours, once each. Bearer CRON_SECRET gated.
+//
+// Aplazo entra aquí porque es el método que más venta deja colgada: 8 de 11
+// pedidos se quedaron pendientes para siempre. La solicitud de crédito se
+// abandona a media aprobación y nadie vuelve solo.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -22,7 +26,7 @@ export async function GET(req: NextRequest) {
     .from("orders")
     .select("id, email, order_number, total_cents, payment_method")
     .eq("status", "pending")
-    .in("payment_method", ["oxxo", "spei"])
+    .in("payment_method", ["oxxo", "spei", "aplazo"])
     .is("reminder_sent_at", null)
     .lt("created_at", cutoff)
     .gt("expires_at", nowIso) // still payable
@@ -43,12 +47,15 @@ export async function GET(req: NextRequest) {
       to: o.email,
       orderNumber: o.order_number,
       totalCents: o.total_cents,
-      method: o.payment_method as "oxxo" | "spei",
+      method: o.payment_method as "oxxo" | "spei" | "aplazo",
       reference: pay?.reference ?? undefined,
       clabe: pay?.clabe ?? undefined,
       voucherUrl: pay?.voucher_url ?? undefined,
       expiresAt: pay?.expires_at ?? null,
-      trackUrl: `${SITE_URL}/rastrear`,
+      trackUrl:
+        o.payment_method === "aplazo"
+          ? `${SITE_URL}/pedido/${o.order_number}/pagar`
+          : `${SITE_URL}/rastrear`,
     });
     await admin.from("orders").update({ reminder_sent_at: nowIso }).eq("id", o.id);
     sent++;

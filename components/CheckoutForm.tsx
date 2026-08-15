@@ -462,12 +462,20 @@ export function CheckoutForm({
                 <button
                   type="button" key={id} onClick={() => setMethod(id)}
                   aria-pressed={method === id}
-                  className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all ${
+                  className={`relative flex flex-col items-start gap-1.5 rounded-xl border p-3 pt-7 text-left transition-all ${
                     method === id
                       ? "border-accent bg-accent-soft ring-1 ring-accent"
                       : "border-border hover:border-muted"
                   }`}
                 >
+                  {/* La tarjeta cierra 4 de cada 6 pedidos; efectivo, 1 de 14.
+                      Señalarla no le quita ninguna opción a quien no tiene una,
+                      pero deja de presentar cuatro caminos como si dieran igual. */}
+                  {id === "card" && (
+                    <span className="absolute left-3 top-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-contrast">
+                      Al instante
+                    </span>
+                  )}
                   <MethodMark id={id} />
                   <span className="text-sm font-medium">{label}</span>
                   <span className="text-[11px] leading-tight text-muted">{hint}</span>

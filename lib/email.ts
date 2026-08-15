@@ -119,11 +119,15 @@ export async function sendVoucherEmail(
 
 // abandoned-checkout recovery — pending OXXO/SPEI still unpaid
 export async function sendPaymentReminderEmail(
-  a: { to: string; orderNumber: string; totalCents: number; method: "oxxo" | "spei"; reference?: string; clabe?: string; voucherUrl?: string; expiresAt?: string | null; trackUrl: string },
+  a: { to: string; orderNumber: string; totalCents: number; method: "oxxo" | "spei" | "aplazo"; reference?: string; clabe?: string; voucherUrl?: string; expiresAt?: string | null; trackUrl: string },
 ) {
   const expires = a.expiresAt ? new Date(a.expiresAt).toLocaleString("es-MX") : null;
+  // Aplazo no deja referencia ni CLABE que repetir: lo que falta es terminar la
+  // solicitud, así que el correo lleva de vuelta a retomarla.
   const detail =
-    a.method === "oxxo"
+    a.method === "aplazo"
+      ? `<p style="margin:0 0 8px">Te faltó terminar tu solicitud en Aplazo. Retómala desde tu pedido y págalo en quincenas.</p>`
+      : a.method === "oxxo"
       ? `<p style="margin:0 0 8px">Paga en efectivo con esta referencia en ${CASH_CHAINS_SHORT} y +20,000 tiendas. <strong>No es válido en OXXO.</strong></p>
          <div class="mono" style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:16px;color:#18181b">${a.reference ?? ""}</div>`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE:</p>

@@ -315,6 +315,19 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     p_expires_at: pm.expires_at ? new Date(pm.expires_at * 1000).toISOString() : undefined,
   });
 
+  // 6b. Aplazo también sale del sitio a aprobar un crédito, y `create_order` lo
+  //     dejó sin fecha de vencimiento igual que a MercadoPago. Sin ella el
+  //     pedido nunca expira ni entra al recordatorio, así que se queda colgado
+  //     para siempre reservando stock: 8 de 11 pedidos con Aplazo acabaron así.
+  //     Mismo plazo que MP — la aprobación puede tomar horas y matarla a las 2
+  //     costaría ventas reales.
+  if (input.method === "aplazo" && !created.expires_at) {
+    await admin
+      .from("orders")
+      .update({ expires_at: new Date(Date.now() + MP_EXPIRY_HOURS * 60 * 60 * 1000).toISOString() })
+      .eq("id", orderId);
+  }
+
   // 7. card without 3DS (risk-free smart mode) may already be paid — commit now
   //    (webhook also fires, idempotent). With 3DS, the webhook commits after the challenge.
   let cardPaid = false;
