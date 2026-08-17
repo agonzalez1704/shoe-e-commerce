@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
-import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel } from "@/app/admin/actions";
+import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel, descartarGuia } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
 // Los envíos son pesos cerrados; los centavos sólo estorban al comparar.
@@ -303,10 +303,30 @@ export function FulfillmentPanel({ order }: { order: Order }) {
       })()}
 
       {err && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">{err}</p>}
-      {order.shipping_label_url && (
-        <a href={order.shipping_label_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
-          <ArrowSquareOut size={12} /> Descargar etiqueta (PDF)
-        </a>
+      {(order.shipping_label_url || conGuia) && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {order.shipping_label_url ? (
+            <a href={order.shipping_label_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
+              <ArrowSquareOut size={12} /> Descargar etiqueta (PDF)
+            </a>
+          ) : <span />}
+          {/* La salida cuando la guía ya no sirve —cancelada en Skydropx, o mal
+              capturada—. Sin esto el pedido se queda atorado: hay guía, así que
+              el botón de cotizar no se pinta, y no había forma de quitarla. */}
+          <button
+            disabled={isPending}
+            onClick={() => {
+              if (!confirm("¿Quitar la guía de este pedido para poder generar otra?\n\nEsto NO la cancela en Skydropx: si sigue viva, cancélala allá primero o pagarás dos envíos.")) return;
+              run(async () => {
+                const res = await descartarGuia(order.id);
+                if (!res.ok) setErr(res.error);
+              });
+            }}
+            className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline disabled:opacity-50"
+          >
+            Quitar guía y volver a cotizar
+          </button>
+        </div>
       )}
 
       {/* Advance stage */}

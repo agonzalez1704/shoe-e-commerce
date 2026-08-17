@@ -287,6 +287,28 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
   }
 }
 
+// Suelta la guía del pedido para poder generar otra. Hace falta cuando la guía
+// se cancela en Skydropx: el pedido se queda con un número que ya no sirve, y
+// como el panel esconde "Cotizar" mientras haya guía —para no pagar dos veces
+// por descuido— el pedido quedaba atorado sin salida.
+//
+// Sólo limpia lo nuestro. La guía en Skydropx se cancela allá; esto no la
+// cancela ni devuelve el dinero de una que siga viva.
+export async function descartarGuia(orderId: string) {
+  try {
+    const supabase = await requirePermiso("pedidos_gestionar");
+    const { error } = await supabase
+      .from("orders")
+      .update({ carrier: null, tracking_number: null, tracking_url: null, shipping_label_url: null })
+      .eq("id", orderId);
+    if (error) return { ok: false as const, error: error.message };
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo descartar la guía" };
+  }
+}
+
 // Kept for the León path and as a one-shot fallback: quote, take the cheapest,
 // ship. Everything else should go through quote → choose → create.
 export async function generateSkydropxLabel(orderId: string) {
