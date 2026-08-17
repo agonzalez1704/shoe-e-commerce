@@ -61,6 +61,11 @@ export type Rate = {
   service: string | null;
   total: number;
   days: number | null;
+  // "ocurre": la paquetería entrega en su sucursal y el comprador pasa por el
+  // paquete. Ojo, NO es `pickup_ocurre` —ese dice que el remitente puede dejar
+  // el paquete en sucursal y viene en true en todas las tarifas, así que no
+  // sirve para filtrar. Paquetexpress, la que más usamos, da false aquí.
+  ocurre: boolean;
 };
 
 export type ShipmentResult = {
@@ -172,12 +177,13 @@ export async function quote(to: Address): Promise<{ quotationId: string; rates: 
 
   const rates: Rate[] = (data.rates ?? [])
     .filter((r: { success?: boolean; total?: string | number }) => r.success && r.total != null)
-    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; provider_service_name?: string | null; total: string; days: number | null }) => ({
+    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; provider_service_name?: string | null; total: string; days: number | null; office_delivery?: boolean }) => ({
       id: r.id,
       provider_name: r.provider_name,
       service: r.provider_service_level_name ?? r.provider_service_name ?? null,
       total: Number(r.total),
       days: r.days,
+      ocurre: r.office_delivery === true,
     }))
     .sort((a: Rate, b: Rate) => a.total - b.total);
 
@@ -259,12 +265,13 @@ export async function rateById(quotationId: string, rateId: string): Promise<Rat
   const data = await api(`/quotations/${quotationId}`);
   const rates: Rate[] = (data.rates ?? [])
     .filter((r: { success?: boolean; total?: string | number }) => r.success && r.total != null)
-    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; provider_service_name?: string | null; total: string; days: number | null }) => ({
+    .map((r: { id: string; provider_name: string; provider_service_level_name: string | null; provider_service_name?: string | null; total: string; days: number | null; office_delivery?: boolean }) => ({
       id: r.id,
       provider_name: r.provider_name,
       service: r.provider_service_level_name ?? r.provider_service_name ?? null,
       total: Number(r.total),
       days: r.days,
+      ocurre: r.office_delivery === true,
     }));
   return rates.find((r) => String(r.id) === String(rateId)) ?? null;
 }

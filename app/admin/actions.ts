@@ -189,6 +189,8 @@ async function shipTo(supabase: Awaited<ReturnType<typeof requirePermiso>>, orde
   if (!o?.shipping_address) throw new Error("El pedido no tiene dirección de envío.");
   const s = o.shipping_address as Record<string, string>;
   return {
+    // Lo eligió el comprador en el checkout; viaja en el jsonb de envío.
+    esOcurre: s.entrega === "ocurre",
     name: s.name || "Cliente",
     phone: s.phone || "",
     email: o.email,
@@ -220,6 +222,18 @@ export async function quoteSkydropxRates(orderId: string) {
     }
     const { quote } = await import("@/lib/skydropx");
     const { quotationId, rates } = await quote(to);
+
+    // A sucursal sólo sirven las paqueterías que entregan ahí. Sin este filtro
+    // se puede elegir una que no lo admite, pagar la guía —el envío se cobra al
+    // crearlo— y descubrir después que el paquete va a domicilio. Paquetexpress,
+    // la que más usamos, no entrega en sucursal en varias rutas.
+    if (to.esOcurre) {
+      const conOcurre = rates.filter((r) => r.ocurre);
+      if (!conOcurre.length) {
+        return { ok: false as const, error: "Ninguna paquetería entrega a sucursal (ocurre) en este código postal. Confirma con el cliente si acepta entrega a domicilio." };
+      }
+      return { ok: true as const, local: false, quotationId, rates: conOcurre, ocurre: true as const };
+    }
     return { ok: true as const, local: false, quotationId, rates };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "Falló la cotización" };

@@ -20,6 +20,7 @@ type Order = {
   shipped_at: string | null;
   delivered_at: string | null;
   shipping_label_url: string | null;
+  esOcurre?: boolean;
 };
 
 const STAGE_ICON: Record<FulfillmentStage, React.ComponentType<{ size?: number; weight?: "bold" | "fill" | "regular" }>> = {
@@ -68,7 +69,14 @@ export function FulfillmentPanel({ order }: { order: Order }) {
   return (
     <div className="space-y-5 rounded-2xl border border-border bg-surface p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Envío y seguimiento</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          Envío y seguimiento
+          {order.esOcurre && (
+            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+              A sucursal · ocurre
+            </span>
+          )}
+        </h2>
         {order.estimated_delivery && (
           <span className="text-xs text-muted">Entrega estimada: <span className="text-text">{order.estimated_delivery}</span></span>
         )}
@@ -171,6 +179,16 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         Guardar
       </button>
       </details>
+
+      {/* El comprador pasa por el paquete a la sucursal. La cotización ya sólo
+          ofrece paqueterías que entregan ahí; la sucursal se elige al hacer la
+          guía, porque el buscador de sucursales vive en el panel de Skydropx. */}
+      {order.esOcurre && !conGuia && (
+        <p className="rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-xs text-text">
+          <strong>Entrega a sucursal (ocurre).</strong> Sólo se listan paqueterías que entregan en sucursal.
+          Confirma con el cliente a cuál quiere ir y captura ahí la guía.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         {autoUrl ? (

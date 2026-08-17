@@ -66,6 +66,8 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           shipped_at: order.shipped_at,
           delivered_at: order.delivered_at,
           shipping_label_url: order.shipping_label_url,
+          // Lo pidió el comprador en el checkout (jsonb de envío).
+          esOcurre: (order.shipping_address as Record<string, string> | null)?.entrega === "ocurre",
         }}
       />
 

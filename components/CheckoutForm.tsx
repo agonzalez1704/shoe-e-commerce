@@ -142,6 +142,7 @@ export function CheckoutForm({
   const [method, setMethod] = useState<Method>("card");
   const [needsInvoice, setNeedsInvoice] = useState(false);
   const [save, setSave] = useState(true);
+  const [ocurre, setOcurre] = useState(false);
   const [showCode, setShowCode] = useState(false);
 
   // Prefill contact/shipping from the last "saved" checkout on this device, but
@@ -334,6 +335,9 @@ export function CheckoutForm({
           name: g("name"), phone: g("phone"),
           line1: g("line1"), neighborhood: g("neighborhood"),
           city: g("city"), region: g("region"), postal: g("postal"), country: "MX",
+          // "ocurre" = a sucursal de paquetería. Viaja dentro del jsonb de envío
+          // para no tocar `create_order`; ausente significa domicilio.
+          ...(ocurre ? { entrega: "ocurre" } : {}),
         },
         discountCode: g("discount") || undefined,
         cardTokenId,
@@ -442,6 +446,26 @@ export function CheckoutForm({
                   <Truck size={14} /> {activeBrand.copy.deliveryLine}
                 </p>
               )}
+
+              {/* Ocurre: el paquete llega a la sucursal de la paquetería y el
+                  comprador pasa por él. Se sigue pidiendo la dirección completa
+                  porque Skydropx exige calle y colonia para cotizar, y porque el
+                  código postal es el que decide qué sucursales quedan cerca. */}
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border p-3 transition-colors hover:border-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+                <input
+                  type="checkbox"
+                  checked={ocurre}
+                  onChange={(e) => setOcurre(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-text">Recogerlo en sucursal de paquetería</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    En lugar de a tu domicilio, lo enviamos a la sucursal más cercana a tu código postal y pasas por él.
+                    Te confirmamos la dirección exacta antes de enviarlo.
+                  </span>
+                </span>
+              </label>
               <label className="flex cursor-pointer items-center gap-2 pt-1 text-sm text-muted">
                 <input
                   type="checkbox"
