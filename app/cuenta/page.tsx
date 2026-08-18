@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const ITEMS_ORDERED = `${activeBrand.copy?.itemPlural ?? "Productos"} pedidos`.replace(/^./, (c) => c.toUpperCase());
 
-export default async function CuentaPage({ searchParams }: { searchParams: Promise<{ error?: string; msg?: string }> }) {
-  const { error, msg } = await searchParams;
+export default async function CuentaPage({ searchParams }: { searchParams: Promise<{ error?: string; msg?: string; next?: string }> }) {
+  const { error, msg, next } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -21,7 +21,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
     return (
       <div className="py-12">
         <h1 className="mb-8 text-center text-2xl font-semibold tracking-tight">Mi cuenta</h1>
-        <AuthForms error={error} msg={msg} />
+        <AuthForms error={error} msg={msg} google={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} next={next ?? "/cuenta"} />
       </div>
     );
   }

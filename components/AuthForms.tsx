@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { customerSignIn, customerSignUp } from "@/app/cuenta/actions";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 const INPUT = "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-text";
 
-export function AuthForms({ error, msg }: { error?: string; msg?: string }) {
+export function AuthForms({ error, msg, google = false, next = "/cuenta" }: { error?: string; msg?: string; google?: boolean; next?: string }) {
   const [tab, setTab] = useState<"in" | "up">("in");
 
   return (
@@ -24,6 +25,18 @@ export function AuthForms({ error, msg }: { error?: string; msg?: string }) {
           Crear cuenta
         </button>
       </div>
+
+      {/* Google va arriba y con el descuento a la vista: es a donde manda la
+          barra de bienvenida, y un alta con correo y contraseña convierte mucho
+          peor que un toque. Sólo se pinta si la marca lo tiene activado. */}
+      {google && (
+        <div className="mb-5">
+          <GoogleSignInButton next={next} label={tab === "up" ? "Crear cuenta con Google" : "Continuar con Google"} />
+          <div className="mt-3 flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-border" /> o con tu correo <span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+      )}
 
       {msg && <p className="mb-3 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">{msg}</p>}
       {error && <p className="mb-3 text-sm text-accent">{error}</p>}
