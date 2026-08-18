@@ -226,20 +226,20 @@ const BRANDS: Record<string, BrandConfig> = {
     home: {
       hero: {
         image: "/hero-moto.jpg",
-        eyebrow: "Hecho sobre pedido",
+        eyebrow: "Piel genuina, hecha a mano",
         titleTop: "Piel con filo,",
         titleBottom: "hecha a tu paso.",
-        body: "Sneakers de piel fabricados a mano cuando los pides. Tallas MX 25–30, envío gratis en 4–7 días hábiles a todo México.",
+        body: "Sneakers de piel hechos a mano en León. Tallas MX 25–30, envío gratis a todo México.",
       },
       // Reusa fotografía y copy que ya vivían en `features`: son piezas propias
       // y ya aprobadas, no material inventado para llenar el carrusel.
       slides: [
         {
           image: "/hero-moto.jpg",
-          eyebrow: "Hecho sobre pedido",
+          eyebrow: "Piel genuina, hecha a mano",
           titleTop: "Piel con filo,",
           titleBottom: "hecha a tu paso.",
-          body: "Sneakers de piel fabricados a mano cuando los pides. Envío gratis en 4–7 días hábiles a todo México.",
+          body: "Sneakers de piel hechos a mano en León. Envío gratis a todo México.",
           ctaLabel: "Ver tienda",
           ctaHref: "/products",
         },
@@ -309,7 +309,7 @@ const BRANDS: Record<string, BrandConfig> = {
       editorialTitle: "Hechos para la vida diaria",
       editorialBody: "Piel que combina con todo — de la oficina al café. Así se ven en el día a día.",
       benefits: [
-        { icon: "package", title: "Hecho sobre pedido", sub: "Fabricado a mano para ti" },
+        { icon: "package", title: "Piel genuina", sub: "Hecho a mano en León" },
         { icon: "truck", title: "Envío gratis", sub: "Entrega en 4–7 días hábiles" },
         { icon: "card", title: "Paga como quieras", sub: "Tarjeta, efectivo o Aplazo" },
         { icon: "pin", title: "Todo México", sub: "Con factura disponible" },
@@ -401,7 +401,7 @@ const BRANDS: Record<string, BrandConfig> = {
     emailFrom: "Blade <pedidos@calzadoblade.com>",
     announcement: "2 PARES POR $1,999 · combina cualquier modelo · Envío gratis a todo México",
     seoSuffix: "calzado de piel hecho en México",
-    catalogNote: "hechos sobre pedido · envío gratis",
+    catalogNote: "piel genuina · envío gratis",
     // silver wordmark (transparent PNG); inverted to dark on light theme
     logo: { src: "/blade-logo.png", width: 565, height: 220, alt: "Blade", invertOnLight: true },
     // angular blade glyph fallback: filled with the accent
