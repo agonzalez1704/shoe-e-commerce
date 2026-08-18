@@ -250,6 +250,9 @@ const BRANDS: Record<string, BrandConfig> = {
           // al recorte 4:5, así que la pieza de móvil es otra toma, en círculo.
           image: "/blade-hero-estilos.webp",
           imageMobile: "/blade-hero-estilos-movil.webp",
+          // Pieza 16:9 nativa a 4096px: el hero no le recorta nada y aguanta un
+          // monitor Retina ancho. La anterior era 4:3 de 2000px, así que perdía
+          // un cuarto del alto —los zapatos— y se veía suave al ampliarla.
           eyebrow: "",
           titleTop: "",
           ctaLabel: "Ver tienda",
