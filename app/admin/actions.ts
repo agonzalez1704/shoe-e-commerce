@@ -252,7 +252,7 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
     const rate = await rateById(quotationId, rateId);
     if (!rate) return { ok: false as const, error: "Esa tarifa ya no está disponible. Vuelve a cotizar." };
 
-    const r = await createShipment(quotationId, rate, to);
+    const r = await createShipment(quotationId, rate, to, to.esOcurre);
 
     // A partir de aquí el envío YA está cobrado. Lo que llegue se guarda antes
     // de juzgar si vino completo: perder la guía de un envío pagado cuesta
@@ -278,12 +278,41 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
     }
 
     revalidatePath(`/admin/orders/${orderId}`);
+    // Se pidió a sucursal y Skydropx no lo registró así: el envío ya está
+    // cobrado y saldría a domicilio. Vale más decirlo de frente que dejar que
+    // el cliente vaya a la sucursal por un paquete que nunca llegó ahí.
+    if (to.esOcurre && !r.ocurreConfirmado) {
+      return { ok: false as const, error: `Guía ${r.trackingNumber} creada, pero Skydropx NO la registró como entrega a sucursal — va a domicilio. Revísala en su panel (envío ${r.shipmentId ?? "?"}) antes de avisarle al cliente.` };
+    }
     if (!r.labelUrl) {
       return { ok: false as const, error: `Guía ${r.trackingNumber} creada, pero la etiqueta aún no está lista en Skydropx. Recarga en un minuto; no vuelvas a generar.` };
     }
     return { ok: true as const, carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "Falló la generación de guía" };
+  }
+}
+
+// Marca o desmarca el pedido como entrega a sucursal. Hace falta porque el
+// cliente puede pedirlo por WhatsApp después de comprar, y porque los pedidos
+// anteriores a la casilla del checkout no la traen.
+export async function marcarOcurre(orderId: string, ocurre: boolean) {
+  try {
+    const supabase = await requirePermiso("pedidos_gestionar");
+    const { data: o } = await supabase.from("orders").select("shipping_address").eq("id", orderId).maybeSingle();
+    if (!o?.shipping_address) return { ok: false as const, error: "El pedido no tiene dirección de envío." };
+
+    // Se conserva el resto del jsonb: es el domicilio del comprador.
+    const dir = { ...(o.shipping_address as Record<string, string>) };
+    if (ocurre) dir.entrega = "ocurre";
+    else delete dir.entrega;
+
+    const { error } = await supabase.from("orders").update({ shipping_address: dir }).eq("id", orderId);
+    if (error) return { ok: false as const, error: error.message };
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo cambiar el tipo de entrega" };
   }
 }
 

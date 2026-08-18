@@ -74,6 +74,7 @@ export type ShipmentResult = {
   trackingUrl: string | null;
   labelUrl: string | null;
   shipmentId: string | null; // para rastrear el envío ya cobrado si algo falla después
+  ocurreConfirmado: boolean; // Skydropx lo guardó como entrega a sucursal
 };
 
 let cachedToken: { value: string; exp: number } | null = null;
@@ -191,7 +192,7 @@ export async function quote(to: Address): Promise<{ quotationId: string; rates: 
 }
 
 // Create the shipment for a chosen rate → tracking + label PDF.
-export async function createShipment(quotationId: string, rate: Rate, to: Address): Promise<ShipmentResult> {
+export async function createShipment(quotationId: string, rate: Rate, to: Address, ocurre = false): Promise<ShipmentResult> {
   // Falla aquí y no en Skydropx: mandar la clave vacía devuelve un error de
   // validación que no dice qué configurar, y mandar la de otra marca declara
   // mercancía que no es la del envío.
@@ -213,6 +214,11 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
         parcels: [PARCEL],
         package_type: PACKAGE_TYPE,
         consignment_note: CONSIGNMENT_NOTE,
+        // A sucursal: la paquetería entrega ahí y el comprador pasa por el
+        // paquete. El campo existe en la respuesta del envío (`office_delivery`),
+        // así que se manda con ese nombre; si Skydropx lo ignorara, el envío
+        // saldría a domicilio, y por eso quien llama lo verifica al recibirlo.
+        ...(ocurre ? { office_delivery: true } : {}),
       },
     }),
   });
@@ -236,6 +242,8 @@ function leeEnvio(j: Record<string, any>) {
     labelUrl: (pkg.label_url || a.label_urls?.[0] || null) as string | null,
     shipmentId: (a.id ?? j.data?.id ?? null) as string | null,
     fallo: (a.error_detail ?? null) as string | null,
+    // Lo que Skydropx guardó de verdad, no lo que pedimos.
+    ocurreConfirmado: a.office_delivery === true,
   };
 }
 
@@ -243,7 +251,7 @@ function leeEnvio(j: Record<string, any>) {
 // tarda un par de minutos (en BL-001074, dos y medio). Se relee el envío hasta
 // que aparece, igual que ya se hace al cotizar.
 async function esperaEtiqueta(shipmentId: string | null) {
-  if (!shipmentId) return { trackingNumber: "", trackingUrl: null, labelUrl: null, shipmentId: null };
+  if (!shipmentId) return { trackingNumber: "", trackingUrl: null, labelUrl: null, shipmentId: null, ocurreConfirmado: false };
   let d = leeEnvio(await api(`/shipments/${shipmentId}`));
   for (let i = 0; i < 12 && !d.labelUrl && !d.fallo; i++) {
     await new Promise((r) => setTimeout(r, 3000));
@@ -251,7 +259,7 @@ async function esperaEtiqueta(shipmentId: string | null) {
   }
   // El envío ya está pagado, así que un fallo aquí no puede tirar lo que sí
   // llegó: se devuelve la guía aunque falte la etiqueta y quien llama decide.
-  return { trackingNumber: d.trackingNumber, trackingUrl: d.trackingUrl, labelUrl: d.labelUrl, shipmentId };
+  return { trackingNumber: d.trackingNumber, trackingUrl: d.trackingUrl, labelUrl: d.labelUrl, shipmentId, ocurreConfirmado: d.ocurreConfirmado };
 }
 
 // Re-read a resolved quotation and find one rate by id.

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
-import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel, descartarGuia } from "@/app/admin/actions";
+import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel, descartarGuia, marcarOcurre } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
 // Los envíos son pesos cerrados; los centavos sólo estorban al comparar.
@@ -71,11 +71,11 @@ export function FulfillmentPanel({ order }: { order: Order }) {
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           Envío y seguimiento
-          {order.esOcurre && (
+          {order.esOcurre ? (
             <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
               A sucursal · ocurre
             </span>
-          )}
+          ) : null}
         </h2>
         {order.estimated_delivery && (
           <span className="text-xs text-muted">Entrega estimada: <span className="text-text">{order.estimated_delivery}</span></span>
@@ -183,11 +183,30 @@ export function FulfillmentPanel({ order }: { order: Order }) {
       {/* El comprador pasa por el paquete a la sucursal. La cotización ya sólo
           ofrece paqueterías que entregan ahí; la sucursal se elige al hacer la
           guía, porque el buscador de sucursales vive en el panel de Skydropx. */}
-      {order.esOcurre && !conGuia && (
-        <p className="rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-xs text-text">
-          <strong>Entrega a sucursal (ocurre).</strong> Sólo se listan paqueterías que entregan en sucursal.
-          Confirma con el cliente a cuál quiere ir y captura ahí la guía.
-        </p>
+      {/* El comprador puede pedir la sucursal por WhatsApp después de comprar, y
+          los pedidos anteriores a la casilla del checkout no la traen. Sólo
+          mientras no haya guía: cambiarlo después no movería un envío ya pagado. */}
+      {!conGuia && (
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3 text-xs transition-colors hover:border-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+          <input
+            type="checkbox"
+            checked={!!order.esOcurre}
+            disabled={isPending}
+            onChange={(e) => run(async () => {
+              const res = await marcarOcurre(order.id, e.target.checked);
+              if (!res.ok) setErr(res.error);
+            })}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+          />
+          <span>
+            <strong className="text-text">Entrega a sucursal (ocurre)</strong>
+            <span className="mt-0.5 block text-muted">
+              {order.esOcurre
+                ? "Sólo se listan paqueterías que entregan en sucursal, y la guía se genera marcada como ocurre."
+                : "Márcalo si el cliente pasa por su paquete a la sucursal en vez de recibirlo en casa."}
+            </span>
+          </span>
+        </label>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
