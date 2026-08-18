@@ -9,6 +9,7 @@ import { addToCart } from "@/app/cart/actions";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
 import { activeBrand } from "@/lib/brand";
+import { EVENTO_AGREGADO } from "@/components/CuentaBienvenida";
 
 type Variant = {
   id: string;
@@ -96,6 +97,8 @@ export function VariantPicker({
     }
     startTransition(async () => {
       await addToCart(selected.id, 1);
+      // avisa a la barra de bienvenida; ella decide si hay algo que mostrar
+      window.dispatchEvent(new Event(EVENTO_AGREGADO));
       trackMeta("AddToCart", {
         content_ids: [metaContentId(slug, selected.color)],
         content_type: "product",

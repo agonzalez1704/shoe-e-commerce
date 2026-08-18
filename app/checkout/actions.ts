@@ -193,6 +193,15 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
 
   const orderId = created.order_id;
   onOrderCreated(orderId); // from here on, a failure must roll the cart back
+
+  // El teléfono sólo vivía dentro del jsonb de envío del pedido, así que los
+  // clientes con cuenta tenían `phone` vacío —los 14— y no había con qué armar
+  // una audiencia ni a quién marcarle. Se copia sin bloquear la compra: que
+  // falle no puede costar una venta.
+  if (input.phone) {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (u) await supabase.from("customers").update({ phone: input.phone }).eq("id", u.id).is("phone", null);
+  }
   const baseAfterDiscount = created.subtotal_cents - created.discount_cents;
 
   // 2. add shipping, recompute totals (service role)
