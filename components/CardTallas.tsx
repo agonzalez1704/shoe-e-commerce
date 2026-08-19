@@ -85,7 +85,7 @@ export function CardTallas({
             sacude ? "border-accent text-accent" : sel ? "border-border" : "border-border text-muted"
           }`}
         >
-          <option value="">Elige tu talla (MX)</option>
+          <option value="">Elige tu talla</option>
           {disponibles.map((t) => (
             <option key={t.variantId} value={t.talla}>
               MX {t.talla}
