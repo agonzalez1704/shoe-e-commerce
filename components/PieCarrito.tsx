@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { ShoppingBag, ArrowRight } from "@phosphor-icons/react";
@@ -12,6 +13,16 @@ import { CART_CHANGED } from "@/components/CartBadge";
 // listado — en el checkout estorbaría y en la PDP compite con el CTA propio.
 export function PieCarrito() {
   const [count, setCount] = useState(0);
+  // El portal necesita document; en el server aún no existe.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+
+  // Holgura para que la barra no tape la última fila de la reja. En el body y
+  // no en la página: la barra vive en un portal y la página no sabe de ella.
+  useEffect(() => {
+    document.body.style.paddingBottom = count > 0 ? "72px" : "";
+    return () => { document.body.style.paddingBottom = ""; };
+  }, [count]);
 
   useEffect(() => {
     let alive = true;
@@ -26,7 +37,12 @@ export function PieCarrito() {
     return () => { alive = false; window.removeEventListener(CART_CHANGED, alCambiar); };
   }, []);
 
-  return (
+  // Portal directo a <body>: la página envuelve su contenido en `.reveal`, cuya
+  // animación deja un transform permanente (fill both) — y un ancestro con
+  // transform convierte a `fixed` en "fijo respecto al ancestro". La barra
+  // quedaba pegada al final del documento en vez de a la pantalla.
+  if (!montado) return null;
+  return createPortal(
     <AnimatePresence>
       {count > 0 && (
         <motion.div
@@ -51,6 +67,7 @@ export function PieCarrito() {
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
