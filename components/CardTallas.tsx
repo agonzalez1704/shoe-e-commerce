@@ -2,8 +2,10 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag } from "@phosphor-icons/react";
+import { ShoppingBag, Check } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "motion/react";
 import { addToCart } from "@/app/cart/actions";
+import { notifyCartChanged } from "@/components/CartBadge";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
 
@@ -32,6 +34,7 @@ export function CardTallas({
   const inicial = disponibles.find((t) => t.talla === tallaGuardada)?.talla ?? null;
   const [sel, setSel] = useState<string | null>(inicial);
   const [sacude, setSacude] = useState(false);
+  const [listo, setListo] = useState(false);
   const fila = useRef<HTMLDivElement>(null);
 
   if (!disponibles.length) {
@@ -50,6 +53,11 @@ export function CardTallas({
     }
     startTransition(async () => {
       await addToCart(elegida.variantId, 1);
+      // El contador del encabezado se mueve aquí, no al recargar: es la señal
+      // de que el producto llegó a algún lado.
+      notifyCartChanged(1);
+      setListo(true);
+      setTimeout(() => setListo(false), 1600);
       trackMeta("AddToCart", {
         content_ids: [metaContentId(slug, color ?? "")],
         content_type: "product",
@@ -87,15 +95,59 @@ export function CardTallas({
         ))}
       </div>
 
-      <button
+      {/* Tres estados con su propio color: reposo, enviando y confirmado. Sin
+          esto el botón se quedaba igual y la gente lo tocaba de nuevo. */}
+      <motion.button
         type="button"
         onClick={agregar}
         disabled={pendiente}
-        className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.99] disabled:opacity-60"
+        whileTap={{ scale: 0.97 }}
+        animate={{ backgroundColor: listo ? "var(--color-success, #16a34a)" : "var(--color-accent)" }}
+        transition={{ duration: 0.25 }}
+        className="relative mt-2.5 flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-lg px-3 py-2.5 text-sm font-semibold text-accent-contrast disabled:cursor-wait"
       >
-        <ShoppingBag size={15} weight="fill" />
-        {pendiente ? "Agregando…" : "Agregar al carrito"}
-      </button>
+        <AnimatePresence mode="wait" initial={false}>
+          {listo ? (
+            <motion.span
+              key="listo"
+              className="flex items-center gap-1.5"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              <Check size={15} weight="bold" /> En tu carrito
+            </motion.span>
+          ) : pendiente ? (
+            <motion.span
+              key="enviando"
+              className="flex items-center gap-1.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {/* el artículo cayendo dentro de la bolsa */}
+              <motion.span
+                animate={{ y: [-9, 0], opacity: [0, 1, 1] }}
+                transition={{ duration: 0.6, repeat: Infinity, ease: "easeIn" }}
+                className="inline-flex"
+              >
+                <ShoppingBag size={15} weight="fill" />
+              </motion.span>
+              Agregando…
+            </motion.span>
+          ) : (
+            <motion.span
+              key="reposo"
+              className="flex items-center gap-1.5"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              <ShoppingBag size={15} weight="fill" /> Agregar al carrito
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
     </div>
   );
 }
