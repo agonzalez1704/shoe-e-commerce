@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -444,6 +449,7 @@ export type Database = {
         Row: {
           active: boolean
           code: string
+          customer_id: string | null
           expires_at: string | null
           id: string
           max_uses: number | null
@@ -456,6 +462,7 @@ export type Database = {
         Insert: {
           active?: boolean
           code: string
+          customer_id?: string | null
           expires_at?: string | null
           id?: string
           max_uses?: number | null
@@ -468,6 +475,7 @@ export type Database = {
         Update: {
           active?: boolean
           code?: string
+          customer_id?: string | null
           expires_at?: string | null
           id?: string
           max_uses?: number | null
@@ -477,7 +485,68 @@ export type Database = {
           used_count?: number
           value?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "discount_codes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favoritos: {
+        Row: {
+          color: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favoritos_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favoritos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "favoritos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_colorways"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "favoritos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory: {
         Row: {
@@ -1718,6 +1787,7 @@ export type Database = {
         }[]
       }
       cleanup_rate_limits: { Args: never; Returns: undefined }
+      codigo_bienvenida: { Args: never; Returns: string }
       commit_order: {
         Args: {
           p_amount_cents: number
@@ -1964,4 +2034,3 @@ export const Constants = {
     },
   },
 } as const
-

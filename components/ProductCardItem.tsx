@@ -9,6 +9,7 @@ import { swatchBg } from "@/lib/colors";
 import { comboOf, comboLabel, precioConPromo } from "@/lib/pricing";
 import type { ProductCard } from "@/lib/catalog";
 import { CardTallas } from "@/components/CardTallas";
+import { Favorito } from "@/components/Favorito";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -62,6 +63,8 @@ export function ProductCardItem({ p, priority, badge, tallaGuardada }: { p: Prod
             {onSale && <span className={PILL_ACCENT}>-{p.promoPercent}%</span>}
             {badge && <span className={PILL_DARK}>{badge}</span>}
           </div>
+
+          <Favorito slug={p.slug} color={p.color} />
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 transition-all duration-300 group-hover:opacity-100">
             <span className="flex items-center gap-1 rounded-full bg-text px-3 py-1.5 text-[11px] font-medium text-bg shadow-[var(--shadow-md)]">

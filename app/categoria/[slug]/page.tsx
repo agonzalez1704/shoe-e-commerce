@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getCategory, listProductsByCategory } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
+import { PieCarrito } from "@/components/PieCarrito";
 import { Pagination, paginar } from "@/components/Pagination";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
@@ -86,7 +87,8 @@ export default async function CategoryPage({
         <p className="text-muted">Aún no hay productos en esta categoría.</p>
       ) : (
         <>
-          <ProductGrid products={items} />
+          <PieCarrito />
+      <ProductGrid products={items} />
           <Pagination pagina={pagina} total={products.length} base={`/categoria/${slug}`} />
         </>
       )}

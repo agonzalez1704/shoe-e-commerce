@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listProducts, type ProductFilters } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
+import { PieCarrito } from "@/components/PieCarrito";
 import { Pagination, paginar } from "@/components/Pagination";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand } from "@/lib/brand";
@@ -47,7 +48,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
       ) : (
         <>
           <ComboBand picks={comboPicks(products)} />
-          <ProductGrid products={items} />
+          <PieCarrito />
+      <ProductGrid products={items} />
           <Pagination
             pagina={pagina}
             total={products.length}
