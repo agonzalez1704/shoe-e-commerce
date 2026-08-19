@@ -29,7 +29,7 @@ export default function DevolucionesPage() {
   return (
     <LegalPage title="Devoluciones y Cambios" updated="16 de julio de 2026">
       <p>
-        Queremos que ames tu par. Como cada par se <strong>fabrica sobre pedido</strong>, te pedimos revisar bien
+        Queremos que ames tu par, así que te pedimos revisar bien
         tu talla antes de comprar (consulta la guía de tallas en cada producto). Aun así, te damos estas opciones:
       </p>
 
@@ -44,7 +44,7 @@ export default function DevolucionesPage() {
       <ul>
         <li>Aceptamos devoluciones dentro de los <strong>30 días naturales</strong> posteriores a la entrega, siempre que el producto esté sin uso y en su empaque original.</li>
         <li>El reembolso se realiza al mismo método de pago, una vez que recibimos y validamos el producto.</li>
-        <li>Por tratarse de producto hecho sobre pedido, los productos personalizados o en promoción especial pueden estar sujetos a condiciones distintas, que se indicarán al momento de la compra.</li>
+        <li>Los productos personalizados o en promoción especial pueden estar sujetos a condiciones distintas, que se indicarán al momento de la compra.</li>
       </ul>
 
       <h2>Garantía</h2>

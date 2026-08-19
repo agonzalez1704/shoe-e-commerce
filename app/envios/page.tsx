@@ -32,7 +32,7 @@ export default function EnviosPage() {
 
       <h2>Tiempos de entrega</h2>
       <p>
-        Como cada par se <strong>fabrica sobre pedido</strong>, el tiempo total estimado es de{" "}
+        El tiempo total estimado de entrega es de{" "}
         <strong>4 a 7 días hábiles</strong> a partir de que se confirma tu pago. Este tiempo incluye la fabricación
         y el envío. Los días hábiles no consideran fines de semana ni días festivos.
       </p>

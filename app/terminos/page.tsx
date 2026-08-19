@@ -23,11 +23,11 @@ export default function TerminosPage() {
         compra aceptas estos términos en su totalidad.
       </p>
 
-      <h2>1. Productos hechos sobre pedido</h2>
+      <h2>1. Productos y tiempos de entrega</h2>
       <p>
-        Nuestro calzado se fabrica de forma artesanal <strong>una vez que confirmas tu compra</strong>. El tiempo
-        estimado de entrega es de <strong>4 a 7 días hábiles</strong> a partir de la confirmación del pago. Por
-        tratarse de producción bajo demanda, las cancelaciones aplican según la sección de Devoluciones.
+        Nuestro calzado es de piel y se elabora de forma artesanal. El tiempo estimado de entrega es de{" "}
+        <strong>4 a 7 días hábiles</strong> a partir de la confirmación del pago. Las cancelaciones aplican
+        según la sección de Devoluciones.
       </p>
 
       <h2>2. Precios y pagos</h2>
