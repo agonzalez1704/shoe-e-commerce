@@ -21,14 +21,20 @@ export function trackMeta(event: string, params?: Record<string, unknown>, event
   window.fbq("track", event, params ?? {}, eventId ? { eventID: eventId } : undefined);
 }
 
-export function MetaPixel() {
+// Sólo el re-disparo de PageView necesita la URL. Va aparte para que el
+// Suspense del layout (obligado por usePathname con cacheComponents) envuelva
+// únicamente esto: el <Script> del init no depende de la URL y no debe quedar
+// detrás de un fallback.
+export function MetaPixelPageViews() {
   const pathname = usePathname();
-
   // the SPA doesn't reload, so PageView has to be re-sent on navigation
   useEffect(() => {
     if (PIXEL_ID) trackMeta("PageView");
   }, [pathname]);
+  return null;
+}
 
+export function MetaPixel() {
   if (!PIXEL_ID) return null;
 
   return (

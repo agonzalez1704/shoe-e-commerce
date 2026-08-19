@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserCircle } from "@phosphor-icons/react/dist/ssr";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { CartBadge } from "@/components/CartBadge";
-import { MetaPixel } from "@/components/MetaPixel";
+import { MetaPixel, MetaPixelPageViews } from "@/components/MetaPixel";
 import { AnalyticsBeacon } from "@/components/AnalyticsBeacon";
 import { ViewTransition } from "@/components/ViewTransition";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -90,10 +90,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="overflow-x-hidden">
         <NuqsAdapter>
-          {/* Analítica: renderizan null y necesitan la URL para pageviews. Bajo
-              Suspense no bloquean el shell, y su fallback (nada) es su render. */}
+          {/* El init del pixel no lee la URL: fuera del Suspense, siempre en el
+              shell. Sólo los re-disparos por navegación (usePathname) van detrás
+              del fallback — renderizan null, así que null es su render. */}
+          <MetaPixel />
           <Suspense fallback={null}>
-            <MetaPixel />
+            <MetaPixelPageViews />
             <AnalyticsBeacon />
           </Suspense>
           <StorefrontOnly>
