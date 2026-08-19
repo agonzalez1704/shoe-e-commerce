@@ -108,6 +108,17 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
             </div>
           )}
 
+          {/* Entregado (o ya en camino): la invitación a reseñar vive aquí
+              además del correo — quien entra a rastrear ya demostró interés. */}
+          {!terminal && result.reviewToken && (result.stage === "delivered" || result.stage === "shipped") && (
+            <a
+              href={`/resena/${result.reviewToken}`}
+              className="mt-4 block rounded-lg bg-accent-soft p-3 text-center text-sm font-semibold text-accent"
+            >
+              {result.stage === "delivered" ? "¿Cómo te quedaron? Deja tu reseña →" : "¿Ya te llegó? Deja tu reseña →"}
+            </a>
+          )}
+
           {result.status === "pending" && result.payment && (
             <div className="mt-4 rounded-lg bg-accent-soft p-3 text-sm">
               <p className="font-medium text-accent">Falta tu pago</p>

@@ -10,6 +10,7 @@ export type TrackedOrder = {
   carrier: string | null;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  reviewToken: string | null;
   estimatedDelivery: string | null;
   paymentMethod: string | null;
   totalCents: number;
@@ -32,7 +33,7 @@ export async function lookupOrder(
   const admin = createAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("id, order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, payment_method, total_cents, created_at, shipping_address")
+    .select("id, order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, review_token, payment_method, total_cents, created_at, shipping_address")
     .eq("order_number", orderNumber.trim().toUpperCase())
     .ilike("email", email.trim())
     .maybeSingle();
@@ -57,6 +58,7 @@ export async function lookupOrder(
       carrier: order.carrier,
       trackingNumber: order.tracking_number,
       trackingUrl: order.tracking_url,
+      reviewToken: order.review_token ?? null,
       estimatedDelivery: order.estimated_delivery,
       status: order.status,
       paymentMethod: order.payment_method,
