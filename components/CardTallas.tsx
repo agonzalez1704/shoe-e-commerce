@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Check } from "@phosphor-icons/react";
+import { ShoppingBag, Check, CaretDown } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { addToCart } from "@/app/cart/actions";
 import { notifyCartChanged } from "@/components/CartBadge";
@@ -35,7 +35,7 @@ export function CardTallas({
   const [sel, setSel] = useState<string | null>(inicial);
   const [sacude, setSacude] = useState(false);
   const [listo, setListo] = useState(false);
-  const fila = useRef<HTMLDivElement>(null);
+  const fila = useRef<HTMLSelectElement>(null);
 
   if (!disponibles.length) {
     return <p className="mt-3 text-center text-xs text-muted">Agotado por ahora</p>;
@@ -70,29 +70,33 @@ export function CardTallas({
 
   return (
     <div className="mt-3">
-      <div
-        ref={fila}
-        tabIndex={-1}
-        aria-label="Elige tu talla"
-        className={`flex flex-wrap gap-1.5 outline-none ${sacude ? "animate-sacudida" : ""}`}
-      >
-        {disponibles.map((t) => (
-          <button
-            key={t.variantId}
-            type="button"
-            onClick={() => setSel(t.talla)}
-            aria-pressed={sel === t.talla}
-            className={`min-w-9 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-              sel === t.talla
-                ? "border-accent bg-accent text-accent-contrast"
-                : sacude
-                  ? "border-accent text-accent"
-                  : "border-border text-muted hover:border-muted hover:text-text"
-            }`}
-          >
-            {t.talla}
-          </button>
-        ))}
+      {/* <select> nativo, no un dropdown propio: en iOS abre la rueda del
+          sistema y en Android su hoja inferior — el comportamiento nativo que
+          un menú hecho a mano nunca iguala en móvil. Los 11 chips de antes se
+          leían como un calendario en pantallas angostas. */}
+      <div className={`relative ${sacude ? "animate-sacudida" : ""}`}>
+        <select
+          ref={fila}
+          value={sel ?? ""}
+          onChange={(e) => setSel(e.target.value || null)}
+          aria-label="Elige tu talla"
+          aria-invalid={sacude || undefined}
+          className={`h-10 w-full cursor-pointer appearance-none rounded-lg border bg-surface pl-3 pr-9 text-sm font-medium text-text outline-none transition-colors focus:border-accent ${
+            sacude ? "border-accent text-accent" : sel ? "border-border" : "border-border text-muted"
+          }`}
+        >
+          <option value="">Elige tu talla (MX)</option>
+          {disponibles.map((t) => (
+            <option key={t.variantId} value={t.talla}>
+              MX {t.talla}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          size={14}
+          weight="bold"
+          className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${sacude ? "text-accent" : "text-muted"}`}
+        />
       </div>
 
       {/* Tres estados con su propio color: reposo, enviando y confirmado. Sin
