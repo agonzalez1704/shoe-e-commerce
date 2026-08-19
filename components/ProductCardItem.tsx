@@ -8,6 +8,7 @@ import { ProductImage } from "@/components/ProductImage";
 import { swatchBg } from "@/lib/colors";
 import { comboOf, comboLabel, precioConPromo } from "@/lib/pricing";
 import type { ProductCard } from "@/lib/catalog";
+import { CardTallas } from "@/components/CardTallas";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -17,7 +18,7 @@ const PILL_DARK = `${PILL} bg-text uppercase text-bg`;
 
 // One card = one variant colour (limited inventory). Links to the product with
 // that colour preselected.
-export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priority?: boolean; badge?: string }) {
+export function ProductCardItem({ p, priority, badge, tallaGuardada }: { p: ProductCard; priority?: boolean; badge?: string; tallaGuardada?: string | null }) {
   const href = p.color ? `/products/${p.slug}?color=${encodeURIComponent(p.color)}` : `/products/${p.slug}`;
   // unique per colourway so view-transition names don't collide on the grid
   const vtName = p.key.replace(/[^a-zA-Z0-9_-]/g, "-");
@@ -90,6 +91,16 @@ export function ProductCardItem({ p, priority, badge }: { p: ProductCard; priori
           )}
         </div>
       </Link>
+
+      {p.tallas.length > 0 && (
+        <CardTallas
+          tallas={p.tallas}
+          slug={p.slug}
+          color={p.color}
+          precioCents={onSale ? salePrice : p.base_price_cents}
+          tallaGuardada={tallaGuardada}
+        />
+      )}
     </li>
   );
 }
