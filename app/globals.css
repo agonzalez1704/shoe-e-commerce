@@ -188,3 +188,27 @@ input:-webkit-autofill:active {
 @media (prefers-reduced-motion: no-preference) {
   .no-scrollbar { scroll-behavior: smooth; }
 }
+
+/* Sacudida del selector de talla cuando alguien toca "Agregar" sin elegir.
+   Corrige señalando, sin sacar a nadie de la reja con un modal. */
+@keyframes sacudida {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+.animate-sacudida { animation: sacudida 0.45s ease-in-out; }
+
+/* Quien pidió menos movimiento recibe el aviso igual: las tallas se marcan en
+   color de acento aunque no haya sacudida. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-sacudida { animation: none; }
+}
+
+/* El carrito del encabezado acusa recibo cuando entra algo. */
+@keyframes brinco {
+  0%, 100% { transform: scale(1); }
+  35%      { transform: scale(1.35); }
+  70%      { transform: scale(0.94); }
+}
+.animate-brinco { animation: brinco 0.42s cubic-bezier(.34,1.56,.64,1); }
+@media (prefers-reduced-motion: reduce) { .animate-brinco { animation: none; } }

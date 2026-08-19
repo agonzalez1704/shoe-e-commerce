@@ -22,7 +22,27 @@ export type ProductCard = {
   comboMinQty: number | null;
   comboPriceCents: number | null;
   promoPercent: number | null;  // active promo %, or null
+  // Tallas de ESE color, para poder agregar al carrito desde la reja sin entrar
+  // al producto. Vacío cuando el modelo no maneja tallas (un casco, un scooter).
+  tallas: { variantId: string; talla: string; disponible: boolean }[];
 };
+
+// Existencias por variante, desde la vista pública (no expone on_hand ni
+// reservado). Se consulta una vez por listado en vez de una por tarjeta: son
+// 363 variantes en total, así que una sola lectura sale más barata que 33.
+async function getStockMap(variantIds: string[]): Promise<Map<string, number>> {
+  if (!variantIds.length) return new Map();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("variant_availability")
+    .select("variant_id, qty_available")
+    .in("variant_id", variantIds);
+  return new Map((data ?? []).map((r) => [r.variant_id as string, r.qty_available as number]));
+}
+
+type FilaConVariantes = { variants?: { id: string }[] };
+const idsDeVariantes = (rows: FilaConVariantes[]) =>
+  rows.flatMap((r) => (r.variants ?? []).map((v) => v.id));
 
 // Active promo % per product id, for the storefront to render sale prices.
 // Applies to every product (combos included); when combo units pair up, the
@@ -51,9 +71,10 @@ function toVariantCards(
     combo_min_qty?: number | null; combo_price_cents?: number | null;
     brands: { name: string } | null;
     product_images: { url: string; position: number; color: string | null }[];
-    variants: { color: string | null; status: string; price_cents?: number | null }[];
+    variants: { id: string; color: string | null; status: string; price_cents?: number | null; size_value?: string | null }[];
   },
   promoPct: number | null = null,
+  stock: Map<string, number> = new Map(),
 ): ProductCard[] {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
   const brand = p.brands?.name ?? null;
@@ -65,6 +86,14 @@ function toVariantCards(
   const priceOf = (c: string) =>
     p.variants?.find((v) => v.status === "active" && v.color === c && v.price_cents != null)?.price_cents
     ?? p.base_price_cents;
+  // Se ordenan como número, no como texto: "25.5" va entre 25 y 26, y un sort
+  // alfabético las pondría como 25, 25.5, 26… pero 30 antes que 5.
+  const tallasDe = (c: string | null) =>
+    (p.variants ?? [])
+      .filter((v) => v.status === "active" && v.size_value && (c === null || v.color === c))
+      .map((v) => ({ variantId: v.id, talla: v.size_value!, disponible: (stock.get(v.id) ?? 0) > 0 }))
+      .sort((a, b) => Number(a.talla) - Number(b.talla));
+
   const common = {
     name: p.name, slug: p.slug, brand,
     comboMinQty: p.combo_min_qty ?? null, comboPriceCents: p.combo_price_cents ?? null,
@@ -72,12 +101,12 @@ function toVariantCards(
   };
 
   if (colors.length === 0) {
-    return [{ key: p.id, color: null, base_price_cents: p.base_price_cents, image: imgs[0]?.url ?? null, imageAlt: imgs[1]?.url ?? null, ...common }];
+    return [{ key: p.id, color: null, base_price_cents: p.base_price_cents, image: imgs[0]?.url ?? null, imageAlt: imgs[1]?.url ?? null, tallas: tallasDe(null), ...common }];
   }
   return colors.map((c) => {
     const ci = imgs.filter((i) => i.color === c);
     const use = ci.length ? ci : imgs; // fall back to all images if none tagged
-    return { key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, ...common };
+    return { key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, tallas: tallasDe(c), ...common };
   });
 }
 
@@ -87,7 +116,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   let q = supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(color, status, price_cents)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
     .eq("status", "active");
 
   if (filters.gender) q = q.eq("gender", filters.gender);
@@ -103,9 +132,10 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   if (error) throw error;
 
   const promo = await getPromoMap();
+  const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
   return (data ?? []).flatMap((p) => {
     const row = p as Parameters<typeof toVariantCards>[0];
-    return toVariantCards(row, promo.get(row.id) ?? null);
+    return toVariantCards(row, promo.get(row.id) ?? null, stock);
   });
 }
 
@@ -114,7 +144,7 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
     .eq("status", "active")
     .neq("slug", excludeSlug)
     .order("created_at", { ascending: false });
@@ -122,7 +152,8 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
 
   type Row = Parameters<typeof toVariantCards>[0];
   const promo = await getPromoMap();
-  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null));
+  const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
+  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null, stock));
   // one card per model
   const bySlug = new Map<string, ProductCard>();
   for (const c of cards) if (!bySlug.has(c.slug)) bySlug.set(c.slug, c);
@@ -146,18 +177,19 @@ export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCa
 
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
     .in("id", ids)
     .eq("status", "active");
 
   type Row = Parameters<typeof toVariantCards>[0];
   const promo = await getPromoMap();
+  const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
   const byId = new Map<string, Row>(((data ?? []) as unknown as Row[]).map((p) => [p.id, p]));
   // one card per model, in the ranking's order — `in` does not preserve it
   return ids
     .map((id) => byId.get(id))
     .filter((p): p is Row => !!p)
-    .map((p) => toVariantCards(p, promo.get(p.id) ?? null)[0])
+    .map((p) => toVariantCards(p, promo.get(p.id) ?? null, stock)[0])
     .filter(Boolean);
 }
 
@@ -168,7 +200,7 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
     .eq("status", "active")
     .eq("featured", true)
     .order("created_at", { ascending: false })
@@ -176,8 +208,9 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
 
   type Row = Parameters<typeof toVariantCards>[0];
   const promo = await getPromoMap();
+  const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
   return ((data ?? []) as unknown as Row[])
-    .map((p) => toVariantCards(p, promo.get(p.id) ?? null)[0])
+    .map((p) => toVariantCards(p, promo.get(p.id) ?? null, stock)[0])
     .filter(Boolean);
 }
 
@@ -226,7 +259,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(color, status, price_cents), " +
+      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value), " +
         "product_categories!inner(categories!inner(slug))",
     )
     .eq("status", "active")
@@ -236,7 +269,8 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
 
   type Row = Parameters<typeof toVariantCards>[0];
   const promo = await getPromoMap();
-  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null));
+  const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
+  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null, stock));
 }
 
 export type ProductDetail = {
