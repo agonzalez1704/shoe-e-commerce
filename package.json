@@ -23,11 +23,14 @@
     "db:push:honeywhale": "node scripts/db-push.mjs .env.honeywhale"
   },
   "dependencies": {
+    "@base-ui/react": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@phosphor-icons/react": "^2.1.7",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^1.32.0",
     "mcp-handler": "^1.1.0",
     "motion": "^13.1.0",
     "next": "16.3.0",
