@@ -29,7 +29,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const [{ data: customer }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("full_name, email").eq("id", user.id).maybeSingle(),
-    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -76,12 +76,25 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                       {o.payment_method === "aplazo" ? "Continuar en Aplazo" : "Completar pago"} →
                     </Link>
                   ) : (
-                    <Link
-                      href={`/rastrear?o=${o.order_number}`}
-                      className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
-                    >
-                      Rastrear
-                    </Link>
+                    <>
+                      {/* El correo de reseña era la única puerta y nadie la
+                          cruzó (3 enviados, 0 reseñas): el dueño del pedido
+                          merece el enlace aquí, sin buscar en su bandeja. */}
+                      {(o.fulfillment_stage === "delivered" || o.fulfillment_stage === "shipped") && o.review_token && (
+                        <Link
+                          href={`/resena/${o.review_token}`}
+                          className="rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-semibold text-accent"
+                        >
+                          {o.fulfillment_stage === "delivered" ? "Deja tu reseña" : "¿Ya llegó? Reséñalo"}
+                        </Link>
+                      )}
+                      <Link
+                        href={`/rastrear?o=${o.order_number}`}
+                        className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
+                      >
+                        Rastrear
+                      </Link>
+                    </>
                   )}
                 </div>
                 <details className="mt-2 [&_summary]:cursor-pointer">
