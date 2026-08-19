@@ -34,6 +34,7 @@ export function CardTallas({
   const inicial = disponibles.find((t) => t.talla === tallaGuardada)?.talla ?? null;
   const [sel, setSel] = useState<string | null>(inicial);
   const [sacude, setSacude] = useState(false);
+  const [error, setError] = useState(false);
   const [listo, setListo] = useState(false);
   const fila = useRef<HTMLSelectElement>(null);
 
@@ -45,9 +46,12 @@ export function CardTallas({
 
   function agregar() {
     if (!elegida) {
+      // La sacudida llama la mirada; el estado de error se queda hasta que
+      // eligen — un aviso de 600ms no le sirve a quien parpadeó, y el mensaje
+      // con role="alert" se lo lee el lector de pantalla.
+      setError(true);
       setSacude(true);
       setTimeout(() => setSacude(false), 600);
-      // Quien llega con teclado o lector de pantalla no ve la sacudida.
       fila.current?.focus();
       return;
     }
@@ -78,11 +82,16 @@ export function CardTallas({
         <select
           ref={fila}
           value={sel ?? ""}
-          onChange={(e) => setSel(e.target.value || null)}
+          onChange={(e) => { setSel(e.target.value || null); if (e.target.value) setError(false); }}
           aria-label="Elige tu talla"
-          aria-invalid={sacude || undefined}
-          className={`h-10 w-full cursor-pointer appearance-none rounded-lg border bg-surface pl-3 pr-9 text-sm font-medium text-text outline-none transition-colors focus:border-accent ${
-            sacude ? "border-accent text-accent" : sel ? "border-border" : "border-border text-muted"
+          aria-invalid={error || undefined}
+          aria-describedby={error ? `err-${slug}-${color ?? ""}` : undefined}
+          className={`h-10 w-full cursor-pointer appearance-none rounded-lg border bg-surface pl-3 pr-9 text-sm font-medium outline-none transition-colors ${
+            error
+              ? "border-accent/80 text-accent focus:border-accent/80 focus:ring-2 focus:ring-accent/20"
+              : sel
+                ? "border-border text-text focus:border-accent"
+                : "border-border text-muted focus:border-accent"
           }`}
         >
           <option value="">Elige tu talla</option>
@@ -95,9 +104,19 @@ export function CardTallas({
         <CaretDown
           size={14}
           weight="bold"
-          className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${sacude ? "text-accent" : "text-muted"}`}
+          className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${error ? "text-accent/80" : "text-muted"}`}
         />
       </div>
+      {/* Vive en el DOM siempre y cambia de contenido: así aria-live anuncia la
+          aparición del error sin que el layout brinque (la línea reserva alto). */}
+      <p
+        id={`err-${slug}-${color ?? ""}`}
+        role="alert"
+        aria-live="polite"
+        className={`mt-1 min-h-4 text-xs transition-opacity ${error ? "text-accent opacity-100" : "opacity-0"}`}
+      >
+        {error ? "Elige tu talla primero" : ""}
+      </p>
 
       {/* Tres estados con su propio color: reposo, enviando y confirmado. Sin
           esto el botón se quedaba igual y la gente lo tocaba de nuevo. */}
