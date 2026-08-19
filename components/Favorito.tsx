@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Heart, X } from "@phosphor-icons/react";
-import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { alternarFavorito, migrarFavoritos, listarFavoritos } from "@/app/favoritos/actions";
@@ -32,7 +31,6 @@ export function Favorito({ slug, color }: { slug: string; color: string | null }
   const llave = `${slug}:${color ?? ""}`;
   const [marcado, setMarcado] = useState(false);
   const [modal, setModal] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     setMarcado(leer().includes(llave));
@@ -127,9 +125,9 @@ export function Favorito({ slug, color }: { slug: string; color: string | null }
               <p className="mb-5 text-sm leading-relaxed text-muted">
                 Crea tu cuenta para no perderlos — y llévate <strong className="text-accent">10% en tu primera compra</strong>.
               </p>
-              <GoogleSignInButton next={pathname} label="Continuar con Google" />
+              <GoogleSignInButton next={typeof window !== "undefined" ? window.location.pathname : "/products"} label="Continuar con Google" />
               <a
-                href={`/cuenta?next=${encodeURIComponent(pathname)}`}
+                href={`/cuenta?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/products")}`}
                 className="mt-3 block text-center text-xs text-muted underline-offset-2 hover:text-text hover:underline"
               >
                 o con tu correo

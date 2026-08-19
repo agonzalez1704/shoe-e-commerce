@@ -7,7 +7,6 @@ import { completeReadyJob, failJob } from "@/lib/angle-complete";
 // 3 images, attach to the product) runs in after() so the response is instant —
 // doing it synchronously tripped Vercel's resource limit (HTTP 508) and the
 // completion was lost. The client poll reflects the row once after() finishes.
-export const dynamic = "force-dynamic";
 
 type Payload = {
   angleSetId: string;

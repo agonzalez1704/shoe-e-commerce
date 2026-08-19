@@ -7,7 +7,6 @@ import { Pagination, paginar } from "@/components/Pagination";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand } from "@/lib/brand";
 
-export const revalidate = 60; // ISR — catalog changes infrequently
 
 // Catalogue copy follows the brand: "calzado de piel hecho sobre pedido" was
 // hardcoded here and shipped on a scooter store, in the page title and under

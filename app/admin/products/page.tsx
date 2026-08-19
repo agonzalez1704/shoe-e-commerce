@@ -4,7 +4,10 @@ import { formatCents } from "@/lib/money";
 import { ProductStatusToggle } from "@/components/ProductStatusToggle";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 

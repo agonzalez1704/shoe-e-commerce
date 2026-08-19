@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { List, X, CaretDown } from "@phosphor-icons/react";
 import type { CategoryLink } from "@/lib/catalog";
 
@@ -22,11 +21,17 @@ export function SiteHeader({
   actions: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
 
-  // Close on navigation. This is the only reason the panel is not a plain
-  // <details>: tapping a category has to dismiss it.
-  useEffect(() => setOpen(false), [pathname]);
+  // Cerrar al navegar. Dependía de usePathname, pero leer la URL en el render
+  // bloquea el prerender del shell con cacheComponents; un click en cualquier
+  // enlace dentro del documento dice lo mismo sin tocar la URL.
+  useEffect(() => {
+    const alClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest("a")) setOpen(false);
+    };
+    document.addEventListener("click", alClick, true);
+    return () => document.removeEventListener("click", alClick, true);
+  }, []);
 
   // Escape, and a click anywhere outside the header. A backdrop <div> was the
   // obvious alternative and it does not work here: the menu lives inside a

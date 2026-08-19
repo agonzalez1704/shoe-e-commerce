@@ -3,7 +3,6 @@ import { listNoticias } from "@/lib/noticias";
 import { NoticiaCard } from "@/components/NoticiasBand";
 import { activeBrand } from "@/lib/brand";
 
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Noticias y eventos",

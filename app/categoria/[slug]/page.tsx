@@ -9,7 +9,6 @@ import { Pagination, paginar } from "@/components/Pagination";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
 
-export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

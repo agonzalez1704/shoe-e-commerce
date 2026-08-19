@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ShoppingBag, ArrowRight } from "@phosphor-icons/react";
 import { getCartCount } from "@/app/cart/actions";
@@ -13,7 +12,6 @@ import { CART_CHANGED } from "@/components/CartBadge";
 // listado — en el checkout estorbaría y en la PDP compite con el CTA propio.
 export function PieCarrito() {
   const [count, setCount] = useState(0);
-  const pathname = usePathname();
 
   useEffect(() => {
     let alive = true;
@@ -26,7 +24,7 @@ export function PieCarrito() {
     load();
     window.addEventListener(CART_CHANGED, alCambiar);
     return () => { alive = false; window.removeEventListener(CART_CHANGED, alCambiar); };
-  }, [pathname]);
+  }, []);
 
   return (
     <AnimatePresence>

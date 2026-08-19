@@ -18,3 +18,4 @@ supabase/.temp
 
 # respaldos de limpieza de datos (originales; no van al repo)
 descripciones-respaldo-*.json
+.vercel

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso } from "@/lib/permisos-guard";
@@ -150,6 +150,8 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
   }
 
   revalidatePath("/admin/products");
+  updateTag("productos");
+  updateTag("stock");
   redirect("/admin/products");
 }
 
@@ -160,5 +162,7 @@ export async function deleteProduct(id: string): Promise<void> {
   const supabase = await requirePermiso("productos_gestionar");
   await supabase.from("products").delete().eq("id", id);
   revalidatePath("/admin/products");
+  updateTag("productos");
+  updateTag("stock");
   redirect("/admin/products");
 }

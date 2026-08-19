@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReviewForm } from "@/components/ReviewForm";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 export default async function ReviewPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

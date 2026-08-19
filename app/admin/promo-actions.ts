@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso } from "@/lib/permisos-guard";
 
@@ -41,6 +41,7 @@ export async function crearPromocion(input: PromoInput): Promise<void> {
   if (e2) throw new Error(e2.message ?? "No se pudieron asignar los productos");
 
   revalidatePath("/admin/promociones");
+  updateTag("promos");
 }
 
 // End a promo now — an admin can stop it at any moment.
@@ -49,6 +50,7 @@ export async function finalizarPromocion(id: string): Promise<void> {
   const { error } = await supabase.from("promociones").update({ active: false }).eq("id", id);
   if (error) throw new Error(error.message ?? "No se pudo finalizar");
   revalidatePath("/admin/promociones");
+  updateTag("promos");
 }
 
 // Re-activate a stopped promo (only meaningful while still within its window).
@@ -57,6 +59,7 @@ export async function reactivarPromocion(id: string): Promise<void> {
   const { error } = await supabase.from("promociones").update({ active: true }).eq("id", id);
   if (error) throw new Error(error.message ?? "No se pudo reactivar");
   revalidatePath("/admin/promociones");
+  updateTag("promos");
 }
 
 export async function eliminarPromocion(id: string): Promise<void> {
@@ -64,4 +67,5 @@ export async function eliminarPromocion(id: string): Promise<void> {
   const { error } = await supabase.from("promociones").delete().eq("id", id);
   if (error) throw new Error(error.message ?? "No se pudo eliminar");
   revalidatePath("/admin/promociones");
+  updateTag("promos");
 }

@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 
-export const revalidate = 3600; // refresh hourly
 
 type Row = { slug: string; updated_at: string };
 

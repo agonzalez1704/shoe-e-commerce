@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { ShoppingBag } from "@phosphor-icons/react";
 import { getCartCount } from "@/app/cart/actions";
 
@@ -19,7 +18,6 @@ export const notifyCartChanged = (suma = 0) =>
 export function CartBadge() {
   const [count, setCount] = useState(0);
   const [brinca, setBrinca] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     let alive = true;
@@ -40,7 +38,7 @@ export function CartBadge() {
     load();
     window.addEventListener(CART_CHANGED, alCambiar);
     return () => { alive = false; window.removeEventListener(CART_CHANGED, alCambiar); };
-  }, [pathname]);
+  }, []);
 
   return (
     <>

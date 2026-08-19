@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
-export const dynamic = "force-dynamic";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : null);
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { TrackOrder } from "@/components/TrackOrder";
 
+export const instant = false; // dinámica de punta a punta (sesión/pedido)
+
 export const metadata: Metadata = {
   title: "Rastrear pedido",
   description: "Consulta el estado de tu pedido con tu número y correo.",

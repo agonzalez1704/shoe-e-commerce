@@ -1,7 +1,8 @@
 import { getCart } from "./actions";
 import { CartView } from "@/components/CartView";
 
-export const dynamic = "force-dynamic"; // cart is per-session
+export const instant = false; // dinámica de punta a punta (sesión/pedido)
+
 
 export default async function CartPage() {
   const cart = await getCart();

@@ -7,7 +7,8 @@ import { PASOS_CLIENTE, pasoCliente, carrierName, trackingUrlFor, fechaEntrega }
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 
-export const dynamic = "force-dynamic";
+export const instant = false; // dinámica de punta a punta (sesión/pedido)
+
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const ITEMS_ORDERED = `${activeBrand.copy?.itemPlural ?? "Productos"} pedidos`.replace(/^./, (c) => c.toUpperCase());

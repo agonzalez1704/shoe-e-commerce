@@ -10,7 +10,10 @@ import { AngleJobsProvider } from "@/components/providers/AngleJobsProvider";
 import { GlobalJobProgress } from "@/components/admin/GlobalJobProgress";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 // installable admin PWA (its own manifest so the storefront is unaffected)
 export const metadata: Metadata = {

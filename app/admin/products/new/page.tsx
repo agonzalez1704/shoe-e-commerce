@@ -3,7 +3,10 @@ import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { ProductForm } from "@/components/ProductForm";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 export default async function NewProduct() {
   const supabase = await createClient();

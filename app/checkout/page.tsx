@@ -4,7 +4,10 @@ import { CheckoutForm, type CheckoutDefaults } from "@/components/CheckoutForm";
 import { WhatsAppFab } from "@/components/WhatsAppFab";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 // Prefill from the signed-in user: name/email from the auth profile, the rest
 // from their most recent order's shipping address.

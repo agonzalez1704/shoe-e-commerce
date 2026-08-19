@@ -9,7 +9,8 @@ import { isDeclined, isSet } from "@/lib/provider-return";
 import { SITE_URL } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
 
-export const dynamic = "force-dynamic";
+export const instant = false; // dinámica de punta a punta (sesión/pedido)
+
 
 type Params = {
   o?: string;

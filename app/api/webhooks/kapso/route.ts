@@ -4,7 +4,6 @@ import { estadoConversacion, marcarAsesor, getAsesores } from "@/lib/agent/hando
 import { enviarTexto } from "@/lib/kapso";
 import { verifySignature } from "@/lib/webhook-sig";
 
-export const runtime = "nodejs";
 export const maxDuration = 60;
 
 // Kapso verification handshake

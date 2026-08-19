@@ -11,7 +11,10 @@ import { CASH_CHAINS } from "@/lib/payment-method";
 import { SITE_URL } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const CHAINS = "7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y +20,000 tiendas";

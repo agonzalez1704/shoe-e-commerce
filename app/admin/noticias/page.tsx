@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NoticiasView } from "@/components/admin/NoticiasView";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 export default async function AdminNoticias() {
   const supabase = await createClient();

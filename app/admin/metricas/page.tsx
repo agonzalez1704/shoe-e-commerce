@@ -3,7 +3,10 @@ import { Eye, Users, CursorClick } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 type Bucket = { n: number } & Record<string, string | number>;
 type Summary = {

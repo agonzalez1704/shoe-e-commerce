@@ -1,5 +1,7 @@
 "use server";
 
+import { updateTag } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
@@ -193,6 +195,10 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
 
   const orderId = created.order_id;
   onOrderCreated(orderId); // from here on, a failure must roll the cart back
+  // El pedido reservó stock: las rejas cacheadas deben dejar de anunciar esa
+  // disponibilidad. Con cacheLife("minutes") la ventana era corta; esto la
+  // cierra al instante.
+  updateTag("stock");
 
   // El teléfono sólo vivía dentro del jsonb de envío del pedido, así que los
   // clientes con cuenta tenían `phone` vacío —los 14— y no había con qué armar

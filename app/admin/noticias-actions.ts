@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requirePermiso } from "@/lib/permisos-guard";
 
 export type NoticiaInput = {
@@ -54,6 +54,7 @@ export async function guardarNoticia(input: NoticiaInput): Promise<{ ok: boolean
   revalidatePath("/admin/noticias");
   revalidatePath("/noticias");
   revalidatePath("/");
+  updateTag("noticias");
   return { ok: true };
 }
 
@@ -64,5 +65,6 @@ export async function eliminarNoticia(id: string): Promise<{ ok: boolean; error?
   revalidatePath("/admin/noticias");
   revalidatePath("/noticias");
   revalidatePath("/");
+  updateTag("noticias");
   return { ok: true };
 }

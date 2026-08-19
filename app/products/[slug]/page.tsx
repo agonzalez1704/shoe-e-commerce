@@ -12,7 +12,6 @@ import { ProductReviews } from "@/components/ProductReviews";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { ogCardUrl } from "@/lib/og-card";
 
-export const revalidate = 60;
 
 export async function generateMetadata({
   params,

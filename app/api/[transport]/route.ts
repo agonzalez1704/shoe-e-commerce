@@ -15,7 +15,6 @@ import {
 } from "@/lib/analytics";
 import { activeBrand } from "@/lib/brand";
 
-export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const PERIODO = z.enum(["hoy", "7d", "30d"]);

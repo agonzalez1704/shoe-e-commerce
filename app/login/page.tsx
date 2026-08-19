@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { signIn } from "@/app/auth/actions";
 import { SITE_NAME } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const instant = false; // dinámica de punta a punta (sesión/pedido)
+
 
 export default async function LoginPage({
   searchParams,

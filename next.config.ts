@@ -6,6 +6,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   : null;
 
 const nextConfig: NextConfig = {
+  // Instant Navigations (Next 16.3): shell prerenderizado por ruta + prefetch
+  // parcial en <Link> visibles. Los loading.tsx existentes son los fallbacks
+  // que integran ese shell.
+  cacheComponents: true,
+  partialPrefetching: true,
   // Next 16 builds with Turbopack, which infers the workspace root from the
   // nearest lockfile — and there is a stray package-lock.json in ~/Sites, one
   // level above this repo. Pin it so resolution never walks out of the project.

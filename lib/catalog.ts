@@ -1,5 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/publico";
+import { cacheLife, cacheTag } from "next/cache";
 
 export type ProductFilters = {
   brand?: string;   // brand slug
@@ -31,8 +33,11 @@ export type ProductCard = {
 // reservado). Se consulta una vez por listado en vez de una por tarjeta: son
 // 363 variantes en total, así que una sola lectura sale más barata que 33.
 async function getStockMap(variantIds: string[]): Promise<Map<string, number>> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("stock");
   if (!variantIds.length) return new Map();
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase
     .from("variant_availability")
     .select("variant_id, qty_available")
@@ -48,7 +53,10 @@ const idsDeVariantes = (rows: FilaConVariantes[]) =>
 // Applies to every product (combos included); when combo units pair up, the
 // combo price reprices them instead. Mirrors promo_percent() + create_order (0037).
 export async function getPromoMap(): Promise<Map<string, number>> {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("promos");
+  const supabase = createPublicClient();
   const now = new Date().toISOString();
   const { data } = await supabase
     .from("promocion_productos")
@@ -112,7 +120,10 @@ function toVariantCards(
 
 // PLP: active products, optional filters. RLS already hides non-active.
 export async function listProducts(filters: ProductFilters = {}): Promise<ProductCard[]> {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
 
   let q = supabase
     .from("products")
@@ -141,7 +152,10 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
 // Cross-sell: other active models (one card per model, not per colourway).
 export async function listRelatedProducts(excludeSlug: string, limit = 4): Promise<ProductCard[]> {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("products")
     .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
@@ -168,7 +182,10 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
 // the caller can hide the section rather than label the newest arrivals as
 // best sellers.
 export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCard[]> {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
   const { data: top, error } = await supabase.rpc("top_sellers", { p_limit: limit });
   if (error || !top?.length) return [];
 
@@ -197,7 +214,10 @@ export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCa
 // separate from listBestSellers so the heading can differ: what the storefront
 // claims always matches where the list came from.
 export async function listFeatured(limit = 8): Promise<ProductCard[]> {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
   const { data } = await supabase
     .from("products")
     .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
@@ -229,7 +249,10 @@ export type CategoryLink = { name: string; slug: string; count: number };
 // page, so the count doubles as the filter. Cached per request like
 // getCategory, since the header and the footer both call this.
 export const listCategories = cache(async (): Promise<CategoryLink[]> => {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("hours");
+  cacheTag("categorias");
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("categories")
     .select("name, slug, product_categories(products!inner(id))")
@@ -244,7 +267,10 @@ export const listCategories = cache(async (): Promise<CategoryLink[]> => {
 });
 
 export const getCategory = cache(async (slug: string): Promise<Category | null> => {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("categorias");
+  const supabase = createPublicClient();
   const { data } = await supabase
     .from("categories")
     .select("id, name, slug, description")
@@ -255,7 +281,10 @@ export const getCategory = cache(async (slug: string): Promise<Category | null> 
 
 // Products in a category (M:N via product_categories), mapped like listProducts.
 export async function listProductsByCategory(slug: string): Promise<ProductCard[]> {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("products")
     .select(
@@ -308,7 +337,10 @@ export type ProductDetail = {
 // PDP: one product by slug, with variants joined to live availability.
 // Cached per-request so generateMetadata + the page share one fetch.
 export const getProduct = cache(async (slug: string): Promise<ProductDetail | null> => {
-  const supabase = await createClient();
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from("products")

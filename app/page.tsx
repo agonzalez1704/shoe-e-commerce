@@ -38,7 +38,6 @@ const ICONS: Record<string, typeof Package> = {
 };
 const icon = (k: string) => ICONS[k] ?? Sparkle;
 
-export const revalidate = 60;
 
 // Storefront editorial comes from the brand config, so a second store fills it
 // in instead of editing this file.

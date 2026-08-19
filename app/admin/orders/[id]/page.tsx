@@ -11,7 +11,10 @@ import { CfdiActions } from "@/components/CfdiActions";
 import { FulfillmentPanel } from "@/components/admin/FulfillmentPanel";
 import { ResendVoucher } from "@/components/admin/ResendVoucher";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 

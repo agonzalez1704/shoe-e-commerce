@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildMetaCatalogCsv } from "@/lib/meta-catalog";
 
-export const dynamic = "force-dynamic"; // always live — Meta re-fetches on a schedule
 
 // Meta Commerce scheduled feed. Point Commerce Manager at this URL; it reflects
 // the current catalog (availability, new/removed products) on every fetch.

@@ -10,9 +10,9 @@ import { ViewTransition } from "@/components/ViewTransition";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorefrontOnly } from "@/components/StorefrontOnly";
 import { Logo } from "@/components/Logo";
+import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { CuentaBienvenida } from "@/components/CuentaBienvenida";
-import { createClient } from "@/lib/supabase/server";
+import { BienvenidaSesion } from "@/components/BienvenidaSesion";
 import { listCategories } from "@/lib/catalog";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import { activeBrand, brandThemeCss } from "@/lib/brand";
@@ -72,8 +72,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // A store with no categories yet — Blade today — gets neither the menu nor the
   // footer column, rather than three links to pages that do not exist.
   const categories = await listCategories();
-  // Con sesión no hay gancho que mostrar: ya tenemos su correo.
-  const { data: { user } } = await (await createClient()).auth.getUser();
   return (
     <html lang="es-MX" className={`${outfit.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
@@ -92,10 +90,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="overflow-x-hidden">
         <NuqsAdapter>
-          <MetaPixel />
-          <AnalyticsBeacon />
+          {/* Analítica: renderizan null y necesitan la URL para pageviews. Bajo
+              Suspense no bloquean el shell, y su fallback (nada) es su render. */}
+          <Suspense fallback={null}>
+            <MetaPixel />
+            <AnalyticsBeacon />
+          </Suspense>
           <StorefrontOnly>
-          <CuentaBienvenida conSesion={!!user} />
+          <BienvenidaSesion />
           <Link href="/products" className="block bg-text text-bg transition-opacity hover:opacity-90">
             <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs font-medium">
               {activeBrand.announcement ?? "Envíos a todo México"}

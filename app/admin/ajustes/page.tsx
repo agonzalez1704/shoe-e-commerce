@@ -5,7 +5,10 @@ import { TeamSettings } from "@/components/admin/TeamSettings";
 import { MetaTest } from "@/components/admin/MetaTest";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 export default async function AjustesPage() {
   await requirePagePermiso("ajustes_gestionar");

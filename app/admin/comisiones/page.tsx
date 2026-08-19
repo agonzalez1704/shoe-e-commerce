@@ -5,7 +5,10 @@ import { commissionCents, mxWeekStart } from "@/lib/commission";
 import { CommissionPayButton } from "@/components/admin/CommissionPayButton";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const fmtDate = (iso: string) =>

@@ -4,7 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { InventoryColorway, type Colorway } from "@/components/admin/InventoryColorway";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
-export const dynamic = "force-dynamic";
+// Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
+// shell prerenderizado no aporta aqui.
+export const instant = false;
+
 
 const PER_PAGE = 12; // colourways per page — each one carries all its sizes
 const STOCK = [
