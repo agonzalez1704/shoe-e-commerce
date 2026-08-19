@@ -157,12 +157,15 @@ const addrPayload = (a: Address) => ({
 
 // Create a quotation and poll until the rates resolve. Returns successful rates
 // cheapest-first + the quotation id.
-export async function quote(to: Address): Promise<{ quotationId: string; rates: Rate[] }> {
+// `desde` por defecto es la bodega. La guía de retorno de una garantía viaja
+// al revés — del domicilio del cliente a la bodega — y es el mismo endpoint
+// con las direcciones intercambiadas.
+export async function quote(to: Address, desde: Address = ORIGIN as Address): Promise<{ quotationId: string; rates: Rate[] }> {
   const created = await api("/quotations", {
     method: "POST",
     body: JSON.stringify({
       quotation: {
-        address_from: addrPayload({ ...ORIGIN } as Address),
+        address_from: addrPayload(desde),
         address_to: addrPayload(to),
         parcels: [PARCEL],
       },
@@ -192,7 +195,7 @@ export async function quote(to: Address): Promise<{ quotationId: string; rates: 
 }
 
 // Create the shipment for a chosen rate → tracking + label PDF.
-export async function createShipment(quotationId: string, rate: Rate, to: Address, ocurre = false): Promise<ShipmentResult> {
+export async function createShipment(quotationId: string, rate: Rate, to: Address, ocurre = false, desde: Address = ORIGIN as Address): Promise<ShipmentResult> {
   // Falla aquí y no en Skydropx: mandar la clave vacía devuelve un error de
   // validación que no dice qué configurar, y mandar la de otra marca declara
   // mercancía que no es la del envío.
@@ -209,7 +212,7 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
         quotation_id: quotationId,
         rate_id: rate.id,
         carrier_name: rate.provider_name,
-        address_from: addrPayload({ ...ORIGIN } as Address),
+        address_from: addrPayload(desde),
         address_to: addrPayload(to),
         parcels: [PARCEL],
         package_type: PACKAGE_TYPE,

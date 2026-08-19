@@ -11,6 +11,11 @@ export type TrackedOrder = {
   trackingNumber: string | null;
   trackingUrl: string | null;
   reviewToken: string | null;
+  garantia: {
+    razon: string; recibido: boolean; cerrada: boolean;
+    retorno: { carrier: string | null; tracking: string; url: string | null; label: string | null } | null;
+    repo: { carrier: string | null; tracking: string; url: string | null } | null;
+  } | null;
   estimatedDelivery: string | null;
   paymentMethod: string | null;
   totalCents: number;
@@ -51,6 +56,12 @@ export async function lookupOrder(
       .maybeSingle(),
   ]);
 
+  const { data: garantia } = await admin
+    .from("garantias")
+    .select("razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_url, retorno_label_url, repo_carrier, repo_tracking, repo_url")
+    .eq("order_id", order.id)
+    .maybeSingle();
+
   return {
     order: {
       orderNumber: order.order_number,
@@ -59,6 +70,19 @@ export async function lookupOrder(
       trackingNumber: order.tracking_number,
       trackingUrl: order.tracking_url,
       reviewToken: order.review_token ?? null,
+      garantia: garantia
+        ? {
+            razon: garantia.razon,
+            recibido: !!garantia.recibido_at,
+            cerrada: !!garantia.cerrada_at,
+            retorno: garantia.retorno_tracking
+              ? { carrier: garantia.retorno_carrier, tracking: garantia.retorno_tracking, url: garantia.retorno_url, label: garantia.retorno_label_url }
+              : null,
+            repo: garantia.repo_tracking
+              ? { carrier: garantia.repo_carrier, tracking: garantia.repo_tracking, url: garantia.repo_url }
+              : null,
+          }
+        : null,
       estimatedDelivery: order.estimated_delivery,
       status: order.status,
       paymentMethod: order.payment_method,

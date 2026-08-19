@@ -108,6 +108,51 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
             </div>
           )}
 
+          {/* Garantía en curso: lo más importante para el cliente es SU parte —
+              la etiqueta de retorno que debe imprimir y con qué paquetería
+              regresarlo. Cada pierna aparece en cuanto el admin la genera. */}
+          {result.garantia && (
+            <div className="mt-4 rounded-lg border border-accent/40 bg-accent-soft/60 p-3 text-sm">
+              <p className="font-semibold text-accent">
+                Garantía en proceso{result.garantia.cerrada ? " — resuelta" : ""}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">{result.garantia.razon}</p>
+
+              {result.garantia.retorno && (
+                <div className="mt-2.5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Tu envío de regreso</p>
+                  <p className="mt-1">
+                    <span className="capitalize text-muted">{result.garantia.retorno.carrier ?? "Paquetería"}</span>{" "}
+                    <span className="nums font-medium">{result.garantia.retorno.tracking}</span>
+                  </p>
+                  {result.garantia.retorno.label && (
+                    <a href={result.garantia.retorno.label} target="_blank" rel="noopener noreferrer"
+                       className="mt-1 inline-block font-medium text-accent underline">
+                      Descarga tu etiqueta, pégala en la caja y entrégala en la paquetería →
+                    </a>
+                  )}
+                  {result.garantia.recibido && <p className="mt-1 text-xs text-muted">✓ Ya lo recibimos en bodega.</p>}
+                </div>
+              )}
+
+              {result.garantia.repo && (
+                <div className="mt-2.5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Tu reposición en camino</p>
+                  <p className="mt-1">
+                    <span className="capitalize text-muted">{result.garantia.repo.carrier ?? "Paquetería"}</span>{" "}
+                    <span className="nums font-medium">{result.garantia.repo.tracking}</span>
+                  </p>
+                  {(() => { const u = trackingUrlFor(result.garantia.repo.carrier, result.garantia.repo.tracking, result.garantia.repo.url);
+                    return u ? <a href={u} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-medium text-accent underline">Rastrear con la paquetería →</a> : null; })()}
+                </div>
+              )}
+
+              {!result.garantia.retorno && !result.garantia.cerrada && (
+                <p className="mt-2 text-xs text-muted">Estamos generando tu guía de regreso; aparecerá aquí.</p>
+              )}
+            </div>
+          )}
+
           {/* Entregado (o ya en camino): la invitación a reseñar vive aquí
               además del correo — quien entra a rastrear ya demostró interés. */}
           {!terminal && result.reviewToken && (result.stage === "delivered" || result.stage === "shipped") && (

@@ -548,6 +548,68 @@ export type Database = {
           },
         ]
       }
+      garantias: {
+        Row: {
+          cerrada_at: string | null
+          created_at: string
+          id: string
+          notas: string | null
+          order_id: string
+          razon: string
+          recibido_at: string | null
+          repo_carrier: string | null
+          repo_label_url: string | null
+          repo_tracking: string | null
+          repo_url: string | null
+          retorno_carrier: string | null
+          retorno_label_url: string | null
+          retorno_tracking: string | null
+          retorno_url: string | null
+        }
+        Insert: {
+          cerrada_at?: string | null
+          created_at?: string
+          id?: string
+          notas?: string | null
+          order_id: string
+          razon: string
+          recibido_at?: string | null
+          repo_carrier?: string | null
+          repo_label_url?: string | null
+          repo_tracking?: string | null
+          repo_url?: string | null
+          retorno_carrier?: string | null
+          retorno_label_url?: string | null
+          retorno_tracking?: string | null
+          retorno_url?: string | null
+        }
+        Update: {
+          cerrada_at?: string | null
+          created_at?: string
+          id?: string
+          notas?: string | null
+          order_id?: string
+          razon?: string
+          recibido_at?: string | null
+          repo_carrier?: string | null
+          repo_label_url?: string | null
+          repo_tracking?: string | null
+          repo_url?: string | null
+          retorno_carrier?: string | null
+          retorno_label_url?: string | null
+          retorno_tracking?: string | null
+          retorno_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garantias_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           location: string

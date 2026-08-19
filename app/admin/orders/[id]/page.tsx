@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { OrderStatusActions } from "@/components/OrderStatusActions";
 import { CfdiActions } from "@/components/CfdiActions";
 import { FulfillmentPanel } from "@/components/admin/FulfillmentPanel";
+import { GarantiaPanel, type Garantia } from "@/components/admin/GarantiaPanel";
 import { ResendVoucher } from "@/components/admin/ResendVoucher";
 
 // Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
@@ -28,6 +29,12 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     .from("orders")
     .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url")
     .eq("id", id)
+    .maybeSingle();
+
+  const { data: garantia } = await supabase
+    .from("garantias")
+    .select("razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_url, retorno_label_url, repo_carrier, repo_tracking, repo_url, repo_label_url")
+    .eq("order_id", order?.id ?? "")
     .maybeSingle();
   if (!order) notFound();
 
@@ -73,6 +80,8 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           esOcurre: (order.shipping_address as Record<string, string> | null)?.entrega === "ocurre",
         }}
       />
+
+      <GarantiaPanel orderId={order.id} garantia={(garantia ?? null) as Garantia} />
 
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
         <div className="overflow-x-auto rounded-2xl border border-border">

@@ -29,7 +29,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const [{ data: customer }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("full_name, email").eq("id", user.id).maybeSingle(),
-    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -137,6 +137,25 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                           </div>
                         </div>
                       )}
+                      {(() => {
+                        const ga = (o as unknown as { garantias: { razon: string; recibido_at: string | null; cerrada_at: string | null; retorno_carrier: string | null; retorno_tracking: string | null; retorno_label_url: string | null; repo_carrier: string | null; repo_tracking: string | null } | null }).garantias;
+                        if (!ga) return null;
+                        return (
+                          <div className="mb-3 rounded-lg border border-accent/40 bg-accent-soft/60 p-2.5">
+                            <p className="text-xs font-semibold text-accent">Garantía en proceso{ga.cerrada_at ? " — resuelta" : ""}</p>
+                            {ga.retorno_tracking && (
+                              <p className="mt-1 text-xs text-muted">
+                                Regreso: <span className="nums text-text">{ga.retorno_tracking}</span>
+                                {ga.retorno_label_url && <> · <a className="text-accent underline" href={ga.retorno_label_url} target="_blank" rel="noopener noreferrer">tu etiqueta</a></>}
+                                {ga.recibido_at && " · ✓ recibido"}
+                              </p>
+                            )}
+                            {ga.repo_tracking && (
+                              <p className="mt-0.5 text-xs text-muted">Reposición: <span className="nums text-text">{ga.repo_tracking}</span></p>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <p className="text-xs font-medium uppercase tracking-wide text-muted">Datos de envío</p>
                       <div className="mt-1.5 text-muted">
                         {ship.name && <p className="text-text">{ship.name}</p>}
