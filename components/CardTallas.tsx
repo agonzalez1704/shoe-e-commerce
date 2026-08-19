@@ -2,7 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Check, CaretDown } from "@phosphor-icons/react";
+import { ShoppingBag, Check } from "@phosphor-icons/react";
+import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "@/components/ui/select";
 import { AnimatePresence, motion } from "motion/react";
 import { addToCart } from "@/app/cart/actions";
 import { notifyCartChanged } from "@/components/CartBadge";
@@ -36,7 +37,7 @@ export function CardTallas({
   const [sacude, setSacude] = useState(false);
   const [error, setError] = useState(false);
   const [listo, setListo] = useState(false);
-  const fila = useRef<HTMLSelectElement>(null);
+  const fila = useRef<HTMLButtonElement>(null);
 
   if (!disponibles.length) {
     return <p className="mt-3 text-center text-xs text-muted">Agotado por ahora</p>;
@@ -74,38 +75,31 @@ export function CardTallas({
 
   return (
     <div className="mt-3">
-      {/* <select> nativo, no un dropdown propio: en iOS abre la rueda del
-          sistema y en Android su hoja inferior — el comportamiento nativo que
-          un menú hecho a mano nunca iguala en móvil. Los 11 chips de antes se
-          leían como un calendario en pantallas angostas. */}
-      <div className={`relative ${sacude ? "animate-sacudida" : ""}`}>
-        <select
-          ref={fila}
-          value={sel ?? ""}
-          onChange={(e) => { setSel(e.target.value || null); if (e.target.value) setError(false); }}
-          aria-label="Elige tu talla"
-          aria-invalid={error || undefined}
-          aria-describedby={error ? `err-${slug}-${color ?? ""}` : undefined}
-          className={`h-10 w-full cursor-pointer appearance-none rounded-lg border bg-surface pl-3 pr-9 text-sm font-medium outline-none transition-colors ${
-            error
-              ? "border-accent/80 text-accent focus:border-accent/80 focus:ring-2 focus:ring-accent/20"
-              : sel
-                ? "border-border text-text focus:border-accent"
-                : "border-border text-muted focus:border-accent"
-          }`}
+      {/* Select de @coss (Base UI): popup propio con teclado, tipeo-para-saltar
+          y scroll anclado al valor elegido. El estado de error usa su propio
+          aria-invalid (borde y ring destructivos), que aquí ES el acento. */}
+      <div className={sacude ? "animate-sacudida" : ""}>
+        <Select
+          value={sel}
+          onValueChange={(v) => { setSel(v as string | null); if (v) setError(false); }}
         >
-          <option value="">Elige tu talla</option>
-          {disponibles.map((t) => (
-            <option key={t.variantId} value={t.talla}>
-              MX {t.talla}
-            </option>
-          ))}
-        </select>
-        <CaretDown
-          size={14}
-          weight="bold"
-          className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${error ? "text-accent/80" : "text-muted"}`}
-        />
+          <SelectTrigger
+            ref={fila}
+            aria-label="Elige tu talla"
+            aria-invalid={error || undefined}
+            aria-describedby={error ? `err-${slug}-${color ?? ""}` : undefined}
+            className="min-h-10 bg-surface"
+          >
+            <SelectValue>{sel ? `MX ${sel}` : "Elige tu talla"}</SelectValue>
+          </SelectTrigger>
+          <SelectPopup>
+            {disponibles.map((t) => (
+              <SelectItem key={t.variantId} value={t.talla}>
+                MX {t.talla}
+              </SelectItem>
+            ))}
+          </SelectPopup>
+        </Select>
       </div>
       {/* Vive en el DOM siempre y cambia de contenido: así aria-live anuncia la
           aparición del error sin que el layout brinque (la línea reserva alto). */}

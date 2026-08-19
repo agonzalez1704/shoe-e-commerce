@@ -62,6 +62,19 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-accent-contrast: var(--accent-contrast);
+  /* Alias con los nombres que esperan los componentes de registry shadcn/coss,
+     mapeados a la marca activa: cualquier componente que se instale hereda el
+     tema de la tienda sin retocar sus clases. `destructive` es el acento — es
+     el color de error en toda la tienda. */
+  --color-background: var(--surface);
+  --color-foreground: var(--text);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+  --color-destructive: var(--accent);
+  --color-muted-foreground: var(--muted);
+  --color-popover: var(--elevated);
+  --color-popover-foreground: var(--text);
+  --color-accent-foreground: var(--accent-contrast);
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
