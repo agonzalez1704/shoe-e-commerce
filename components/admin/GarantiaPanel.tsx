@@ -145,7 +145,7 @@ export function GarantiaPanel({ orderId, garantia }: { orderId: string; garantia
         <div className="overflow-hidden rounded-xl border border-border">
           <div className="flex items-center justify-between border-b border-border bg-elevated px-3 py-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {rates.pierna === "retorno" ? "Retorno (cliente → bodega)" : "Reposición (bodega → cliente)"} · {rates.lista.length} opciones
+              {rates.pierna === "retorno" ? "Retorno (cliente → sucursal en León, ocurre)" : "Reposición (bodega → cliente)"} · {rates.lista.length} opciones
             </p>
             <button onClick={() => setRates(null)} className="text-xs text-muted hover:text-text">Cerrar</button>
           </div>

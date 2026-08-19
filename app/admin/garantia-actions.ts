@@ -61,8 +61,15 @@ export async function cotizarGarantia(orderId: string, pierna: Pierna) {
     const { quotationId, rates } = pierna === "retorno"
       ? await quote(ORIGIN as Address, cliente)   // cliente -> bodega
       : await quote(cliente);                      // bodega -> cliente
-    if (!rates.length) return { ok: false as const, error: "Sin tarifas para esta ruta." };
-    return { ok: true as const, quotationId, rates };
+    // El retorno llega a sucursal en Leon (ocurre): nosotros pasamos por el
+    // paquete en vez de esperar reparto en la bodega. Solo tarifas que lo den.
+    const lista = pierna === "retorno" ? rates.filter((r) => r.ocurre) : rates;
+    if (!lista.length) {
+      return { ok: false as const, error: pierna === "retorno"
+        ? "Ninguna paqueteria entrega a sucursal (ocurre) en Leon para esta ruta."
+        : "Sin tarifas para esta ruta." };
+    }
+    return { ok: true as const, quotationId, rates: lista };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "Falló la cotización" };
   }
@@ -77,7 +84,7 @@ export async function generarGuiaGarantia(orderId: string, pierna: Pierna, quota
     if (!rate) return { ok: false as const, error: "Esa tarifa ya no está disponible. Vuelve a cotizar." };
 
     const r = pierna === "retorno"
-      ? await createShipment(quotationId, rate, ORIGIN as Address, false, cliente)
+      ? await createShipment(quotationId, rate, ORIGIN as Address, true, cliente) // ocurre: recogemos en sucursal de Leon
       : await createShipment(quotationId, rate, cliente);
 
     // Cobrado ya: lo que llegó se guarda antes de juzgar (lección de BL-001074).
@@ -95,6 +102,11 @@ export async function generarGuiaGarantia(orderId: string, pierna: Pierna, quota
     if (!r.trackingNumber) return { ok: false as const, error: `Skydropx cobró el envío sin devolver guía. ${rastro} — revísalo antes de reintentar o lo pagarás dos veces.` };
 
     revalidatePath(`/admin/orders/${orderId}`);
+    // Misma verificacion que el envio normal: pedimos sucursal y hay que saber
+    // si Skydropx lo registro asi, porque si no, saldria a reparto a la bodega.
+    if (pierna === "retorno" && !r.ocurreConfirmado) {
+      return { ok: false as const, error: `Guía ${r.trackingNumber} creada, pero Skydropx NO la registró como entrega a sucursal — saldría a domicilio. Revísala en su panel (envío ${r.shipmentId ?? "?"}).` };
+    }
     if (!r.labelUrl) return { ok: false as const, error: `Guía ${r.trackingNumber} creada; la etiqueta aún no está lista. Recarga en un minuto, no vuelvas a generar.` };
     return { ok: true as const };
   } catch (e) {
