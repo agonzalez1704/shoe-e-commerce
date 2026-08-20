@@ -82,12 +82,13 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
       const { data: items } = await admin
         .from("order_items").select("quantity").eq("order_id", order.id);
       const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
-      const ship = (full?.shipping_address ?? null) as { name?: string } | null;
+      const ship = (full?.shipping_address ?? null) as { name?: string; phone?: string; postal?: string; line1?: string } | null;
       const pref = await createMpPreference({
         orderNumber,
         amountCents: order.total_cents,
         itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
         customer: { name: ship?.name ?? "", email: full?.email ?? "" },
+        ship: { phone: ship?.phone, zip: ship?.postal, street: ship?.line1 },
         successUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}`,
         failureUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}&payment_status=failed`,
         notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,

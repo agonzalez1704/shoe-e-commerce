@@ -42,6 +42,10 @@ type PreferenceArgs = {
   amountCents: number;       // final total the buyer pays (discount already applied)
   itemsSummary: string;      // e.g. "2 artículos" — shown on the MP checkout line
   customer: { name: string; email: string };
+  // Datos extra del pagador. El motor de riesgo de MP aprueba mas cuando la
+  // preferencia trae telefono y direccion que cuadran con el comprador
+  // (rechazos rejected_high_risk con datos minimos — caso BL-001085).
+  ship?: { phone?: string; zip?: string; street?: string };
   successUrl: string;
   failureUrl: string;
   notificationUrl: string;
@@ -66,7 +70,14 @@ export async function createMpPreference(a: PreferenceArgs): Promise<MpPreferenc
         },
       ],
       external_reference: a.orderNumber, // how the webhook maps a payment back to our order
-      payer: { name: a.customer.name, email: a.customer.email },
+      payer: {
+        name: a.customer.name,
+        email: a.customer.email,
+        ...(a.ship?.phone ? { phone: { number: a.ship.phone.replace(/\D/g, "") } } : {}),
+        ...(a.ship?.zip || a.ship?.street
+          ? { address: { ...(a.ship.zip ? { zip_code: a.ship.zip } : {}), ...(a.ship.street ? { street_name: a.ship.street } : {}) } }
+          : {}),
+      },
       back_urls: { success: a.successUrl, failure: a.failureUrl, pending: a.successUrl },
       auto_return: "approved",
       notification_url: a.notificationUrl,

@@ -271,6 +271,11 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
       amountCents: totalCents,
       itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
       customer: { name: input.customerName, email: input.email },
+      ship: {
+        phone: input.phone,
+        zip: String(input.shippingAddress.postal ?? ""),
+        street: String(input.shippingAddress.line1 ?? ""),
+      },
       successUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,
       failureUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}&payment_status=failed`,
       notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,
