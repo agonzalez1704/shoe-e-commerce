@@ -37,6 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ["/admin/inventory", "Inventario", "inventario_ver"],
     ["/admin/discounts", "Descuentos", "descuentos_gestionar"],
     ["/admin/promociones", "Promociones", "promociones_gestionar"],
+    ["/admin/combos", "Combos", "promociones_gestionar"],
     ["/admin/noticias", "Noticias", "contenido_gestionar"],
     ["/admin/metricas", "Métricas", "metricas_ver"],
     ["/admin/comisiones", "Comisiones", "comisiones_ver"],
