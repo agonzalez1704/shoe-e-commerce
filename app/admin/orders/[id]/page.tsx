@@ -86,6 +86,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           shipping_label_url: order.shipping_label_url,
           // Lo pidió el comprador en el checkout (jsonb de envío).
           esOcurre: (order.shipping_address as Record<string, string> | null)?.entrega === "ocurre",
+          sucursal: (order.shipping_address as Record<string, string> | null)?.sucursal ?? null,
         }}
       />
 

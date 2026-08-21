@@ -92,6 +92,11 @@ export function TrackOrder({ defaultOrder = "" }: { defaultOrder?: string }) {
                   <span className="nums font-medium text-text">{result.trackingNumber}</span>
                 </p>
               )}
+              {result.sucursal && (
+                <p className="mt-1 text-xs text-muted">
+                  Recoge tu paquete en: <span className="text-text">{result.sucursal}</span>
+                </p>
+              )}
               {result.estimatedDelivery && (
                 <p className="mt-1 text-muted">
                   Entrega estimada:{" "}

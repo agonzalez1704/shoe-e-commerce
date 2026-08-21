@@ -25,6 +25,7 @@ type Order = {
   delivered_at: string | null;
   shipping_label_url: string | null;
   esOcurre?: boolean;
+  sucursal?: string | null;
 };
 
 const STAGE_ICON: Record<FulfillmentStage, React.ComponentType<{ size?: number; weight?: "bold" | "fill" | "regular" }>> = {
@@ -77,7 +78,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           Envío y seguimiento
           {order.esOcurre ? (
-            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent" title={order.sucursal ?? undefined}>
               A sucursal · ocurre
             </span>
           ) : null}
@@ -88,6 +89,10 @@ export function FulfillmentPanel({ order }: { order: Order }) {
       </div>
 
       {/* Timeline — click any stage to set it directly */}
+      {order.esOcurre && order.sucursal && (
+        <p className="-mt-3 text-xs text-muted">Sucursal elegida: <span className="text-text">{order.sucursal}</span></p>
+      )}
+
       <ol className="flex items-center">
         {STAGES.map((s, i) => {
           const done = i < curIdx;

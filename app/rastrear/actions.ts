@@ -9,6 +9,7 @@ export type TrackedOrder = {
   stage: string | null;
   carrier: string | null;
   trackingNumber: string | null;
+  sucursal: string | null;
   trackingUrl: string | null;
   reviewToken: string | null;
   garantia: {
@@ -68,6 +69,7 @@ export async function lookupOrder(
       stage: order.fulfillment_stage,
       carrier: order.carrier,
       trackingNumber: order.tracking_number,
+      sucursal: ((order.shipping_address ?? {}) as { sucursal?: string }).sucursal ?? null,
       trackingUrl: order.tracking_url,
       reviewToken: order.review_token ?? null,
       garantia: garantia

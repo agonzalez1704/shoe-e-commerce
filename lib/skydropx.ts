@@ -195,7 +195,20 @@ export async function quote(to: Address, desde: Address = ORIGIN as Address): Pr
 }
 
 // Create the shipment for a chosen rate → tracking + label PDF.
-export async function createShipment(quotationId: string, rate: Rate, to: Address, ocurre = false, desde: Address = ORIGIN as Address): Promise<ShipmentResult> {
+// Sucursales donde la paqueteria de la tarifa puede entregar (ocurre), la mas
+// cercana al destino primero. Skydropx exige el id de la sucursal al crear un
+// envio con office_delivery: sin el, el POST /shipments responde 422.
+export type OfficePoint = { id: string; name: string; address: string };
+export async function officePoints(rateId: string): Promise<OfficePoint[]> {
+  const j = await api(`/office_points?rate_id=${rateId}&direction=delivery&limit=5`);
+  return (j.data ?? []).map((pt: { id: string; attributes?: { name?: string; short_address?: string } }) => ({
+    id: pt.id,
+    name: pt.attributes?.name ?? "",
+    address: pt.attributes?.short_address ?? "",
+  }));
+}
+
+export async function createShipment(quotationId: string, rate: Rate, to: Address, ocurre = false, desde: Address = ORIGIN as Address, officePointId?: string): Promise<ShipmentResult> {
   // Falla aquí y no en Skydropx: mandar la clave vacía devuelve un error de
   // validación que no dice qué configurar, y mandar la de otra marca declara
   // mercancía que no es la del envío.
@@ -221,7 +234,7 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
         // paquete. El campo existe en la respuesta del envío (`office_delivery`),
         // así que se manda con ese nombre; si Skydropx lo ignorara, el envío
         // saldría a domicilio, y por eso quien llama lo verifica al recibirlo.
-        ...(ocurre ? { office_delivery: true } : {}),
+        ...(ocurre ? { office_delivery: true, ...(officePointId ? { office_delivery_point_id: officePointId } : {}) } : {}),
       },
     }),
   });

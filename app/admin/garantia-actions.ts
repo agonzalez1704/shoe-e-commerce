@@ -83,9 +83,18 @@ export async function generarGuiaGarantia(orderId: string, pierna: Pierna, quota
     const rate = await rateById(quotationId, rateId);
     if (!rate) return { ok: false as const, error: "Esa tarifa ya no está disponible. Vuelve a cotizar." };
 
-    const r = pierna === "retorno"
-      ? await createShipment(quotationId, rate, ORIGIN as Address, true, cliente) // ocurre: recogemos en sucursal de Leon
-      : await createShipment(quotationId, rate, cliente);
+    let r;
+    if (pierna === "retorno") {
+      // Ocurre exige elegir sucursal: la mas cercana a la bodega, y queda
+      // anotada en la garantia para saber a donde ir por el paquete.
+      const { officePoints } = await import("@/lib/skydropx");
+      const puntos = await officePoints(rateId);
+      if (!puntos.length) return { ok: false as const, error: "Esta paqueteria no tiene sucursales en Leon. Elige otra tarifa." };
+      r = await createShipment(quotationId, rate, ORIGIN as Address, true, cliente, puntos[0].id);
+      await supabase.from("garantias").update({ notas: `Retorno a sucursal: ${puntos[0].name} — ${puntos[0].address}` }).eq("order_id", orderId);
+    } else {
+      r = await createShipment(quotationId, rate, cliente);
+    }
 
     // Cobrado ya: lo que llegó se guarda antes de juzgar (lección de BL-001074).
     const { error } = await supabase.from("garantias").update(

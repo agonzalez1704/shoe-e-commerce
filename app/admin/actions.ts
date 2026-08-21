@@ -252,7 +252,19 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
     const rate = await rateById(quotationId, rateId);
     if (!rate) return { ok: false as const, error: "Esa tarifa ya no está disponible. Vuelve a cotizar." };
 
-    const r = await createShipment(quotationId, rate, to, to.esOcurre);
+    // A sucursal: Skydropx exige decidir CUAL sucursal al crear el envio. Se
+    // toma la mas cercana al domicilio del cliente y se deja registrada en el
+    // pedido para poder decirle a donde ir por su paquete.
+    let sucursal: string | null = null;
+    let officePointId: string | undefined;
+    if (to.esOcurre) {
+      const { officePoints } = await import("@/lib/skydropx");
+      const puntos = await officePoints(rateId);
+      if (!puntos.length) return { ok: false as const, error: "Esta paqueteria no tiene sucursales cerca del cliente. Elige otra tarifa." };
+      officePointId = puntos[0].id;
+      sucursal = `${puntos[0].name} — ${puntos[0].address}`;
+    }
+    const r = await createShipment(quotationId, rate, to, to.esOcurre, undefined, officePointId);
 
     // A partir de aquí el envío YA está cobrado. Lo que llegue se guarda antes
     // de juzgar si vino completo: perder la guía de un envío pagado cuesta
@@ -278,6 +290,12 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
     }
 
     revalidatePath("/admin/orders/[id]", "page");
+    if (sucursal) {
+      const { data: oo } = await supabase.from("orders").select("shipping_address").eq("id", orderId).maybeSingle();
+      const dir = (oo?.shipping_address ?? {}) as Record<string, unknown>;
+      await supabase.from("orders").update({ shipping_address: { ...dir, sucursal } }).eq("id", orderId);
+    }
+
     // Se pidió a sucursal y Skydropx no lo registró así: el envío ya está
     // cobrado y saldría a domicilio. Vale más decirlo de frente que dejar que
     // el cliente vaya a la sucursal por un paquete que nunca llegó ahí.
