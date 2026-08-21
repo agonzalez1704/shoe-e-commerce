@@ -6,6 +6,7 @@ import { formatCents } from "@/lib/money";
 import { precioConPromo } from "@/lib/pricing";
 import {
   crearPromocion,
+  editarPromocion,
   finalizarPromocion,
   reactivarPromocion,
   eliminarPromocion,
@@ -32,6 +33,12 @@ function estado(p: PromoRow): { label: string; cls: string } {
   return { label: "Activa", cls: "bg-accent text-accent-contrast" };
 }
 
+// ISO → valor de <input type="datetime-local"> en hora local (no UTC).
+const aLocal = (iso: string) => {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -42,33 +49,40 @@ export function PromocionesView({
   promos: PromoRow[];
   productos: ProductoOpcion[];
 }) {
-  const [creando, setCreando] = useState(false);
+  // null = cerrado; "nueva" = alta; PromoRow = edicion de esa promo.
+  const [form, setForm] = useState<null | "nueva" | PromoRow>(null);
   return (
     <div className="space-y-6">
-      {!creando && (
+      {form === null && (
         <button
-          onClick={() => setCreando(true)}
+          onClick={() => setForm("nueva")}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast"
         >
           Nueva promoción
         </button>
       )}
 
-      {creando && <NuevaPromo productos={productos} onClose={() => setCreando(false)} />}
+      {form !== null && (
+        <PromoForm
+          productos={productos}
+          promo={form === "nueva" ? null : form}
+          onClose={() => setForm(null)}
+        />
+      )}
 
       <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
         {promos.length === 0 && (
           <li className="px-4 py-6 text-center text-sm text-muted">Aún no hay promociones.</li>
         )}
         {promos.map((p) => (
-          <PromoItem key={p.id} promo={p} />
+          <PromoItem key={p.id} promo={p} onEdit={() => setForm(p)} />
         ))}
       </ul>
     </div>
   );
 }
 
-function PromoItem({ promo }: { promo: PromoRow }) {
+function PromoItem({ promo, onEdit }: { promo: PromoRow; onEdit: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const e = estado(promo);
@@ -100,6 +114,13 @@ function PromoItem({ promo }: { promo: PromoRow }) {
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
+        <button
+          onClick={onEdit}
+          disabled={pending}
+          className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-elevated disabled:opacity-50"
+        >
+          Editar
+        </button>
         {promo.active ? (
           <button
             onClick={() => run(() => finalizarPromocion(promo.id))}
@@ -133,14 +154,14 @@ function PromoItem({ promo }: { promo: PromoRow }) {
   );
 }
 
-function NuevaPromo({ productos, onClose }: { productos: ProductoOpcion[]; onClose: () => void }) {
+function PromoForm({ productos, promo, onClose }: { productos: ProductoOpcion[]; promo: PromoRow | null; onClose: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [nombre, setNombre] = useState("");
-  const [percent, setPercent] = useState("15");
-  const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
-  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [nombre, setNombre] = useState(promo?.nombre ?? "");
+  const [percent, setPercent] = useState(promo ? String(promo.percent) : "15");
+  const [startsAt, setStartsAt] = useState(promo ? aLocal(promo.startsAt) : "");
+  const [endsAt, setEndsAt] = useState(promo ? aLocal(promo.endsAt) : "");
+  const [sel, setSel] = useState<Set<string>>(new Set(promo?.productIds ?? []));
   const [q, setQ] = useState("");
 
   const pct = Number(percent);
@@ -159,17 +180,13 @@ function NuevaPromo({ productos, onClose }: { productos: ProductoOpcion[]; onClo
   function guardar() {
     start(async () => {
       try {
-        await crearPromocion({
-          nombre,
-          percent: pct,
-          startsAt,
-          endsAt,
-          productIds: [...sel],
-        });
+        const input = { nombre, percent: pct, startsAt, endsAt, productIds: [...sel] };
+        if (promo) await editarPromocion(promo.id, input);
+        else await crearPromocion(input);
         onClose();
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Error al crear");
+        alert(err instanceof Error ? err.message : "Error al guardar");
       }
     });
   }
@@ -270,7 +287,7 @@ function NuevaPromo({ productos, onClose }: { productos: ProductoOpcion[]; onClo
           disabled={pending || !valido}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast disabled:opacity-50"
         >
-          {pending ? "Creando…" : "Crear promoción"}
+          {pending ? "Guardando…" : promo ? "Guardar cambios" : "Crear promoción"}
         </button>
       </div>
     </div>

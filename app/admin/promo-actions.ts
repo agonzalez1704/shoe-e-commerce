@@ -44,6 +44,36 @@ export async function crearPromocion(input: PromoInput): Promise<void> {
   updateTag("promos");
 }
 
+export async function editarPromocion(id: string, input: PromoInput): Promise<void> {
+  const supabase = await db();
+
+  const nombre = input.nombre.trim();
+  if (!nombre) throw new Error("El nombre es obligatorio");
+  const percent = Math.round(input.percent);
+  if (!(percent >= 1 && percent <= 99)) throw new Error("El porcentaje debe ser entre 1 y 99");
+  const starts = new Date(input.startsAt);
+  const ends = new Date(input.endsAt);
+  if (isNaN(+starts) || isNaN(+ends) || ends <= starts) throw new Error("Rango de fechas inválido");
+  const ids = [...new Set(input.productIds)];
+  if (ids.length === 0) throw new Error("Selecciona al menos un par");
+
+  const { error } = await supabase
+    .from("promociones")
+    .update({ nombre, percent, starts_at: starts.toISOString(), ends_at: ends.toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message ?? "No se pudo editar la promoción");
+
+  // Los pares se reemplazan completos: el formulario manda la selección final.
+  const { error: eDel } = await supabase.from("promocion_productos").delete().eq("promocion_id", id);
+  if (eDel) throw new Error(eDel.message);
+  const rows = ids.map((product_id) => ({ promocion_id: id, product_id }));
+  const { error: eIns } = await supabase.from("promocion_productos").insert(rows);
+  if (eIns) throw new Error(eIns.message ?? "No se pudieron asignar los productos");
+
+  revalidatePath("/admin/promociones");
+  updateTag("promos");
+}
+
 // End a promo now — an admin can stop it at any moment.
 export async function finalizarPromocion(id: string): Promise<void> {
   const supabase = await db();
