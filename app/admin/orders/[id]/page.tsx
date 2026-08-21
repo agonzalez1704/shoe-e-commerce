@@ -22,13 +22,16 @@ const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 type Status = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
 export default async function AdminOrderDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const { id: param } = await params;
   const supabase = await createClient();
 
+  // La URL canonica usa el numero de pedido (BL-001081), legible y compartible.
+  // Los enlaces viejos con uuid siguen resolviendo.
+  const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(param);
   const { data: order } = await supabase
     .from("orders")
     .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url")
-    .eq("id", id)
+    .eq(esUuid ? "id" : "order_number", decodeURIComponent(param))
     .maybeSingle();
 
   const { data: garantia } = await supabase
@@ -43,6 +46,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const digits = (ship.phone ?? "").replace(/\D/g, "");
   const waNumber = digits.length === 10 ? `52${digits}` : digits.length >= 11 ? digits : null;
 
+  const id = order.id;
   const [{ data: items }, { data: payment }, { data: fiscal }, { data: cfdi }] = await Promise.all([
     supabase.from("order_items").select("product_name, variant_label, sku, unit_price_cents, quantity, line_total_cents").eq("order_id", id),
     supabase.from("payments").select("method, status, reference, clabe, voucher_url, expires_at").eq("order_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),

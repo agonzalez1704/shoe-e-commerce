@@ -72,7 +72,7 @@ export default async function AdminHome() {
               <tbody className="divide-y divide-border">
                 {(toShip.data ?? []).map((o) => (
                   <tr key={o.id} className="transition-colors hover:bg-elevated">
-                    <td className="px-4 py-3"><Link href={`/admin/orders/${o.id}`} className="nums font-medium hover:text-accent">{o.order_number}</Link></td>
+                    <td className="px-4 py-3"><Link href={`/admin/orders/${o.order_number}`} className="nums font-medium hover:text-accent">{o.order_number}</Link></td>
                     <td className="max-w-[180px] truncate px-4 py-3 text-muted">{o.email}</td>
                     <td className="px-4 py-3"><StageBadge stage={o.fulfillment_stage} /></td>
                     <td className="nums px-4 py-3 text-muted">{o.estimated_delivery ?? "—"}</td>
@@ -102,7 +102,7 @@ export default async function AdminHome() {
             <tbody className="divide-y divide-border">
               {(recent.data ?? []).map((o) => (
                 <tr key={o.id} className="transition-colors hover:bg-elevated">
-                  <td className="px-4 py-3"><Link href={`/admin/orders/${o.id}`} className="nums font-medium hover:text-accent">{o.order_number}</Link></td>
+                  <td className="px-4 py-3"><Link href={`/admin/orders/${o.order_number}`} className="nums font-medium hover:text-accent">{o.order_number}</Link></td>
                   <td className="nums px-4 py-3 text-muted">{shortDate(o.created_at)}</td>
                   <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                   <td className="px-4 py-3"><StageBadge stage={o.fulfillment_stage} /></td>

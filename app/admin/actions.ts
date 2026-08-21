@@ -57,7 +57,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     tag: `order-${orderId}`,
   });
 
-  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders/[id]", "page");
   revalidatePath("/admin/orders");
 }
 
@@ -87,7 +87,7 @@ export async function saveTracking(
     })
     .eq("id", orderId);
   if (error) throw new Error(error.message);
-  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders/[id]", "page");
 }
 
 // Advance the delivery pipeline. Stamps shipped_at/delivered_at and notifies the
@@ -166,7 +166,7 @@ export async function setFulfillmentStage(orderId: string, stage: FulfillmentSta
     tag: `order-${orderId}`,
   });
 
-  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders/[id]", "page");
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
 }
@@ -277,7 +277,7 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
       return { ok: false as const, error: `Skydropx cobró el envío pero no devolvió guía. ${rastro} — revísalo en Skydropx antes de reintentar o lo pagarás dos veces.` };
     }
 
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     // Se pidió a sucursal y Skydropx no lo registró así: el envío ya está
     // cobrado y saldría a domicilio. Vale más decirlo de frente que dejar que
     // el cliente vaya a la sucursal por un paquete que nunca llegó ahí.
@@ -309,7 +309,7 @@ export async function marcarOcurre(orderId: string, ocurre: boolean) {
 
     const { error } = await supabase.from("orders").update({ shipping_address: dir }).eq("id", orderId);
     if (error) return { ok: false as const, error: error.message };
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     return { ok: true as const };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo cambiar el tipo de entrega" };
@@ -323,6 +323,27 @@ export async function marcarOcurre(orderId: string, ocurre: boolean) {
 //
 // Sólo limpia lo nuestro. La guía en Skydropx se cancela allá; esto no la
 // cancela ni devuelve el dinero de una que siga viva.
+// Cancela la guia EN Skydropx y luego la suelta del pedido. La cancelacion
+// puede quedar "en revision" de la paqueteria; el reembolso lo decide Skydropx.
+export async function cancelarGuia(orderId: string) {
+  try {
+    const supabase = await requirePermiso("pedidos_gestionar");
+    const { data: o } = await supabase.from("orders").select("tracking_number").eq("id", orderId).maybeSingle();
+    if (!o?.tracking_number) return { ok: false as const, error: "El pedido no tiene guia." };
+    const { cancelShipment } = await import("@/lib/skydropx");
+    const r = await cancelShipment(o.tracking_number);
+    const { error } = await supabase
+      .from("orders")
+      .update({ carrier: null, tracking_number: null, tracking_url: null, shipping_label_url: null })
+      .eq("id", orderId);
+    if (error) return { ok: false as const, error: `Cancelada en Skydropx (${r.detalle}), pero no se limpio el pedido: ${error.message}` };
+    revalidatePath("/admin/orders/[id]", "page");
+    return { ok: true as const, detalle: r.detalle };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo cancelar la guia" };
+  }
+}
+
 export async function descartarGuia(orderId: string) {
   try {
     const supabase = await requirePermiso("pedidos_gestionar");
@@ -331,7 +352,7 @@ export async function descartarGuia(orderId: string) {
       .update({ carrier: null, tracking_number: null, tracking_url: null, shipping_label_url: null })
       .eq("id", orderId);
     if (error) return { ok: false as const, error: error.message };
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     return { ok: true as const };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo descartar la guía" };
@@ -365,7 +386,7 @@ export async function generateSkydropxLabel(orderId: string) {
   const isLeon = to.postal_code.startsWith("37") || /le[oó]n/i.test(to.area_level2);
   if (isLeon) {
     await supabase.from("orders").update({ carrier: "local", tracking_number: null, tracking_url: null, shipping_label_url: null }).eq("id", orderId);
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     return { carrier: "local", tracking: "", labelUrl: null, local: true };
   }
 
@@ -389,7 +410,7 @@ export async function generateSkydropxLabel(orderId: string) {
   if (error) throw new Error(`Envío cobrado (${r.shipmentId ?? "?"}, guía ${r.trackingNumber || "sin guía"}) pero no se guardó: ${error.message}`);
   if (!r.trackingNumber) throw new Error(`Skydropx cobró el envío ${r.shipmentId ?? "?"} sin devolver guía. Revísalo antes de reintentar.`);
 
-  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders/[id]", "page");
   return { carrier: r.carrier, tracking: r.trackingNumber, labelUrl: r.labelUrl };
 }
 
@@ -529,6 +550,6 @@ export async function setProductStatus(productId: string, status: "draft" | "act
 export async function stampInvoice(orderId: string) {
   await assertPermiso("facturar"); // critical: stampOrderCfdi uses the service-role client (bypasses RLS)
   const result = await stampOrderCfdi(orderId);
-  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders/[id]", "page");
   return result;
 }

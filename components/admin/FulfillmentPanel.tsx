@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
-import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel, descartarGuia, marcarOcurre } from "@/app/admin/actions";
+import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel, descartarGuia, cancelarGuia, marcarOcurre } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
 
 // Los envíos son pesos cerrados; los centavos sólo estorban al comparar.
@@ -332,19 +332,35 @@ export function FulfillmentPanel({ order }: { order: Order }) {
           {/* La salida cuando la guía ya no sirve —cancelada en Skydropx, o mal
               capturada—. Sin esto el pedido se queda atorado: hay guía, así que
               el botón de cotizar no se pinta, y no había forma de quitarla. */}
-          <button
-            disabled={isPending}
-            onClick={() => {
-              if (!confirm("¿Quitar la guía de este pedido para poder generar otra?\n\nEsto NO la cancela en Skydropx: si sigue viva, cancélala allá primero o pagarás dos envíos.")) return;
-              run(async () => {
-                const res = await descartarGuia(order.id);
-                if (!res.ok) setErr(res.error);
-              });
-            }}
-            className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline disabled:opacity-50"
-          >
-            Quitar guía y volver a cotizar
-          </button>
+          <span className="flex flex-wrap items-center gap-3">
+            <button
+              disabled={isPending}
+              onClick={() => {
+                if (!confirm("¿Cancelar esta guía EN Skydropx y quitarla del pedido?\n\nLa paquetería puede tardar en aprobar la cancelación; el reembolso lo decide Skydropx.")) return;
+                run(async () => {
+                  const res = await cancelarGuia(order.id);
+                  if (!res.ok) setErr(res.error);
+                  else alert(`Cancelación enviada a Skydropx (${res.detalle}).`);
+                });
+              }}
+              className="text-xs text-accent underline-offset-2 transition-colors hover:underline disabled:opacity-50"
+            >
+              Cancelar guía en Skydropx
+            </button>
+            <button
+              disabled={isPending}
+              onClick={() => {
+                if (!confirm("¿Quitar la guía de este pedido para poder generar otra?\n\nEsto NO la cancela en Skydropx: si sigue viva, cancélala allá primero o pagarás dos envíos.")) return;
+                run(async () => {
+                  const res = await descartarGuia(order.id);
+                  if (!res.ok) setErr(res.error);
+                });
+              }}
+              className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline disabled:opacity-50"
+            >
+              Sólo quitarla del pedido
+            </button>
+          </span>
         </div>
       )}
 

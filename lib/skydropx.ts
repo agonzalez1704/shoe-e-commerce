@@ -272,6 +272,31 @@ async function esperaEtiqueta(shipmentId: string | null) {
 // and returns the real rate, or null if that id is not part of it. It also
 // gives us provider_name and total, which the caller needs and the client
 // should not be trusted to supply.
+// Cancela una guia en Skydropx. El pedido no guarda el id del envio, solo el
+// numero de guia, asi que se localiza en los envios recientes (3 paginas bastan:
+// una guia que vale la pena cancelar es de estos dias, no del archivo).
+export async function cancelShipment(trackingNumber: string): Promise<{ shipmentId: string; detalle: string }> {
+  let shipmentId: string | null = null;
+  for (let page = 1; page <= 3 && !shipmentId; page++) {
+    const j = await api(`/shipments?page=${page}&per_page=50`);
+    const hit = (j.data ?? []).find(
+      (sh: { id: string; attributes?: { master_tracking_number?: string } }) =>
+        sh.attributes?.master_tracking_number === trackingNumber,
+    );
+    if (hit) shipmentId = hit.id;
+    if (!(j.data ?? []).length) break;
+  }
+  if (!shipmentId) throw new Error(`No encontre el envio con guia ${trackingNumber} en Skydropx.`);
+  const r = await api(`/shipments/${shipmentId}/cancellations`, {
+    method: "POST",
+    body: JSON.stringify({ reason: "No longer needed" }),
+  });
+  // La cancelacion puede quedar en revision de la paqueteria; se reporta lo que
+  // Skydropx haya contestado en vez de prometer reembolso.
+  const a = (r.data?.attributes ?? r.data ?? r) as Record<string, unknown>;
+  return { shipmentId, detalle: String(a.status ?? a.workflow_status ?? "solicitada") };
+}
+
 export async function rateById(quotationId: string, rateId: string): Promise<Rate | null> {
   const data = await api(`/quotations/${quotationId}`);
   const rates: Rate[] = (data.rates ?? [])

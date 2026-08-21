@@ -44,7 +44,7 @@ export async function abrirGarantia(orderId: string, razon: string) {
     if (error) {
       return { ok: false as const, error: /duplicate|unique/i.test(error.message) ? "Este pedido ya tiene una garantía abierta." : error.message };
     }
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     return { ok: true as const };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo abrir la garantía" };
@@ -101,7 +101,7 @@ export async function generarGuiaGarantia(orderId: string, pierna: Pierna, quota
     if (error) return { ok: false as const, error: `El envío se creó y se cobró, pero no se guardó: ${error.message}. ${rastro} — anótala.` };
     if (!r.trackingNumber) return { ok: false as const, error: `Skydropx cobró el envío sin devolver guía. ${rastro} — revísalo antes de reintentar o lo pagarás dos veces.` };
 
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     // Misma verificacion que el envio normal: pedimos sucursal y hay que saber
     // si Skydropx lo registro asi, porque si no, saldria a reparto a la bodega.
     if (pierna === "retorno" && !r.ocurreConfirmado) {
@@ -123,7 +123,7 @@ export async function guardarGuiaGarantia(orderId: string, pierna: Pierna, datos
       patchPierna(pierna, { carrier: datos.carrier || null, tracking: datos.tracking || null, url: datos.url || null }),
     ).eq("order_id", orderId);
     if (error) return { ok: false as const, error: error.message };
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     return { ok: true as const };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo guardar" };
@@ -139,7 +139,7 @@ export async function marcarGarantia(orderId: string, hito: "recibido" | "cerrad
       : { cerrada_at: valor ? new Date().toISOString() : null };
     const { error } = await supabase.from("garantias").update(patch).eq("order_id", orderId);
     if (error) return { ok: false as const, error: error.message };
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders/[id]", "page");
     return { ok: true as const };
   } catch (e) {
     return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo actualizar" };

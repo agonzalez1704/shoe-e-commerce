@@ -147,7 +147,7 @@ export default async function AdminOrders({
             {(orders ?? []).map((o) => (
               <tr key={o.id} className="transition-colors hover:bg-elevated">
                 <td className="px-4 py-3">
-                  <Link href={`/admin/orders/${o.id}`} className="nums font-medium hover:text-accent">{o.order_number}</Link>
+                  <Link href={`/admin/orders/${o.order_number}`} className="nums font-medium hover:text-accent">{o.order_number}</Link>
                 </td>
                 <td className="max-w-[220px] px-4 py-3">
                   <p className="truncate">{(o.shipping_address as { name?: string } | null)?.name ?? "—"}</p>
