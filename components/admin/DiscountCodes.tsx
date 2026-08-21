@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash, Plus } from "@phosphor-icons/react";
+import { Trash, Plus, PencilSimple, X, Check } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { createDiscountCode, setDiscountActive, deleteDiscountCode } from "@/app/admin/actions";
+import { createDiscountCode, updateDiscountCode, setDiscountActive, deleteDiscountCode } from "@/app/admin/actions";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -27,6 +27,9 @@ export function DiscountCodes({ rows }: { rows: CodeRow[] }) {
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [type, setType] = useState<"percent" | "fixed">("percent");
+  // Fila en edicion. El codigo no se edita: es la identidad que ya circula en
+  // links y conversaciones; para renombrar, se crea otro y se apaga este.
+  const [editing, setEditing] = useState<string | null>(null);
 
   const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
@@ -116,6 +119,15 @@ export function DiscountCodes({ rows }: { rows: CodeRow[] }) {
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((r) => (
+              editing === r.id ? (
+                <EditRow
+                  key={r.id}
+                  row={r}
+                  disabled={isPending}
+                  onCancel={() => setEditing(null)}
+                  onSave={(input) => run(async () => { await updateDiscountCode(r.id, input); setEditing(null); })}
+                />
+              ) : (
               <tr key={r.id} className="transition-colors hover:bg-elevated">
                 <td className="nums px-4 py-3 font-medium">{r.code}</td>
                 <td className="px-4 py-3">{r.type === "percent" ? `${r.value}%` : mxn(r.value)}</td>
@@ -139,16 +151,27 @@ export function DiscountCodes({ rows }: { rows: CodeRow[] }) {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    disabled={isPending}
-                    onClick={() => run(() => deleteDiscountCode(r.id))}
-                    aria-label="Eliminar"
-                    className="text-muted transition-colors hover:text-accent"
-                  >
-                    <Trash size={15} />
-                  </button>
+                  <span className="inline-flex items-center gap-3">
+                    <button
+                      disabled={isPending}
+                      onClick={() => setEditing(r.id)}
+                      aria-label={`Editar ${r.code}`}
+                      className="text-muted transition-colors hover:text-accent"
+                    >
+                      <PencilSimple size={15} />
+                    </button>
+                    <button
+                      disabled={isPending}
+                      onClick={() => run(() => deleteDiscountCode(r.id))}
+                      aria-label="Eliminar"
+                      className="text-muted transition-colors hover:text-accent"
+                    >
+                      <Trash size={15} />
+                    </button>
+                  </span>
                 </td>
               </tr>
+              )
             ))}
             {rows.length === 0 && (
               <tr><td colSpan={7} className="px-4 py-10 text-center text-muted">Sin códigos de descuento.</td></tr>
@@ -157,5 +180,66 @@ export function DiscountCodes({ rows }: { rows: CodeRow[] }) {
         </table>
       </div>
     </div>
+  );
+}
+
+// Fila editable: mismos campos que el alta menos el codigo. Estado local por
+// input; centavos <-> pesos se convierten aqui, como en el alta.
+function EditRow({ row, disabled, onSave, onCancel }: {
+  row: CodeRow;
+  disabled: boolean;
+  onSave: (input: { type: "percent" | "fixed"; value: number; minSubtotalCents: number; maxUses: number | null; expiresAt: string | null }) => void;
+  onCancel: () => void;
+}) {
+  const [type, setType] = useState<"percent" | "fixed">(row.type);
+  const [value, setValue] = useState(String(row.type === "percent" ? row.value : row.value / 100));
+  const [min, setMin] = useState(row.min_subtotal_cents ? String(row.min_subtotal_cents / 100) : "");
+  const [maxUses, setMaxUses] = useState(row.max_uses != null ? String(row.max_uses) : "");
+  const [expires, setExpires] = useState(row.expires_at ? row.expires_at.slice(0, 10) : "");
+
+  return (
+    <tr className="bg-elevated/60">
+      <td className="nums px-4 py-3 font-medium">{row.code}</td>
+      <td className="px-4 py-2">
+        <span className="flex items-center gap-1.5">
+          <select value={type} onChange={(e) => setType(e.target.value as "percent" | "fixed")} className={`${IN} w-24`}>
+            <option value="percent">%</option>
+            <option value="fixed">MXN</option>
+          </select>
+          <input value={value} onChange={(e) => setValue(e.target.value)} type="number" step={type === "percent" ? "1" : "0.01"} min="0" className={`${IN} nums w-20`} aria-label="Valor" />
+        </span>
+      </td>
+      <td className="px-4 py-2">
+        <input value={min} onChange={(e) => setMin(e.target.value)} type="number" step="0.01" min="0" placeholder="0" className={`${IN} nums w-24`} aria-label="Minimo de compra" />
+      </td>
+      <td className="px-4 py-2">
+        <input value={maxUses} onChange={(e) => setMaxUses(e.target.value)} type="number" min="1" placeholder="∞" className={`${IN} nums w-16`} aria-label="Usos maximos" />
+      </td>
+      <td className="px-4 py-2">
+        <input value={expires} onChange={(e) => setExpires(e.target.value)} type="date" className={`${IN} nums w-36`} aria-label="Vence" />
+      </td>
+      <td className="px-4 py-3 text-xs text-muted">{row.active ? "Activo" : "Inactivo"}</td>
+      <td className="px-4 py-3 text-right">
+        <span className="inline-flex items-center gap-3">
+          <button
+            disabled={disabled}
+            onClick={() => onSave({
+              type,
+              value: type === "percent" ? Number(value) : Math.round(Number(value) * 100),
+              minSubtotalCents: Math.round(Number(min || 0) * 100),
+              maxUses: maxUses ? Number(maxUses) : null,
+              expiresAt: expires ? new Date(expires).toISOString() : null,
+            })}
+            aria-label="Guardar cambios"
+            className="text-accent transition-colors hover:opacity-80"
+          >
+            <Check size={16} weight="bold" />
+          </button>
+          <button disabled={disabled} onClick={onCancel} aria-label="Cancelar edicion" className="text-muted transition-colors hover:text-text">
+            <X size={16} />
+          </button>
+        </span>
+      </td>
+    </tr>
   );
 }
