@@ -50,7 +50,7 @@ const SAVE_FIELDS = ["name", "email", "phone", "line1", "neighborhood", "city", 
 // misma señal que ya decide si la PDP anuncia "6 pagos de $X".
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
-  { id: "oxxo", label: "Efectivo", hint: "+20,000 tiendas" },
+  { id: "oxxo", label: "Paga en establecimientos", hint: "+20,000 tiendas" },
   ...(activeBrand.copy?.installments
     ? [{ id: "aplazo" as Method, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }]
     : []),
