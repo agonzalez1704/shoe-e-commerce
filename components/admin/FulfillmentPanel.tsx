@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Check, Truck, Package, Storefront, House, Circle, ArrowSquareOut } from "@phosphor-icons/react";
 import { saveTracking, setFulfillmentStage, quoteSkydropxRates, createSkydropxLabel, generateSkydropxLabel, descartarGuia, cancelarGuia, marcarOcurre } from "@/app/admin/actions";
 import { STAGES, CARRIERS, stageIndex, stageLabel, trackingUrlFor, type FulfillmentStage } from "@/lib/fulfillment";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogPopup, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogClose,
+} from "@/components/ui/alert-dialog";
 
 // Los envíos son pesos cerrados; los centavos sólo estorban al comparar.
 const mxn0 = (n: number) => `$${n.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`;
@@ -50,6 +54,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
   const [err, setErr] = useState<string | null>(null);
   type Rate = { id: string; provider_name: string; service: string | null; total: number; days: number | null };
   const [rates, setRates] = useState<Rate[] | null>(null);
+  const [cancelado, setCancelado] = useState<string | null>(null);
   const [quotationId, setQuotationId] = useState("");
   const [sortBy, setSortBy] = useState<"precio" | "tiempo">("precio");
   const run = (fn: () => Promise<void>) =>
@@ -322,6 +327,11 @@ export function FulfillmentPanel({ order }: { order: Order }) {
       })()}
 
       {err && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">{err}</p>}
+      {cancelado && (
+        <p className="rounded-lg bg-elevated px-3 py-2 text-xs text-text ring-1 ring-border">
+          Cancelación enviada a Skydropx ({cancelado}). El reembolso queda a revisión de la paquetería.
+        </p>
+      )}
       {(order.shipping_label_url || conGuia) && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           {order.shipping_label_url ? (
@@ -333,33 +343,71 @@ export function FulfillmentPanel({ order }: { order: Order }) {
               capturada—. Sin esto el pedido se queda atorado: hay guía, así que
               el botón de cotizar no se pinta, y no había forma de quitarla. */}
           <span className="flex flex-wrap items-center gap-3">
-            <button
-              disabled={isPending}
-              onClick={() => {
-                if (!confirm("¿Cancelar esta guía EN Skydropx y quitarla del pedido?\n\nLa paquetería puede tardar en aprobar la cancelación; el reembolso lo decide Skydropx.")) return;
-                run(async () => {
-                  const res = await cancelarGuia(order.id);
-                  if (!res.ok) setErr(res.error);
-                  else alert(`Cancelación enviada a Skydropx (${res.detalle}).`);
-                });
-              }}
-              className="text-xs text-accent underline-offset-2 transition-colors hover:underline disabled:opacity-50"
-            >
-              Cancelar guía en Skydropx
-            </button>
-            <button
-              disabled={isPending}
-              onClick={() => {
-                if (!confirm("¿Quitar la guía de este pedido para poder generar otra?\n\nEsto NO la cancela en Skydropx: si sigue viva, cancélala allá primero o pagarás dos envíos.")) return;
-                run(async () => {
-                  const res = await descartarGuia(order.id);
-                  if (!res.ok) setErr(res.error);
-                });
-              }}
-              className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline disabled:opacity-50"
-            >
-              Sólo quitarla del pedido
-            </button>
+            {/* Confirmaciones en AlertDialog (shadcn/Base UI) en vez de confirm()
+                nativo: mismo tema del admin y botones con jerarquía clara. */}
+            <AlertDialog>
+              <AlertDialogTrigger
+                disabled={isPending}
+                className="text-xs text-accent underline-offset-2 transition-colors hover:underline disabled:opacity-50"
+              >
+                Cancelar guía en Skydropx
+              </AlertDialogTrigger>
+              <AlertDialogPopup>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Cancelar esta guía en Skydropx?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Se pide la cancelación a Skydropx y la guía se quita del pedido.
+                    La paquetería puede tardar en aprobarla; el reembolso lo decide Skydropx.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogClose className="rounded-full px-4 py-2 text-sm text-muted transition-colors hover:text-text">
+                    Conservarla
+                  </AlertDialogClose>
+                  <AlertDialogClose
+                    onClick={() => run(async () => {
+                      const res = await cancelarGuia(order.id);
+                      if (!res.ok) setErr(res.error);
+                      else setCancelado(res.detalle);
+                    })}
+                    className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98]"
+                  >
+                    Sí, cancelarla
+                  </AlertDialogClose>
+                </AlertDialogFooter>
+              </AlertDialogPopup>
+            </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger
+                disabled={isPending}
+                className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline disabled:opacity-50"
+              >
+                Sólo quitarla del pedido
+              </AlertDialogTrigger>
+              <AlertDialogPopup>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Quitar la guía de este pedido?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Libera el pedido para generar otra guía. Esto NO la cancela en Skydropx:
+                    si sigue viva, cancélala allá primero o pagarás dos envíos.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogClose className="rounded-full px-4 py-2 text-sm text-muted transition-colors hover:text-text">
+                    Conservarla
+                  </AlertDialogClose>
+                  <AlertDialogClose
+                    onClick={() => run(async () => {
+                      const res = await descartarGuia(order.id);
+                      if (!res.ok) setErr(res.error);
+                    })}
+                    className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98]"
+                  >
+                    Sí, quitarla
+                  </AlertDialogClose>
+                </AlertDialogFooter>
+              </AlertDialogPopup>
+            </AlertDialog>
           </span>
         </div>
       )}
