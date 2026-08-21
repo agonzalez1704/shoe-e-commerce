@@ -68,7 +68,11 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         <OrderStatusActions orderId={order.id} status={order.status as Status} />
       </div>
 
+      {/* La key remonta el panel cuando la guía cambia (p. ej. al cancelarla):
+          sin esto, los campos del formulario retienen la guía vieja porque su
+          useState solo se inicializa al montar. */}
       <FulfillmentPanel
+        key={order.tracking_number ?? "sin-guia"}
         order={{
           id: order.id,
           paymentStatus: order.status,
