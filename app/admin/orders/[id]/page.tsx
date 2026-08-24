@@ -65,7 +65,17 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           <h1 className="nums text-2xl font-semibold tracking-tight">{order.order_number}</h1>
           <StatusBadge status={order.status} />
         </div>
-        <OrderStatusActions orderId={order.id} status={order.status as Status} />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* La tarjeta de corte que pide la fabrica: un PDF por modelo+color. */}
+          <a
+            href={`/admin/orders/${order.order_number}/ficha`}
+            download
+            className="rounded-full border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-elevated"
+          >
+            Descargar ficha de producción
+          </a>
+          <OrderStatusActions orderId={order.id} status={order.status as Status} />
+        </div>
       </div>
 
       {/* La key remonta el panel cuando la guía cambia (p. ej. al cancelarla):
