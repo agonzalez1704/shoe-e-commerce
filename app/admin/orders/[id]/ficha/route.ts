@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(param);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number")
+    .select("id, order_number, created_at")
     .eq(esUuid ? "id" : "order_number", decodeURIComponent(param))
     .maybeSingle();
   if (!order) return new NextResponse("Pedido no encontrado", { status: 404 });
@@ -63,10 +63,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   const pedidoNum = order.order_number.replace(/\D/g, "").replace(/^0+/, "") || order.order_number;
+  const fecha = new Date(order.created_at).toLocaleDateString("es-MX", {
+    day: "2-digit", month: "short", year: "numeric", timeZone: "America/Mexico_City",
+  });
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  for (const f of fichas.values()) dibujaFicha(pdf, f, pedidoNum, font, bold);
+  for (const f of fichas.values()) dibujaFicha(pdf, f, pedidoNum, fecha, font, bold);
 
   const bytes = await pdf.save();
   return new NextResponse(Buffer.from(bytes), {
@@ -81,7 +84,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 const W = 612;
 const H = 396;
 
-function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, font: PDFFont, bold: PDFFont) {
+function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, fecha: string, font: PDFFont, bold: PDFFont) {
   const page = pdf.addPage([W, H]);
   const m = 24; // margen
   const negro = rgb(0.1, 0.1, 0.1);
@@ -95,6 +98,10 @@ function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, font: PDFFont, 
     page.drawText(t, { x, y, size, font: f2, color: negro });
   const centrado = (t: string, cx: number, y: number, size: number, f2: PDFFont) =>
     page.drawText(t, { x: cx - f2.widthOfTextAtSize(t, size) / 2, y, size, font: f2, color: negro });
+
+  // ---- fecha en que llego el pedido, arriba de la tarjeta
+  page.drawText("FECHA", { x: m, y: H - m + 2, size: 7, font, color: gris });
+  page.drawText(fecha, { x: m + 32, y: H - m + 1, size: 10, font: bold, color: negro });
 
   // ---- fila 1: PIEL/COLOR · ESTILO · PEDIDO
   const y1 = H - m - 78;
