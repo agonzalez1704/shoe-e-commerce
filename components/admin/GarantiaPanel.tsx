@@ -32,7 +32,15 @@ export function GarantiaPanel({ orderId, garantia }: { orderId: string; garantia
   const run = (fn: () => Promise<{ ok: boolean; error?: string } | void>) =>
     startTransition(async () => {
       setErr(null);
-      const r = await fn();
+      let r;
+      try {
+        r = await fn();
+      } catch {
+        // Next enmascara los errores lanzados en prod: aqui solo sabemos que la
+        // accion murio (timeout, red). Si era generar guia, pudo haberse cobrado.
+        setErr("La acción falló en el servidor. Si estabas generando una guía, verifica en Skydropx si se creó antes de reintentar — podrías pagarla dos veces.");
+        return;
+      }
       if (r && !r.ok) { setErr(r.error ?? "Error"); return; }
       router.refresh();
     });
@@ -141,6 +149,7 @@ export function GarantiaPanel({ orderId, garantia }: { orderId: string; garantia
         />
       </div>
 
+      {rates && err && <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">{err}</p>}
       {rates && (
         <div className="overflow-hidden rounded-xl border border-border">
           <div className="flex items-center justify-between border-b border-border bg-elevated px-3 py-2">

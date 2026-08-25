@@ -76,6 +76,7 @@ export async function cotizarGarantia(orderId: string, pierna: Pierna) {
 }
 
 export async function generarGuiaGarantia(orderId: string, pierna: Pierna, quotationId: string, rateId: string) {
+  console.log(`[garantia] generar ${pierna} para ${orderId} (rate ${rateId})`);
   try {
     const supabase = await requirePermiso("pedidos_gestionar");
     const cliente = await direccionCliente(supabase, orderId);
@@ -119,6 +120,7 @@ export async function generarGuiaGarantia(orderId: string, pierna: Pierna, quota
     if (!r.labelUrl) return { ok: false as const, error: `Guía ${r.trackingNumber} creada; la etiqueta aún no está lista. Recarga en un minuto, no vuelvas a generar.` };
     return { ok: true as const };
   } catch (e) {
+    console.error("[garantia] generar fallo:", e);
     return { ok: false as const, error: e instanceof Error ? e.message : "Falló la generación" };
   }
 }
