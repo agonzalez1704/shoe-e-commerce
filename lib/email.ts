@@ -201,6 +201,21 @@ export async function sendAbandonedCartEmail(a: { to: string; name?: string; lin
   );
 }
 
+// Segundo y ultimo recordatorio de carrito (~48h): trae el empujon del 10%.
+// El codigo vive en discount_codes como REGRESA10, sin tope de usos.
+export async function sendAbandonedCart2Email(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {
+  await send(
+    a.to,
+    "10% para estrenar — tu carrito sigue aquí",
+    shell(`Un empujón: 10% de descuento`,
+      `<p>Hola${a.name ? ` ${a.name}` : ""}, tu ${ITEM} sigue apartado. Usa el código
+        <strong style="letter-spacing:1px">REGRESA10</strong> al pagar y llévate 10% de descuento.</p>
+       ${summary(a.lines)}
+       <p style="margin-top:18px">${button(a.cartUrl, "Usar mi 10%")}</p>
+       <p style="margin-top:14px;font-size:12px;color:#888">Si ya compraste, ignora este correo — no volveremos a recordártelo.</p>`),
+  );
+}
+
 // order shipped — admin marked it fulfilled
 export async function sendShippedEmail(a: Base & { carrier?: string; tracking?: string }) {
   const track =

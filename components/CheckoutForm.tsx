@@ -15,6 +15,7 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { CpAutollenado } from "@/components/CpAutollenado";
 import { trackMeta } from "@/components/MetaPixel";
+import { guardaCorreoCarrito } from "@/app/cart/actions";
 import { trackCheckout } from "@/components/AnalyticsBeacon";
 import { metaContentId } from "@/lib/meta-content";
 import { CASH_CHAINS } from "@/lib/payment-method";
@@ -93,17 +94,17 @@ function MethodMark({ id }: { id: Method }) {
 
 // floating-label field — label rides up on focus/fill; no separate label clutter
 function Field({
-  name, label, type = "text", required = true, autoComplete, inputMode, maxLength, className = "", onInput, defaultValue, list,
+  name, label, type = "text", required = true, autoComplete, inputMode, maxLength, className = "", onInput, onBlur, defaultValue, list,
 }: {
   name: string; label: string; type?: string; required?: boolean; autoComplete?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]; maxLength?: number; className?: string;
-  onInput?: React.FormEventHandler<HTMLInputElement>; defaultValue?: string; list?: string;
+  onInput?: React.FormEventHandler<HTMLInputElement>; onBlur?: React.FocusEventHandler<HTMLInputElement>; defaultValue?: string; list?: string;
 }) {
   return (
     <div className={`relative ${className}`}>
       <input
         id={name} name={name} type={type} required={required} placeholder=" " defaultValue={defaultValue}
-        autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} onInput={onInput} list={list}
+        autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} onInput={onInput} onBlur={onBlur} list={list}
         className="peer h-14 w-full rounded-xl border border-border bg-surface px-3.5 pt-5 pb-1.5 text-sm text-text outline-none transition-colors focus:border-accent focus:ring-4 focus:ring-accent/10 [&:user-invalid]:border-accent [&:user-invalid]:ring-2 [&:user-invalid]:ring-accent/30"
       />
       <label
@@ -431,7 +432,8 @@ export function CheckoutForm({
             <div className="space-y-3">
               <Field name="name" label="Nombre completo" autoComplete="name" defaultValue={defaults.name} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" defaultValue={defaults.email} />
+                <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" defaultValue={defaults.email}
+                  onBlur={(e) => { void guardaCorreoCarrito(e.currentTarget.value); }} />
                 <Field name="phone" label="Teléfono" type="tel" autoComplete="tel" inputMode="tel" defaultValue={defaults.phone} />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

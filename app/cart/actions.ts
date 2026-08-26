@@ -187,6 +187,17 @@ export async function restoreCartFromOrder(orderId: string) {
 
 // Item count for the header badge. Cheap (one column) and never creates a cart,
 // so it can run on every page without minting cookies for bots.
+// El checkout llama esto al salir del campo de correo: con el correo pegado al
+// carrito, el cron de carritos abandonados puede alcanzar a un invitado que se
+// fue sin pagar (antes solo los usuarios con cuenta eran alcanzables).
+export async function guardaCorreoCarrito(email: string) {
+  const limpio = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpio)) return;
+  const { db, cartId } = await resolveCart(false);
+  if (!cartId) return;
+  await db.from("carts").update({ contact_email: limpio }).eq("id", cartId);
+}
+
 export async function getCartCount(): Promise<number> {
   const { db, cartId } = await resolveCart(false);
   if (!cartId) return 0;
