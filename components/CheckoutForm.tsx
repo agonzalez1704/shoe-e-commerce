@@ -19,6 +19,10 @@ import { guardaCorreoCarrito } from "@/app/cart/actions";
 import { trackCheckout } from "@/components/AnalyticsBeacon";
 import { metaContentId } from "@/lib/meta-content";
 import { CASH_CHAINS } from "@/lib/payment-method";
+import {
+  AlertDialog, AlertDialogPopup, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogClose,
+} from "@/components/ui/alert-dialog";
 
 type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
 
@@ -146,6 +150,9 @@ export function CheckoutForm({
   const [save, setSave] = useState(true);
   const [ocurre, setOcurre] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  // Pagar en tienda desconcierta a quien no lo conoce ("¿y ahora qué hago?"):
+  // al elegirlo, un modal explica los 4 pasos antes de que decida.
+  const [modalEfectivo, setModalEfectivo] = useState(false);
 
   // Prefill contact/shipping from the last "saved" checkout on this device, but
   // only for fields the server didn't already fill (logged-in defaults win).
@@ -488,7 +495,8 @@ export function CheckoutForm({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {methods.map(({ id, label, hint }) => (
                 <button
-                  type="button" key={id} onClick={() => setMethod(id)}
+                  type="button" key={id}
+                  onClick={() => { setMethod(id); if (id === "oxxo" && method !== "oxxo") setModalEfectivo(true); }}
                   aria-pressed={method === id}
                   className={`relative flex flex-col items-start gap-1.5 rounded-xl border p-3 pt-7 text-left transition-all ${
                     method === id
@@ -510,6 +518,33 @@ export function CheckoutForm({
                 </button>
               ))}
             </div>
+
+            <AlertDialog open={modalEfectivo} onOpenChange={setModalEfectivo}>
+              <AlertDialogPopup>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Así funciona pagar en tiendas</AlertDialogTitle>
+                  <AlertDialogDescription>Sin tarjeta y sin apps — solo efectivo en la caja.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <ol className="space-y-3 px-6 pb-2 text-sm">
+                  {[
+                    ["1", "Al confirmar tu pedido te generamos una ficha de pago con código de barras (también te llega por correo)."],
+                    ["2", "Llévala a Farmacias del Ahorro, 7-Eleven, Walmart, BBVA o cualquiera de las +20,000 tiendas afiliadas."],
+                    ["3", "Muestra el código en caja y paga en efectivo. Tienes 3 días."],
+                    ["4", "Detectamos tu pago automáticamente y preparamos el envío de tus zapatos — te avisamos por correo."],
+                  ].map(([n, t]) => (
+                    <li key={n} className="flex gap-3">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-xs font-bold text-accent-contrast">{n}</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ol>
+                <AlertDialogFooter>
+                  <AlertDialogClose className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98]">
+                    Entendido, pagaré en tienda
+                  </AlertDialogClose>
+                </AlertDialogFooter>
+              </AlertDialogPopup>
+            </AlertDialog>
 
             {method === "card" && (
               <div className="mt-5 grid gap-5 md:grid-cols-[290px_1fr] md:items-center">
