@@ -214,7 +214,7 @@ export async function getCart(): Promise<CartSummary> {
     .select(
       "quantity, variant_id, " +
         "variants(sku, size_value, size_system, width, color, price_cents, " +
-        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_group, product_images(url, position)))",
+        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_group, product_images(url, position, color)))",
     )
     .eq("cart_id", cartId);
 
@@ -228,7 +228,7 @@ export async function getCart(): Promise<CartSummary> {
       products: {
         id: string; name: string; slug: string; base_price_cents: number;
         combo_min_qty: number | null; combo_price_cents: number | null; combo_group: string | null;
-        product_images: { url: string; position: number }[];
+        product_images: { url: string; position: number; color: string | null }[];
       };
     };
   };
@@ -254,7 +254,10 @@ export async function getCart(): Promise<CartSummary> {
     );
     const lineTotal = unit * it.quantity;
     subtotal += lineTotal;
-    const img = [...(v.products.product_images ?? [])].sort((a, b) => a.position - b.position)[0];
+    // La foto del COLOR comprado, no la primera del producto: un Londres
+    // hueso/oxido con foto del negro hizo dudar al cliente de su pedido.
+    const fotos = [...(v.products.product_images ?? [])].sort((a, b) => a.position - b.position);
+    const img = fotos.find((f) => f.color?.toLowerCase() === v.color.toLowerCase()) ?? fotos[0];
     return {
       variantId: it.variant_id,
       productId: v.products.id,
