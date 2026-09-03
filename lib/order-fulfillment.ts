@@ -87,7 +87,11 @@ export async function markOrderPaid(opts: {
     title: `Pago recibido · ${mxn(order.total_cents)}`,
     body: `${order.order_number} — ${methodLabel(opts.method)}. Listo para producción.`,
     url: `/admin/orders/${opts.orderId}`,
-    tag: `order-${opts.orderId}`,
+    // Tag propio: con el tag del pedido, esta notificacion REEMPLAZABA a la de
+    // "Pedido nuevo" en la bandeja, y un reemplazo es silencioso en iOS (no
+    // soporta renotify) y a veces en Android. El pago es la noticia que mas
+    // importa: que suene siempre.
+    tag: `order-${opts.orderId}-pagado`,
   });
 
   // stamp CFDI on payment if requested (non-fatal; records failure for admin retry)
