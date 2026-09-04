@@ -178,6 +178,9 @@ export type BrandConfig = {
   key: string;
   name: string;          // shown in header/footer/metadata, e.g. "sole&co"
   domain: string;        // "calzadoblade.com" — shown in copy and share cards
+  // Redes sociales de la marca. Solo se pintan las que existan: no inventar
+  // handles — un link a un perfil vacio o ajeno es peor que ninguno.
+  social?: { facebook?: string; instagram?: string; tiktok?: string };
   accentWord?: string;   // a substring of name rendered in the accent color (wordmark)
   tagline: string;
   description: string;   // SEO meta description
@@ -212,6 +215,9 @@ const BRANDS: Record<string, BrandConfig> = {
     key: "blade",
     name: "Blade",
     domain: "calzadoblade.com",
+    social: {
+      facebook: "https://www.facebook.com/profile.php?id=1261201307069080",
+    },
     legal: {
       operator: "Ma. de Lourdes Cifuentes Huerta",
       rfc: "CIHL580621SK1",

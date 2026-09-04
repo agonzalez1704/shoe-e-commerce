@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
-import { UserCircle } from "@phosphor-icons/react/dist/ssr";
+import { UserCircle, FacebookLogo, InstagramLogo, TiktokLogo } from "@phosphor-icons/react/dist/ssr";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { CartBadge } from "@/components/CartBadge";
 import { MetaPixel, MetaPixelPageViews } from "@/components/MetaPixel";
@@ -145,6 +145,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <p className="font-medium text-text">{SITE_NAME}</p>
                 <p className="mt-2">{SITE_DESCRIPTION}</p>
                 {activeBrand.copy?.paymentNote && <p className="mt-4 text-xs">{activeBrand.copy.paymentNote}</p>}
+                {activeBrand.social && (
+                  <div className="mt-4 flex items-center gap-3">
+                    {activeBrand.social.facebook && (
+                      <a href={activeBrand.social.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook"
+                         className="text-muted transition-colors hover:text-text">
+                        <FacebookLogo size={20} />
+                      </a>
+                    )}
+                    {activeBrand.social.instagram && (
+                      <a href={activeBrand.social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                         className="text-muted transition-colors hover:text-text">
+                        <InstagramLogo size={20} />
+                      </a>
+                    )}
+                    {activeBrand.social.tiktok && (
+                      <a href={activeBrand.social.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok"
+                         className="text-muted transition-colors hover:text-text">
+                        <TiktokLogo size={20} />
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
               {categories.length > 0 && (
                 <nav className="flex flex-col gap-2">
