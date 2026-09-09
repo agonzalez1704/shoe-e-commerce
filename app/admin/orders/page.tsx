@@ -53,10 +53,30 @@ export default async function AdminOrders({
   // someone up by name is the usual way a customer message arrives
   if (query) {
     sb = sb.or(
-      `order_number.ilike.%${query}%,email.ilike.%${query}%,shipping_address->>name.ilike.%${query}%`,
+      // tracking_number: encontrar el pedido desde la guia de Skydropx (los
+      // sobrecargos y reportes de la paqueteria llegan citando la guia, no el pedido)
+      `order_number.ilike.%${query}%,email.ilike.%${query}%,shipping_address->>name.ilike.%${query}%,tracking_number.ilike.%${query}%`,
     );
   }
-  const { data: orders, count } = await sb;
+  let { data: orders, count } = await sb;
+
+  // La guia puede ser de una garantia (retorno o reposicion): si nada salio y
+  // la busqueda parece numero de guia, se busca en garantias y se traen sus pedidos.
+  if (query && !orders?.length && /^\d{6,}$/.test(query)) {
+    const { data: gs } = await supabase
+      .from("garantias")
+      .select("order_id")
+      .or(`retorno_tracking.ilike.%${query}%,repo_tracking.ilike.%${query}%`);
+    const ids = (gs ?? []).map((g) => g.order_id);
+    if (ids.length) {
+      const { data: og, count: cg } = await supabase
+        .from("orders")
+        .select("id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address", { count: "exact" })
+        .in("id", ids)
+        .order("created_at", { ascending: false });
+      orders = og; count = cg;
+    }
+  }
 
   const total = count ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
