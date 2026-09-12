@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCents } from "@/lib/money";
 import { ComboExpress, type ParElegible } from "@/components/ComboExpress";
+import { PagoComplemento } from "@/components/PagoComplemento";
 import { pedidoAutorizado } from "./actions";
 
 // Checkout exprés para completar el combo de un pedido ya pagado: elige el
@@ -41,7 +42,7 @@ export default async function ComboExpresPage({
   // ¿Ya hay complemento? Vivo → mándalo a pagar; pagado → ya quedó.
   const { data: hijo } = await admin
     .from("orders")
-    .select("order_number, status")
+    .select("order_number, status, total_cents")
     .eq("combo_parent_order_id", order.id)
     .not("status", "in", "(cancelled,refunded)")
     .maybeSingle();
@@ -50,10 +51,15 @@ export default async function ComboExpresPage({
       <Caja>
         <h1 className="text-2xl font-semibold tracking-tight">Completa tu combo</h1>
         {hijo.status === "pending" ? (
-          <p className="mt-3 text-sm text-muted">
-            Ya tienes un par apartado en el pedido <span className="nums font-medium text-text">{hijo.order_number}</span>.{" "}
-            <a href={`/pedido/${hijo.order_number}/pagar`} className="text-accent underline">Termina el pago aquí</a>.
-          </p>
+          // Par apartado sin pagar: los MISMOS metodos del checkout, aqui mismo.
+          <PagoComplemento
+            parentOrderNumber={order.order_number}
+            token={t ?? null}
+            childOrderNumber={hijo.order_number}
+            totalCents={hijo.total_cents}
+            conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
+            mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
+          />
         ) : (
           <p className="mt-3 text-sm text-muted">
             Tu combo ya quedó completo con el pedido <span className="nums font-medium text-text">{hijo.order_number}</span>. ¡Gracias!

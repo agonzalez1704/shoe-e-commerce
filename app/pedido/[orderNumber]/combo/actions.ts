@@ -40,7 +40,7 @@ export async function elegirComplemento(orderNumber: string, token: string | nul
   const num = (data as { out_order_number: string }[] | null)?.[0]?.out_order_number;
   if (!num) return { ok: false as const, error: "No se pudo crear el pedido del combo." };
 
-  // El pago vive en el flujo que ya existe: /pagar rebota a Mercado Pago
-  // (tarjeta, saldo o meses) y el webhook confirma como cualquier pedido.
-  redirect(`/pedido/${num}/pagar`);
+  // De vuelta a la pagina del combo: con el complemento pendiente creado, ahi
+  // vive el paso de pago con TODOS los metodos del checkout.
+  redirect(`/pedido/${orderNumber}/combo${token ? `?t=${encodeURIComponent(token)}` : ""}`);
 }
