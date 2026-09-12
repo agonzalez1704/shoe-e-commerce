@@ -23,6 +23,7 @@
     "db:push:honeywhale": "node scripts/db-push.mjs .env.honeywhale"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.53",
     "@ai-sdk/react": "^4.0.102",
     "@base-ui/react": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
