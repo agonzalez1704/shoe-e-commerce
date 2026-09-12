@@ -25,6 +25,11 @@ export async function markOrderPaid(opts: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const admin = createAdminClient();
 
+  // La accion sincrona y el webhook confirman el mismo pago: el segundo en
+  // llegar no debe repetir correo, pixel ni push (llegaban dobles).
+  const { data: pre } = await admin.from("orders").select("status").eq("id", opts.orderId).maybeSingle();
+  if (pre?.status === "paid" || pre?.status === "fulfilled") return { ok: true };
+
   const { error } = await admin.rpc("commit_order", {
     p_order_id: opts.orderId,
     p_charge_id: opts.chargeId,

@@ -29,7 +29,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const [{ data: customer }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("full_name, email").eq("id", user.id).maybeSingle(),
-    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, combo_parent_order_id, order_items_combo:order_items(quantity, variants(products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -80,6 +80,30 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                       {/* El correo de reseña era la única puerta y nadie la
                           cruzó (3 enviados, 0 reseñas): el dueño del pedido
                           merece el enlace aquí, sin buscar en su bandeja. */}
+                      {/* Par suelto de combo en un pedido pagado: la puerta al
+                          checkout exprés que cobra solo la diferencia. */}
+                      {(() => {
+                        if (o.status !== "paid" && o.status !== "fulfilled") return null;
+                        if ((o as unknown as { combo_parent_order_id: string | null }).combo_parent_order_id) return null;
+                        const filas = (o as unknown as { order_items_combo: { quantity: number; variants: { products: { combo_group: string | null; combo_min_qty: number | null } | null } | null }[] }).order_items_combo ?? [];
+                        const g = new Map<string, { min: number; u: number }>();
+                        for (const f of filas) {
+                          const pr = f.variants?.products;
+                          if (!pr?.combo_group || pr.combo_min_qty == null) continue;
+                          const e = g.get(pr.combo_group) ?? { min: pr.combo_min_qty, u: 0 };
+                          e.u += f.quantity; g.set(pr.combo_group, e);
+                        }
+                        const falta = [...g.values()].some((e) => e.u % e.min === e.min - 1);
+                        if (!falta) return null;
+                        return (
+                          <Link
+                            href={`/pedido/${o.order_number}/combo`}
+                            className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-contrast"
+                          >
+                            Completa tu combo
+                          </Link>
+                        );
+                      })()}
                       {(o.fulfillment_stage === "delivered" || o.fulfillment_stage === "shipped") && o.review_token && (
                         <Link
                           href={`/resena/${o.review_token}`}

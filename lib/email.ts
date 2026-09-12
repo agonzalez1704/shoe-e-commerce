@@ -201,6 +201,19 @@ export async function sendAbandonedCartEmail(a: { to: string; name?: string; lin
   );
 }
 
+// Invitacion a completar el combo: pago exprés de la pura diferencia.
+export async function sendComboInviteEmail(a: { to: string; orderNumber: string; diffCents: number; url: string }) {
+  await send(
+    a.to,
+    `Tu segundo par por ${mxn(a.diffCents)} — pedido ${a.orderNumber}`,
+    shell(`Completa tu combo 2 pares`,
+      `<p>Tu pedido <strong>${a.orderNumber}</strong> incluye un par que entra en la promo de 2 pares.
+        Elige el segundo modelo y paga solo <strong>${mxn(a.diffCents)}</strong> de diferencia — envío gratis.</p>
+       <p style="margin-top:18px">${button(a.url, "Elegir mi segundo par")}</p>
+       <p style="margin-top:14px;font-size:12px;color:#888">La liga es personal de tu pedido; si ya no te interesa, ignora este correo.</p>`),
+  );
+}
+
 // Segundo y ultimo recordatorio de carrito (~48h): trae el empujon del 10%.
 // El codigo vive en discount_codes como REGRESA10, sin tope de usos.
 export async function sendAbandonedCart2Email(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {

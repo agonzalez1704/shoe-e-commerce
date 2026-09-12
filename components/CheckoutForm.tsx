@@ -384,6 +384,9 @@ export function CheckoutForm({
         return;
       }
       setResult(res);
+      // la confirmacion reemplaza al formulario ARRIBA; sin esto el scroll se
+      // queda donde estaba el boton de pagar y el comprador ve pantalla vacia
+      window.scrollTo({ top: 0 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "el pago falló");
       trackCheckout("error:excepcion");
