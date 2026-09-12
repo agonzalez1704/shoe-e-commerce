@@ -14,13 +14,16 @@ import {
 
 export const maxDuration = 60;
 
-// Dos caminos de modelo: con ANTHROPIC_API_KEY va directo a Anthropic; sin
+// Caminos de modelo (en orden): con ANTHROPIC_API_KEY va directo a Anthropic; sin
 // ella, via AI Gateway de Vercel (que en plan gratuito NO incluye Claude —
 // necesita creditos). ADMIN_CHAT_MODEL cambia el modelo en cualquiera.
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 const MODELO = process.env.ANTHROPIC_API_KEY
   ? createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(process.env.ADMIN_CHAT_MODEL ?? "claude-sonnet-4-5")
-  : process.env.ADMIN_CHAT_MODEL ?? "anthropic/claude-sonnet-4.5";
+  : process.env.OPENAI_API_KEY
+    ? createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(process.env.ADMIN_CHAT_MODEL ?? "gpt-5-mini")
+    : process.env.ADMIN_CHAT_MODEL ?? "anthropic/claude-sonnet-4.5";
 const periodo = z.enum(["hoy", "7d", "30d"]);
 
 export async function POST(req: Request) {
