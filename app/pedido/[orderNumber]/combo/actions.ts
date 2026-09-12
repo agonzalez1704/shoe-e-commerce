@@ -44,3 +44,25 @@ export async function elegirComplemento(orderNumber: string, token: string | nul
   // vive el paso de pago con TODOS los metodos del checkout.
   redirect(`/pedido/${orderNumber}/combo${token ? `?t=${encodeURIComponent(token)}` : ""}`);
 }
+
+// El cliente cambio de opinion antes de pagar: se cancela el complemento
+// pendiente y vuelve a la reja. Solo si NO se genero ya una ficha de pago —
+// una ficha viva podria pagarse en tienda contra un pedido cancelado.
+export async function cambiarPar(orderNumber: string, token: string | null) {
+  const order = await pedidoAutorizado(orderNumber, token);
+  if (!order) return { ok: false as const, error: "No pudimos verificar tu pedido." };
+  const admin = createAdminClient();
+  const { data: hijo } = await admin
+    .from("orders")
+    .select("id, status")
+    .eq("combo_parent_order_id", order.id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!hijo) return { ok: false as const, error: "No hay un par apartado que cambiar." };
+  const { data: pago } = await admin
+    .from("payments").select("id").eq("order_id", hijo.id).limit(1).maybeSingle();
+  if (pago) return { ok: false as const, error: "Ya se generó una ficha de pago para este par; escríbenos por WhatsApp para cambiarlo." };
+  const { error } = await admin.from("orders").update({ status: "cancelled" }).eq("id", hijo.id);
+  if (error) return { ok: false as const, error: error.message };
+  redirect(`/pedido/${orderNumber}/combo${token ? `?t=${encodeURIComponent(token)}` : ""}`);
+}

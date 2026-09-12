@@ -22,7 +22,7 @@ export default async function ComboExpresPage({
   const order = await pedidoAutorizado(decodeURIComponent(orderNumber), t ?? null);
 
   const Caja = ({ children }: { children: React.ReactNode }) => (
-    <div className="mx-auto max-w-2xl py-12">{children}</div>
+    <div className="mx-auto max-w-3xl py-12">{children}</div>
   );
 
   if (!order) {
@@ -42,11 +42,28 @@ export default async function ComboExpresPage({
   // ¿Ya hay complemento? Vivo → mándalo a pagar; pagado → ya quedó.
   const { data: hijo } = await admin
     .from("orders")
-    .select("order_number, status, total_cents")
+    .select("id, order_number, status, total_cents")
     .eq("combo_parent_order_id", order.id)
     .not("status", "in", "(cancelled,refunded)")
     .maybeSingle();
   if (hijo) {
+    // El par que aparto (nombre, variante y foto del color) y si ya se genero
+    // ficha de pago — con ficha viva, cambiar de par queda cerrado.
+    const [{ data: item }, { data: pago }] = await Promise.all([
+      admin.from("order_items")
+        .select("product_name, variant_label, variants(color, products(product_images(url, position, color)))")
+        .eq("order_id", hijo.id).limit(1).maybeSingle(),
+      admin.from("payments").select("id").eq("order_id", hijo.id).limit(1).maybeSingle(),
+    ]);
+    const vv = item?.variants as unknown as { color: string; products: { product_images: { url: string; position: number; color: string | null }[] } } | null;
+    const fotos = [...(vv?.products?.product_images ?? [])].sort((a, b) => a.position - b.position);
+    const elegido = item
+      ? {
+          nombre: item.product_name.replace(" (completa tu combo)", ""),
+          label: item.variant_label,
+          imagen: (fotos.find((f) => f.color?.toLowerCase() === vv?.color?.toLowerCase()) ?? fotos[0])?.url ?? null,
+        }
+      : null;
     return (
       <Caja>
         <h1 className="text-2xl font-semibold tracking-tight">Completa tu combo</h1>
@@ -57,8 +74,10 @@ export default async function ComboExpresPage({
             token={t ?? null}
             childOrderNumber={hijo.order_number}
             totalCents={hijo.total_cents}
+            elegido={elegido}
             conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
             mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
+            fichaGenerada={!!pago}
           />
         ) : (
           <p className="mt-3 text-sm text-muted">

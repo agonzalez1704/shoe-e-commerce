@@ -24,7 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogClose,
 } from "@/components/ui/alert-dialog";
 
-type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
+export type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
 
 declare global {
   interface Window {
@@ -74,7 +74,7 @@ function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }
 }
 
 // Store logos where a cash voucher can be paid (representative of +20,000).
-function StoreLogos({ h = 15 }: { h?: number }) {
+export function StoreLogos({ h = 15 }: { h?: number }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <LogoChip src="/pay/farmacias-ahorro.svg" alt="Farmacias del Ahorro" h={h} />
@@ -83,7 +83,7 @@ function StoreLogos({ h = 15 }: { h?: number }) {
   );
 }
 
-function MethodMark({ id }: { id: Method }) {
+export function MethodMark({ id }: { id: Method }) {
   if (id === "oxxo") return <LogoChip src="/pay/farmacias-ahorro.svg" alt="Efectivo en tiendas" h={14} />;
   if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
   if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
