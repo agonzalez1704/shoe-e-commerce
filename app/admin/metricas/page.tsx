@@ -32,8 +32,65 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
   const days = RANGES.some((r) => String(r.days) === d) ? Number(d) : 7;
 
   const supabase = await createClient();
-  const { data } = await supabase.rpc("analytics_summary", { p_days: days });
+  const desde = new Date(Date.now() - days * 864e5).toISOString();
+  const [{ data }, { data: vendidos }, { data: vistasPdp }, { data: slugs }] = await Promise.all([
+    supabase.rpc("analytics_summary", { p_days: days }),
+    // lineas de pedidos cobrados del rango — de aqui salen todos los cortes de producto
+    supabase
+      .from("order_items")
+      .select("product_name, quantity, line_total_cents, variant_label, orders!inner(status, created_at)")
+      .in("orders.status", ["paid", "fulfilled"])
+      .gte("orders.created_at", desde),
+    // vistas de PDP del rango, para la conversion vista -> compra por modelo
+    supabase
+      .from("analytics_events")
+      .select("path")
+      .eq("type", "pageview")
+      .like("path", "/products/%")
+      .gte("created_at", desde)
+      .limit(20000),
+    supabase.from("products").select("name, slug"),
+  ]);
   const s = (data ?? {}) as Partial<Summary>;
+
+  // cortes de producto
+  type Linea = { product_name: string; quantity: number; line_total_cents: number; variant_label: string };
+  const lineas = (vendidos ?? []) as unknown as Linea[];
+  const porProducto = new Map<string, { pares: number; ingresos: number }>();
+  const porTalla = new Map<string, number>();
+  const porColor = new Map<string, number>();
+  let paresTotal = 0, ingresosTotal = 0;
+  for (const l of lineas) {
+    const nombre = l.product_name.replace(" (completa tu combo)", "");
+    const e = porProducto.get(nombre) ?? { pares: 0, ingresos: 0 };
+    e.pares += l.quantity; e.ingresos += l.line_total_cents;
+    porProducto.set(nombre, e);
+    paresTotal += l.quantity; ingresosTotal += l.line_total_cents;
+    // variant_label: "MX 27 / medium / negro" — talla al frente, color al final
+    const partes = l.variant_label.split("/").map((x) => x.trim());
+    if (partes[0]) porTalla.set(partes[0], (porTalla.get(partes[0]) ?? 0) + l.quantity);
+    const color = partes.slice(2).join("/");
+    if (color) porColor.set(color, (porColor.get(color) ?? 0) + l.quantity);
+  }
+  const topVendidos = [...porProducto.entries()].sort((a, b) => b[1].pares - a[1].pares);
+  const topIngresos = [...porProducto.entries()].sort((a, b) => b[1].ingresos - a[1].ingresos);
+  const topTallas = [...porTalla.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const topColores = [...porColor.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  // vistas por slug -> conversion por modelo (pares vendidos / vistas de su PDP)
+  const nombrePorSlug = new Map((slugs ?? []).map((x) => [x.slug, x.name]));
+  const vistasPorNombre = new Map<string, number>();
+  for (const v of (vistasPdp ?? []) as { path: string }[]) {
+    const slug = decodeURIComponent(v.path.split("/")[2] ?? "").split("?")[0];
+    const nombre = nombrePorSlug.get(slug);
+    if (nombre) vistasPorNombre.set(nombre, (vistasPorNombre.get(nombre) ?? 0) + 1);
+  }
+  const conversion = [...vistasPorNombre.entries()]
+    .map(([nombre, vistas]) => ({ nombre, vistas, pares: porProducto.get(nombre)?.pares ?? 0 }))
+    .filter((x) => x.vistas >= 5)
+    .map((x) => ({ ...x, tasa: x.pares / x.vistas }))
+    .sort((a, b) => b.tasa - a.tasa);
+  const mxn0 = (c: number) => `$${Math.round(c / 100).toLocaleString("es-MX")}`;
 
   const maxDaily = Math.max(1, ...(s.daily ?? []).map((x) => x.n));
 
@@ -88,6 +145,44 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
         <RankCard title="Dónde dan click" subtitle="Enlaces y botones" rows={(s.clicks ?? []).map((r) => ({ label: r.target, n: r.n }))} />
         <RankCard title="Dispositivo" rows={(s.devices ?? []).map((r) => ({ label: r.device === "mobile" ? "Móvil" : "Escritorio", n: r.n }))} />
       </div>
+
+      {/* ---- Producto: que se vende, en que talla y color, y que convierte ---- */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold tracking-tight">Producto</h2>
+        <p className="nums text-sm text-muted">
+          {paresTotal.toLocaleString("es-MX")} pares · {mxn0(ingresosTotal)} · ticket {paresTotal ? mxn0(ingresosTotal / paresTotal) : "—"}/par
+        </p>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RankCard title="Más vendidos" subtitle="Pares cobrados en el rango"
+          rows={topVendidos.map(([nombre, e]) => ({ label: nombre, n: e.pares }))} />
+        <RankCard title="Ingresos por modelo" subtitle="Lo cobrado, en pesos"
+          rows={topIngresos.map(([nombre, e]) => ({ label: `${nombre} · ${mxn0(e.ingresos)}`, n: Math.round(e.ingresos / 100) }))} />
+        <RankCard title="Tallas más pedidas" rows={topTallas.map(([t, n]) => ({ label: t, n }))} />
+        <RankCard title="Colores más pedidos" rows={topColores.map(([c, n]) => ({ label: c, n }))} />
+      </div>
+      <section className="rounded-2xl border border-border bg-surface p-5">
+        <h2 className="text-sm font-semibold">Conversión por modelo</h2>
+        <p className="text-xs text-muted">Vistas de su página → pares vendidos (rango elegido, modelos con 5+ vistas)</p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[420px] text-sm">
+            <thead className="text-left text-xs uppercase tracking-wide text-muted">
+              <tr><th className="pb-2">Modelo</th><th className="pb-2 text-right">Vistas</th><th className="pb-2 text-right">Pares</th><th className="pb-2 text-right">Conversión</th></tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {conversion.length === 0 && <tr><td colSpan={4} className="py-4 text-muted">Sin datos suficientes en este rango.</td></tr>}
+              {conversion.map((x) => (
+                <tr key={x.nombre}>
+                  <td className="py-2">{x.nombre}</td>
+                  <td className="nums py-2 text-right text-muted">{x.vistas.toLocaleString("es-MX")}</td>
+                  <td className="nums py-2 text-right">{x.pares}</td>
+                  <td className="nums py-2 text-right font-medium">{(x.tasa * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {(s.pageviews ?? 0) === 0 && (
         <p className="rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
