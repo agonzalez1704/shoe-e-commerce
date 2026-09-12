@@ -78,7 +78,7 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
     let url: string | undefined;
     try {
       const { data: full } = await admin
-        .from("orders").select("email, shipping_address").eq("id", order.id).maybeSingle();
+        .from("orders").select("email, shipping_address, combo_parent_order_id").eq("id", order.id).maybeSingle();
       const { data: items } = await admin
         .from("order_items").select("quantity").eq("order_id", order.id);
       const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
@@ -89,6 +89,8 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
         itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
         customer: { name: ship?.name ?? "", email: full?.email ?? "" },
         ship: { phone: ship?.phone, zip: ship?.postal, street: ship?.line1 },
+        // complemento de combo: sin meses — la diferencia se paga de contado
+        maxInstallments: full?.combo_parent_order_id ? 1 : undefined,
         successUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}`,
         failureUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}&payment_status=failed`,
         notificationUrl: `${SITE_URL}/api/webhooks/mercadopago?secret=${process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ""}`,

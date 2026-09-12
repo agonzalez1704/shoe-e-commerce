@@ -49,6 +49,10 @@ type PreferenceArgs = {
   successUrl: string;
   failureUrl: string;
   notificationUrl: string;
+  // Tope de mensualidades. 1 = una sola exhibicion: el complemento de combo
+  // ($400) a meses sin intereses pagaria comision de MSI dos veces por el
+  // mismo combo. Sin definir, MP ofrece sus cuotas normales.
+  maxInstallments?: number;
 };
 
 export type MpPreference = { id: string; init_point: string; sandbox_init_point?: string };
@@ -82,6 +86,7 @@ export async function createMpPreference(a: PreferenceArgs): Promise<MpPreferenc
       auto_return: "approved",
       notification_url: a.notificationUrl,
       statement_descriptor: DESCRIPTOR,
+      ...(a.maxInstallments ? { payment_methods: { installments: a.maxInstallments } } : {}),
     }),
   });
 }
