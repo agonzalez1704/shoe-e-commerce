@@ -30,7 +30,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(param);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url")
+    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url, combo_parent_order_id")
     .eq(esUuid ? "id" : "order_number", decodeURIComponent(param))
     .maybeSingle();
 
@@ -47,6 +47,19 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const waNumber = digits.length === 10 ? `52${digits}` : digits.length >= 11 ? digits : null;
 
   const id = order.id;
+  // Combo en dos cobros: el padre (par solo) y su complemento se explican uno
+  // al otro — sin esto, un pedido de $400 parece error de captura.
+  const [{ data: comboHijo }, { data: comboPadre }] = await Promise.all([
+    supabase.from("orders").select("order_number, total_cents, status").eq("combo_parent_order_id", id).not("status", "in", "(cancelled,refunded)").maybeSingle(),
+    order.combo_parent_order_id
+      ? supabase.from("orders").select("order_number, total_cents, status").eq("id", order.combo_parent_order_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const comboPar = comboHijo
+    ? { solo: { num: order.order_number, cents: order.total_cents, status: order.status }, comp: { num: comboHijo.order_number, cents: comboHijo.total_cents, status: comboHijo.status } }
+    : comboPadre
+      ? { solo: { num: comboPadre.order_number, cents: comboPadre.total_cents, status: comboPadre.status }, comp: { num: order.order_number, cents: order.total_cents, status: order.status } }
+      : null;
   const [{ data: items }, { data: payment }, { data: fiscal }, { data: cfdi }] = await Promise.all([
     supabase.from("order_items").select("product_name, variant_label, sku, unit_price_cents, quantity, line_total_cents").eq("order_id", id),
     supabase.from("payments").select("method, status, reference, clabe, voucher_url, expires_at").eq("order_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -126,6 +139,23 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         <aside className="space-y-4">
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
             <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">Totales</h2>
+            {comboPar && (
+              <div className="mb-3 rounded-lg bg-elevated p-2.5 text-xs">
+                <p className="font-semibold">Combo en dos cobros</p>
+                <p className="mt-1 flex justify-between gap-2 text-muted">
+                  <Link className="underline" href={`/admin/orders/${comboPar.solo.num}`}>1 par solo · {comboPar.solo.num}</Link>
+                  <span className="nums text-text">{mxn(comboPar.solo.cents)}</span>
+                </p>
+                <p className="mt-0.5 flex justify-between gap-2 text-muted">
+                  <Link className="underline" href={`/admin/orders/${comboPar.comp.num}`}>Complemento · {comboPar.comp.num}</Link>
+                  <span className="nums text-text">{mxn(comboPar.comp.cents)}{comboPar.comp.status === "pending" ? " (sin pagar)" : ""}</span>
+                </p>
+                <p className="mt-1 flex justify-between gap-2 border-t border-border pt-1 font-medium">
+                  <span>Combo completo</span>
+                  <span className="nums">{mxn(comboPar.solo.cents + comboPar.comp.cents)}</span>
+                </p>
+              </div>
+            )}
             <Row label="Subtotal" value={mxn(order.subtotal_cents)} />
             {order.discount_cents > 0 && <Row label="Descuento" value={`- ${mxn(order.discount_cents)}`} />}
             <Row label="Envío" value={mxn(order.shipping_cents)} />
