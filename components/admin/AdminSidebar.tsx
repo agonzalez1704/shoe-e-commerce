@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  House, Package, TShirt, Stack, Tag, Megaphone, SquaresFour, ChartLine, Newspaper,
+  House, Package, TShirt, Stack, Tag, Megaphone, SquaresFour, ChartLine, Newspaper, Sparkle,
   CurrencyDollar, UsersThree, Gear, List, X, Storefront,
 } from "@phosphor-icons/react";
 
@@ -16,6 +16,7 @@ const ICONS = {
   "/admin/discounts": Tag,
   "/admin/promociones": Megaphone,
   "/admin/combos": SquaresFour,
+  "/admin/chat": Sparkle,
   "/admin/noticias": Newspaper,
   "/admin/metricas": ChartLine,
   "/admin/comisiones": CurrencyDollar,
