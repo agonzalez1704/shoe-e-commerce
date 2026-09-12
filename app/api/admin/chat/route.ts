@@ -39,7 +39,8 @@ export async function POST(req: Request) {
     model: MODELO,
     system: `Eres el asistente interno de ${process.env.NEXT_PUBLIC_BRAND === "honeywhale" ? "Honeywhale" : "Calzado Blade"}, una tienda en linea mexicana de calzado de piel. Hoy es ${new Date().toLocaleDateString("es-MX", { dateStyle: "long", timeZone: "America/Mexico_City" })}.
 Respondes en español, directo y con numeros concretos. Usa las herramientas para TODO dato del negocio — nunca inventes cifras. Montos en MXN.
-Para cambios al combo (meter/sacar modelos, cambiar precio o cantidad) usa proponerCambioCombo: tu solo PROPONES; el administrador confirma en pantalla. Nunca afirmes que un cambio ya se aplico hasta ver el resultado de la herramienta.`,
+Para cambios al combo (meter/sacar modelos, cambiar precio o cantidad) usa proponerCambioCombo: tu solo PROPONES; el administrador confirma en pantalla. Nunca afirmes que un cambio ya se aplico hasta ver el resultado de la herramienta.
+Cuando te pidan graficas o visualizaciones usa mostrarGrafica (se pinta dentro del chat). No ofrezcas PNGs ni archivos: no puedes generarlos. Para ventas por dia usa ventasPorDia y grafica el resultado.`,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(8),
     tools: {
@@ -100,6 +101,37 @@ Para cambios al combo (meter/sacar modelos, cambiar precio o cantidad) usa propo
             fuera: fuera.map((p) => p.name),
           };
         },
+      }),
+      ventasPorDia: tool({
+        description: "Ventas cobradas agrupadas por dia del periodo: pedidos e ingresos por fecha.",
+        inputSchema: z.object({ periodo }),
+        execute: async ({ periodo: p }) => {
+          const dias = p === "hoy" ? 1 : p === "7d" ? 7 : 30;
+          const db = createAdminClient();
+          const { data } = await db.from("orders")
+            .select("total_cents, created_at")
+            .in("status", ["paid", "fulfilled"])
+            .gte("created_at", new Date(Date.now() - dias * 864e5).toISOString());
+          const porDia = new Map<string, { pedidos: number; ingresos: number }>();
+          for (const o of data ?? []) {
+            const dia = new Date(o.created_at).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", month: "2-digit", day: "2-digit" });
+            const e = porDia.get(dia) ?? { pedidos: 0, ingresos: 0 };
+            e.pedidos++; e.ingresos += o.total_cents;
+            porDia.set(dia, e);
+          }
+          return [...porDia.entries()].map(([dia, e]) => ({ dia, pedidos: e.pedidos, ingresos_mxn: e.ingresos / 100 }));
+        },
+      }),
+      // Grafica dentro del chat: el modelo arma las series y la UI las pinta
+      // como barras. El execute es identidad — solo transporta los datos.
+      mostrarGrafica: tool({
+        description: "Pinta una grafica de barras DENTRO del chat. Usala siempre que pidan graficas. series = etiqueta + valor; unidad 'mxn' formatea pesos.",
+        inputSchema: z.object({
+          titulo: z.string(),
+          unidad: z.enum(["mxn", "numero"]).default("numero"),
+          series: z.array(z.object({ etiqueta: z.string(), valor: z.number() })).min(1).max(31),
+        }),
+        execute: async (input) => input,
       }),
       // V2 — sin execute: la llamada llega a la UI, el admin confirma y la
       // accion real (con permiso promociones_gestionar) corre desde el cliente.

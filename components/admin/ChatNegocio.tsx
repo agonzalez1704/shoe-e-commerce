@@ -84,6 +84,30 @@ export function ChatNegocio() {
                     />
                   );
                 }
+                // grafica generativa: barras nativas del chat
+                if (part.type === "tool-mostrarGrafica" && part.state === "output-available") {
+                  const g = part.output as { titulo: string; unidad: "mxn" | "numero"; series: { etiqueta: string; valor: number }[] };
+                  const max = Math.max(1, ...g.series.map((x) => x.valor));
+                  const fmt = (v: number) => g.unidad === "mxn" ? `$${Math.round(v).toLocaleString("es-MX")}` : v.toLocaleString("es-MX");
+                  return (
+                    <div key={i} className="w-full min-w-[280px] rounded-2xl border border-border bg-surface p-4">
+                      <p className="text-sm font-semibold">{g.titulo}</p>
+                      <ul className="mt-3 space-y-2">
+                        {g.series.map((x, j) => (
+                          <li key={j} className="text-xs">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="min-w-0 flex-1 truncate">{x.etiqueta}</span>
+                              <span className="nums shrink-0 font-medium">{fmt(x.valor)}</span>
+                            </div>
+                            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-elevated">
+                              <div className="h-full rounded-full bg-accent/70" style={{ width: `${Math.max(2, Math.round((x.valor / max) * 100))}%` }} />
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
                 // lecturas: chip discreto de actividad
                 if (part.type.startsWith("tool-")) {
                   return (
@@ -136,6 +160,8 @@ function etiquetaTool(tipo: string) {
     "tool-estadoInventario": "Revisando inventario",
     "tool-embudoCheckout": "Armando el embudo",
     "tool-estadoCombo": "Leyendo el combo",
+    "tool-ventasPorDia": "Sumando ventas por día",
+    "tool-mostrarGrafica": "Dibujando gráfica",
   };
   return nombres[tipo] ?? "Consultando";
 }
