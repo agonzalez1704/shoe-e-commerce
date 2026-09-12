@@ -50,7 +50,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   // Combo en dos cobros: el padre (par solo) y su complemento se explican uno
   // al otro — sin esto, un pedido de $400 parece error de captura.
   const [{ data: comboHijo }, { data: comboPadre }] = await Promise.all([
-    supabase.from("orders").select("order_number, total_cents, status").eq("combo_parent_order_id", id).not("status", "in", "(cancelled,refunded)").maybeSingle(),
+    supabase.from("orders").select("id, order_number, total_cents, status").eq("combo_parent_order_id", id).not("status", "in", "(cancelled,refunded)").maybeSingle(),
     order.combo_parent_order_id
       ? supabase.from("orders").select("order_number, total_cents, status").eq("id", order.combo_parent_order_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -60,6 +60,11 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     : comboPadre
       ? { solo: { num: comboPadre.order_number, cents: comboPadre.total_cents, status: comboPadre.status }, comp: { num: order.order_number, cents: order.total_cents, status: order.status } }
       : null;
+  // Las lineas del complemento se muestran en la tabla del padre: el combo
+  // completo se lee en un solo lugar, aunque el cobro viva en dos pedidos.
+  const { data: itemsHijo } = comboHijo
+    ? await supabase.from("order_items").select("product_name, variant_label, sku, quantity, line_total_cents").eq("order_id", comboHijo.id)
+    : { data: null };
   const [{ data: items }, { data: payment }, { data: fiscal }, { data: cfdi }] = await Promise.all([
     supabase.from("order_items").select("product_name, variant_label, sku, unit_price_cents, quantity, line_total_cents").eq("order_id", id),
     supabase.from("payments").select("method, status, reference, clabe, voucher_url, expires_at").eq("order_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -127,6 +132,19 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                   <td className="px-4 py-3">
                     <p className="font-medium">{it.product_name}</p>
                     <p className="text-xs capitalize text-muted">{it.variant_label} · <span className="nums">{it.sku}</span></p>
+                  </td>
+                  <td className="nums px-4 py-3 text-right">{it.quantity}</td>
+                  <td className="nums px-4 py-3 text-right">{mxn(it.line_total_cents)}</td>
+                </tr>
+              ))}
+              {(itemsHijo ?? []).map((it, i) => (
+                <tr key={`h${i}`} className="bg-elevated/40">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{it.product_name.replace(" (completa tu combo)", "")}</p>
+                    <p className="text-xs capitalize text-muted">{it.variant_label} · <span className="nums">{it.sku}</span></p>
+                    <p className="mt-0.5 text-[11px] text-accent">
+                      Complemento del combo · {comboHijo!.order_number}{comboHijo!.status === "pending" ? " (sin pagar)" : ""}
+                    </p>
                   </td>
                   <td className="nums px-4 py-3 text-right">{it.quantity}</td>
                   <td className="nums px-4 py-3 text-right">{mxn(it.line_total_cents)}</td>
