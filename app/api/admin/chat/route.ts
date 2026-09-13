@@ -129,6 +129,7 @@ Cuando te pidan graficas o visualizaciones usa mostrarGrafica (se pinta dentro d
         inputSchema: z.object({
           titulo: z.string(),
           unidad: z.enum(["mxn", "numero"]).default("numero"),
+          tipo: z.enum(["barras", "linea"]).default("barras").describe("linea para tendencias en el tiempo"),
           series: z.array(z.object({ etiqueta: z.string(), valor: z.number() })).min(1).max(31),
         }),
         execute: async (input) => input,
