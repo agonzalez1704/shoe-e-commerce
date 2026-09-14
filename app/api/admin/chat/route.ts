@@ -6,6 +6,7 @@ import {
   ventasResumen, masVendidos, buscarPedido, estadoPedido, verificarPago,
   estadoInventario, embudoCheckout, fiadosPendientes, type Periodo,
 } from "@/lib/analytics";
+import { dashboardSpecSchema } from "@/lib/dashboards";
 
 // Asistente del negocio: chat con herramientas SOLO de lectura mas una
 // propuesta de edicion de combos que NUNCA se ejecuta sola — el modelo propone
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
     system: `Eres el asistente interno de ${process.env.NEXT_PUBLIC_BRAND === "honeywhale" ? "Honeywhale" : "Calzado Blade"}, una tienda en linea mexicana de calzado de piel. Hoy es ${new Date().toLocaleDateString("es-MX", { dateStyle: "long", timeZone: "America/Mexico_City" })}.
 Respondes en español, directo y con numeros concretos. Usa las herramientas para TODO dato del negocio — nunca inventes cifras. Montos en MXN.
 Para cambios al combo (meter/sacar modelos, cambiar precio o cantidad) usa proponerCambioCombo: tu solo PROPONES; el administrador confirma en pantalla. Nunca afirmes que un cambio ya se aplico hasta ver el resultado de la herramienta.
-Cuando te pidan graficas o visualizaciones usa mostrarGrafica (se pinta dentro del chat). No ofrezcas PNGs ni archivos: no puedes generarlos. Para ventas por dia usa ventasPorDia y grafica el resultado.`,
+Cuando te pidan graficas o visualizaciones usa mostrarGrafica (se pinta dentro del chat). No ofrezcas PNGs ni archivos: no puedes generarlos. Para ventas por dia usa ventasPorDia y grafica el resultado.
+Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spec con widgets (kpi con comparar para deltas, serie linea/barras/area, distribucion para donas, tabla, nota) y consultas del DSL (fuente pedidos/trafico/garantias/resenas + metrica + agrupar). El grid es de 12 columnas: kpis w=3, graficas w=6, anchas w=12. El dashboard queda guardado y VIVO (se actualiza al abrirlo). Reparte 3-4 KPIs arriba y 2-4 graficas abajo salvo que pidan otra cosa.`,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(8),
     tools: {
@@ -133,6 +135,18 @@ Cuando te pidan graficas o visualizaciones usa mostrarGrafica (se pinta dentro d
           series: z.array(z.object({ etiqueta: z.string(), valor: z.number() })).min(1).max(31),
         }),
         execute: async (input) => input,
+      }),
+      crearDashboard: tool({
+        description: "Crea un dashboard guardado y vivo a partir de un spec declarativo. Devuelve la URL para abrirlo.",
+        inputSchema: z.object({ spec: dashboardSpecSchema }),
+        execute: async ({ spec }) => {
+          const db = createAdminClient();
+          const { data, error } = await db.from("dashboards")
+            .insert({ nombre: spec.titulo, spec })
+            .select("id").single();
+          if (error || !data) return { ok: false, error: error?.message ?? "no se pudo guardar" };
+          return { ok: true, url: `/admin/dashboards/${data.id}`, nombre: spec.titulo };
+        },
       }),
       // V2 — sin execute: la llamada llega a la UI, el admin confirma y la
       // accion real (con permiso promociones_gestionar) corre desde el cliente.

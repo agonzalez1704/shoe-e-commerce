@@ -451,6 +451,62 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboards: {
+        Row: {
+          creado_por: string | null
+          created_at: string
+          id: string
+          nombre: string
+          spec: Json
+          updated_at: string
+        }
+        Insert: {
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+          nombre: string
+          spec: Json
+          updated_at?: string
+        }
+        Update: {
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+          nombre?: string
+          spec?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dashboards_versiones: {
+        Row: {
+          created_at: string
+          dashboard_id: string
+          id: string
+          spec: Json
+        }
+        Insert: {
+          created_at?: string
+          dashboard_id: string
+          id?: string
+          spec: Json
+        }
+        Update: {
+          created_at?: string
+          dashboard_id?: string
+          id?: string
+          spec?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboards_versiones_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discount_codes: {
         Row: {
           active: boolean

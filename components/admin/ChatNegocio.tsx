@@ -89,6 +89,17 @@ export function ChatNegocio() {
                 if (part.type === "tool-mostrarGrafica" && part.state === "output-available") {
                   return <GraficaChat key={i} datos={part.output as DatosGrafica} />;
                 }
+                // dashboard creado: card con enlace
+                if (part.type === "tool-crearDashboard" && part.state === "output-available") {
+                  const out = part.output as { ok: boolean; url?: string; nombre?: string; error?: string };
+                  return out.ok ? (
+                    <a key={i} href={out.url} className="block rounded-xl border border-accent/50 bg-accent-soft/60 px-4 py-3 text-sm font-medium transition-colors hover:border-accent">
+                      📊 {out.nombre} — abrir dashboard →
+                    </a>
+                  ) : (
+                    <p key={i} className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">No se pudo crear: {out.error}</p>
+                  );
+                }
                 // lecturas: chip discreto de actividad
                 if (part.type.startsWith("tool-")) {
                   return (
@@ -143,6 +154,7 @@ function etiquetaTool(tipo: string) {
     "tool-estadoCombo": "Leyendo el combo",
     "tool-ventasPorDia": "Sumando ventas por día",
     "tool-mostrarGrafica": "Dibujando gráfica",
+    "tool-crearDashboard": "Armando el dashboard",
   };
   return nombres[tipo] ?? "Consultando";
 }
