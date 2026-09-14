@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requirePermiso, assertPermiso } from "@/lib/permisos-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
-import { sendShippedEmail, sendDeliveredEmail, sendVoucherEmail } from "@/lib/email";
+import { sendShippedEmail, sendDeliveredEmail, sendVoucherEmail, linkSeguimiento } from "@/lib/email";
 import { notifyAdmins } from "@/lib/push";
-import { stageLabel } from "@/lib/fulfillment";
+import { stageLabel, trackingUrlFor, ventanaEntrega } from "@/lib/fulfillment";
 
 type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
@@ -128,7 +128,7 @@ export async function setFulfillmentStage(orderId: string, stage: FulfillmentSta
   if (stage === "shipped") {
     const { data: o } = await supabase
       .from("orders")
-      .select("email, order_number, total_cents, carrier, tracking_number")
+      .select("email, order_number, total_cents, carrier, tracking_number, review_token, shipped_at")
       .eq("id", orderId)
       .maybeSingle();
     if (o) {
@@ -142,6 +142,9 @@ export async function setFulfillmentStage(orderId: string, stage: FulfillmentSta
         totalCents: o.total_cents,
         carrier: o.carrier ?? undefined,
         tracking: o.tracking_number ?? undefined,
+        carrierUrl: trackingUrlFor(o.carrier, o.tracking_number) ?? undefined,
+        trackUrl: linkSeguimiento(o.order_number, o.review_token),
+        eta: o.shipped_at ? ventanaEntrega(o.shipped_at, o.shipped_at).texto : undefined,
         lines: (items ?? []).map((i) => ({
           name: `${i.product_name} (${i.variant_label})`,
           quantity: i.quantity,

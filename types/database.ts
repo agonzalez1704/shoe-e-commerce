@@ -883,6 +883,7 @@ export type Database = {
           order_number: string
           paid_at: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          production_update_sent_at: string | null
           reminder_sent_at: string | null
           review_request_sent_at: string | null
           review_token: string
@@ -921,6 +922,7 @@ export type Database = {
           order_number: string
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          production_update_sent_at?: string | null
           reminder_sent_at?: string | null
           review_request_sent_at?: string | null
           review_token?: string
@@ -959,6 +961,7 @@ export type Database = {
           order_number?: string
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          production_update_sent_at?: string | null
           reminder_sent_at?: string | null
           review_request_sent_at?: string | null
           review_token?: string

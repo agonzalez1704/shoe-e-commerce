@@ -56,7 +56,7 @@ export const PASOS_CLIENTE = [
   { key: "delivered", label: "Entregado" },
 ] as const;
 
-export function pasoCliente(status: string, stage: string | null): number {
+export function pasoCliente(status: string, stage: string | null, conGuia = false): number {
   if (status === "pending") return 0;              // sin pago no hay entrega que contar
   const porEtapa: Record<string, number> = {
     pending: 1, in_production: 1, ready: 2, shipped: 3, delivered: 4,
@@ -64,8 +64,38 @@ export function pasoCliente(status: string, stage: string | null): number {
   // `fulfilled` significa "se envió" en este esquema, así que vale como piso
   // aunque nadie haya tocado la etapa.
   const piso = status === "fulfilled" ? 3 : 1;
-  return Math.max(piso, porEtapa[stage ?? "pending"] ?? 1);
+  // Con guia generada el par ya salio de fabricacion aunque nadie haya movido
+  // la etapa (BL-001107 llevaba 14 dias "en preparacion" con guia).
+  return Math.max(piso, conGuia ? 2 : 0, porEtapa[stage ?? "pending"] ?? 1);
 }
+
+// ============================================================
+// Cuándo llega. Tiempos MEDIDOS en los pedidos reales (sep 2026): de pago a
+// envío p50 7.4 días, p90 9.3; la paquetería entrega en 1–3 días. La promesa
+// anterior ("4–7 días hábiles") no se cumplía y generaba las quejas de "no sé
+// nada de mi pedido". Mejor una ventana honesta con fechas que una corta falsa.
+// ============================================================
+export const FABRICA_DIAS = { min: 7, tipico: 8, max: 10 } as const;
+const TRANSITO_DIAS = { min: 1, max: 3 } as const;
+
+const fmtDia = (d: Date, conMes: boolean) =>
+  d.toLocaleDateString("es-MX", { day: "numeric", ...(conMes ? { month: "long" as const } : {}), timeZone: "America/Mexico_City" });
+
+export function ventanaEntrega(paidAt: string, shippedAt?: string | null) {
+  const base = new Date(shippedAt ?? paidAt).getTime();
+  const [a, b] = shippedAt
+    ? [TRANSITO_DIAS.min, TRANSITO_DIAS.max]
+    : [FABRICA_DIAS.min + TRANSITO_DIAS.min, FABRICA_DIAS.max + TRANSITO_DIAS.max];
+  const desde = new Date(base + a * 864e5);
+  const hasta = new Date(base + b * 864e5);
+  const mismoMes = fmtDia(desde, true).split(" ").slice(-1)[0] === fmtDia(hasta, true).split(" ").slice(-1)[0];
+  const texto = mismoMes
+    ? `entre el ${fmtDia(desde, false)} y el ${fmtDia(hasta, true)}`
+    : `entre el ${fmtDia(desde, true)} y el ${fmtDia(hasta, true)}`;
+  return { desde, hasta, texto };
+}
+
+export const diasDesde = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 864e5));
 
 // `estimated_delivery` es una columna `date` sin hora. new Date("2026-08-18") la
 // interpreta como medianoche UTC, así que en México (UTC-6) se imprime el 17 —

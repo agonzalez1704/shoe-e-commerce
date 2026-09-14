@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendPaidEmail } from "@/lib/email";
+import { sendPaidEmail, linkSeguimiento } from "@/lib/email";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { notifyAdmins } from "@/lib/push";
 import { sendPurchaseToMeta } from "@/lib/meta-capi";
@@ -8,6 +8,7 @@ import { metaContentId } from "@/lib/meta-content";
 import { methodLabel } from "@/lib/payment-method";
 import { SITE_URL } from "@/lib/site";
 import { formatCents } from "@/lib/money";
+import { ventanaEntrega } from "@/lib/fulfillment";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -41,7 +42,7 @@ export async function markOrderPaid(opts: {
   const { data: order } = await admin
     .from("orders")
     .select(
-      "email, order_number, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, needs_invoice, shipping_address",
+      "email, order_number, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, needs_invoice, shipping_address, review_token, paid_at",
     )
     .eq("id", opts.orderId)
     .maybeSingle();
@@ -53,6 +54,8 @@ export async function markOrderPaid(opts: {
     .eq("order_id", opts.orderId);
 
   await sendPaidEmail({
+    trackUrl: linkSeguimiento(order.order_number, order.review_token),
+    eta: order.paid_at ? ventanaEntrega(order.paid_at).texto : undefined,
     to: order.email,
     orderNumber: order.order_number,
     totalCents: order.total_cents,

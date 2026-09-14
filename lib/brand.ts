@@ -386,7 +386,7 @@ const BRANDS: Record<string, BrandConfig> = {
       itemSingular: "par",
       itemPlural: "pares",
       deliveryLine: "Envío gratis · entrega en 4 a 7 días hábiles a todo México.",
-      madeToOrderLine: "Tu pedido se envía en 4 a 7 días hábiles.",
+      madeToOrderLine: "Se fabrica a mano en León (7 a 10 días) y después viaja 1 a 3 días con la paquetería.",
       exchangeLine: "Si tu talla no queda como esperabas, el primer cambio es sin costo.",
       relatedNote: "Otros modelos hechos a mano, mismo envío gratis.",
       seoLine: "Calzado de piel hecho a mano en México, envío gratis.",

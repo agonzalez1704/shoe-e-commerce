@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { StageBadge } from "@/components/StageBadge";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 import { STAGES, type FulfillmentStage } from "@/lib/fulfillment";
+import { diasDesde, FABRICA_DIAS } from "@/lib/fulfillment";
 
 // Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
 // shell prerenderizado no aporta aqui.
@@ -42,7 +43,7 @@ export default async function AdminOrders({
   let sb = supabase
     .from("orders")
     .select(
-      "id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address",
+      "id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address, paid_at",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -71,7 +72,7 @@ export default async function AdminOrders({
     if (ids.length) {
       const { data: og, count: cg } = await supabase
         .from("orders")
-        .select("id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address", { count: "exact" })
+        .select("id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address, paid_at", { count: "exact" })
         .in("id", ids)
         .order("created_at", { ascending: false });
       orders = og; count = cg;
@@ -175,7 +176,16 @@ export default async function AdminOrders({
                 </td>
                 <td className="nums px-4 py-3 text-muted">{shortDate(o.created_at)}</td>
                 <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-                <td className="px-4 py-3"><StageBadge stage={o.fulfillment_stage} /></td>
+                <td className="px-4 py-3">
+                  <StageBadge stage={o.fulfillment_stage} />
+                  {/* Pagado y sin salir tras la ventana de fabricacion: lo que
+                      termina en un cliente preguntando "¿y mi pedido?". */}
+                  {o.status === "paid" && o.paid_at && o.fulfillment_stage !== "shipped" && o.fulfillment_stage !== "delivered" && diasDesde(o.paid_at) > FABRICA_DIAS.max && (
+                    <span className="ml-1.5 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">
+                      atrasado · {diasDesde(o.paid_at)} d
+                    </span>
+                  )}
+                </td>
                 <td className="nums px-4 py-3 text-right">{mxn(o.total_cents)}</td>
               </tr>
             ))}

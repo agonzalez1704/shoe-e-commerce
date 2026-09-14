@@ -331,3 +331,25 @@ export async function generateLabel(to: Address): Promise<ShipmentResult> {
   if (!rates.length) throw new Error("Skydropx: sin tarifas disponibles para esta dirección");
   return createShipment(quotationId, rates[0], to);
 }
+
+// Estado de paqueteria por numero de guia. Skydropx no rastrea por guia
+// (GET /shipments/tracking/{guia}/{carrier} responde 404), asi que se recorren
+// los envios recientes, se casa master_tracking_number y se lee el paquete.
+export async function estadosDeGuias(guias: string[]): Promise<Map<string, string>> {
+  const buscadas = new Set(guias.filter(Boolean));
+  const res = new Map<string, string>();
+  for (let page = 1; page <= 4 && res.size < buscadas.size; page++) {
+    const j = await api(`/shipments?page=${page}&per_page=50`);
+    const lista = (j.data ?? []) as { id: string; attributes?: { master_tracking_number?: string } }[];
+    if (!lista.length) break;
+    for (const envio of lista) {
+      const guia = envio.attributes?.master_tracking_number;
+      if (!guia || !buscadas.has(guia) || res.has(guia)) continue;
+      const d = await api(`/shipments/${envio.id}`);
+      const pkg = ((d.included ?? []) as { type: string; attributes?: { tracking_status?: string } }[])
+        .find((i) => i.type === "package")?.attributes;
+      if (pkg?.tracking_status) res.set(guia, pkg.tracking_status);
+    }
+  }
+  return res;
+}

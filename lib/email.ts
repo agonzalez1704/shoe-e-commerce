@@ -2,6 +2,7 @@ import "server-only";
 
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
+import { SITE_URL } from "@/lib/site";
 import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 
 // Brand promises, not email plumbing: a lead time written for made-to-order
@@ -87,7 +88,18 @@ function summary(lines?: EmailLine[], b?: EmailBreakdown, totalCents?: number) {
   </table>`;
 }
 
-type Base = { to: string; orderNumber: string; totalCents: number; lines?: EmailLine[]; breakdown?: EmailBreakdown };
+type Base = { to: string; orderNumber: string; totalCents: number; lines?: EmailLine[]; breakdown?: EmailBreakdown; trackUrl?: string };
+
+// Link directo al estado del pedido: el token del pedido evita teclear numero y
+// correo. Ningun correo enlazaba al rastreo y los clientes preguntaban por WhatsApp.
+export const linkSeguimiento = (orderNumber: string, token?: string | null) =>
+  `${SITE_URL}/rastrear?o=${encodeURIComponent(orderNumber)}${token ? `&t=${token}` : ""}`;
+
+const botonSeguimiento = (url?: string) =>
+  url ? `<p style="margin-top:18px">${button(url, "Ver el estado de mi pedido")}</p>` : "";
+
+const cajaLlegada = (eta: string) =>
+  `<p style="margin:14px 0;padding:12px 14px;background:#fafafa;border:1px solid #eee;border-radius:10px"><strong>Llega ${eta}.</strong>${LEAD_TIME ? `<br><span style="color:#71717a">${LEAD_TIME}</span>` : ""}</p>`;
 
 // async payment created — buyer still needs to pay (OXXO / SPEI)
 export async function sendVoucherEmail(
@@ -144,14 +156,29 @@ export async function sendPaymentReminderEmail(
 }
 
 // payment confirmed — card at checkout, or OXXO/SPEI once received
-export async function sendPaidEmail(a: Base) {
+export async function sendPaidEmail(a: Base & { eta?: string }) {
   await send(
     a.to,
     `Pedido ${a.orderNumber} confirmado`,
     shell(`¡Pago confirmado!`,
-      `<p>Tu pedido <strong>${a.orderNumber}</strong> está confirmado y en preparación.</p>
+      `<p>Tu pedido <strong>${a.orderNumber}</strong> está confirmado.</p>
+       ${a.eta && LEAD_TIME ? cajaLlegada(a.eta) : LEAD_TIME ? `<p style="color:#71717a">${LEAD_TIME}</p>` : ""}
        ${summary(a.lines, a.breakdown, a.totalCents)}
-       ${LEAD_TIME ? `<p style="color:#71717a">${LEAD_TIME}</p>` : ""}`),
+       ${botonSeguimiento(a.trackUrl)}`),
+  );
+}
+
+// A mitad de la fabricacion: el tramo de ~7 dias sin noticias era el origen de
+// las quejas. Un solo correo, con la fecha estimada y el link al estado.
+export async function sendProductionUpdateEmail(a: { to: string; orderNumber: string; dia: number; eta: string; trackUrl: string }) {
+  await send(
+    a.to,
+    `Pedido ${a.orderNumber}: va en fabricación`,
+    shell(`Tu ${ITEM} va en fabricación`,
+      `<p>Tu pedido <strong>${a.orderNumber}</strong> va en el <strong>día ${a.dia}</strong> de fabricación.</p>
+       ${cajaLlegada(a.eta)}
+       <p>En cuanto salga te mandamos la guía para que lo sigas con la paquetería.</p>
+       ${botonSeguimiento(a.trackUrl)}`),
   );
 }
 
@@ -230,7 +257,7 @@ export async function sendAbandonedCart2Email(a: { to: string; name?: string; li
 }
 
 // order shipped — admin marked it fulfilled
-export async function sendShippedEmail(a: Base & { carrier?: string; tracking?: string }) {
+export async function sendShippedEmail(a: Base & { carrier?: string; tracking?: string; carrierUrl?: string; eta?: string }) {
   const track =
     a.carrier || a.tracking
       ? `<p style="margin-top:8px">Guía: <strong>${a.carrier ?? ""} ${a.tracking ?? ""}</strong></p>`
@@ -239,8 +266,9 @@ export async function sendShippedEmail(a: Base & { carrier?: string; tracking?: 
     a.to,
     `Pedido ${a.orderNumber} enviado`,
     shell(`Tu pedido va en camino`,
-      `<p>Tu pedido <strong>${a.orderNumber}</strong> fue enviado.</p>${track}
+      `<p>Tu pedido <strong>${a.orderNumber}</strong> ya salió.${a.eta ? ` Llega <strong>${a.eta}</strong>.` : ""}</p>${track}
+       ${a.carrierUrl ? `<p style="margin-top:16px">${button(a.carrierUrl, "Seguir con la paquetería")}</p>` : ""}
        ${summary(a.lines, undefined, a.totalCents)}
-       <p style="color:#71717a">Gracias por tu compra.</p>`),
+       ${a.trackUrl ? `<p style="margin-top:14px;font-size:13px"><a href="${a.trackUrl}" style="color:${ACCENT}">Ver el estado de mi pedido</a></p>` : ""}`),
   );
 }

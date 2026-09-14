@@ -8,6 +8,7 @@ import { restoreCartFromOrder } from "@/app/cart/actions";
 import { isDeclined, isSet } from "@/lib/provider-return";
 import { SITE_URL } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
+import { ventanaEntrega } from "@/lib/fulfillment";
 
 export const instant = false; // dinámica de punta a punta (sesión/pedido)
 
@@ -125,7 +126,8 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
         <>
           <OrderConfirmation
             orderNumber={o}
-            trackUrl={`${SITE_URL}/rastrear`}
+            trackUrl={`${SITE_URL}/rastrear?o=${encodeURIComponent(o)}`}
+            date={paid && activeBrand.copy?.madeToOrderLine ? `Llega ${ventanaEntrega(new Date().toISOString()).texto}` : undefined}
             status={paid ? "Pedido confirmado" : notAttempted ? "Pago pendiente" : "Pedido recibido"}
           />
           <p className="mt-8 max-w-md text-sm text-muted">

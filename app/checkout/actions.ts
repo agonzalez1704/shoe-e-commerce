@@ -6,12 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { createMpPreference } from "@/lib/mercadopago";
-import { sendVoucherEmail, sendPaidEmail } from "@/lib/email";
+import { sendVoucherEmail, sendPaidEmail, linkSeguimiento } from "@/lib/email";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 import { notifyAdmins } from "@/lib/push";
 import { methodLabel } from "@/lib/payment-method";
 import { formatCents } from "@/lib/money";
+import { ventanaEntrega } from "@/lib/fulfillment";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -375,7 +376,8 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   };
 
   if (cardPaid) {
-    await sendPaidEmail({ to: input.email, orderNumber: created.order_number, totalCents, lines: emailLines, breakdown });
+    const { data: seg } = await admin.from("orders").select("review_token, paid_at").eq("id", orderId).maybeSingle();
+    await sendPaidEmail({ to: input.email, orderNumber: created.order_number, totalCents, lines: emailLines, breakdown, trackUrl: linkSeguimiento(created.order_number, seg?.review_token), eta: ventanaEntrega(seg?.paid_at ?? new Date().toISOString()).texto });
   } else if (input.method === "oxxo" || input.method === "spei") {
     await sendVoucherEmail({
       to: input.email,

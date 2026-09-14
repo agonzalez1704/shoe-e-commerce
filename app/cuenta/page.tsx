@@ -113,7 +113,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                         </Link>
                       )}
                       <Link
-                        href={`/rastrear?o=${o.order_number}`}
+                        href={`/rastrear?o=${o.order_number}${o.review_token ? `&t=${o.review_token}` : ""}`}
                         className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
                       >
                         Rastrear

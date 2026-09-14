@@ -17,7 +17,8 @@ export function OrderConfirmation({
   orderNumber,
   trackUrl,
   status = "Pedido confirmado",
-}: { orderNumber: string; trackUrl: string; status?: string }) {
+  date = "Te avisamos en cada paso",
+}: { orderNumber: string; trackUrl: string; status?: string; date?: string }) {
   const router = useRouter();
   return (
     <PackageTrackerCard
@@ -25,10 +26,10 @@ export function OrderConfirmation({
       packageNumber={orderNumber}
       destination="Envío a México"
       destinationFlag={<MexicoFlag />}
-      date="Entrega en 4–7 días hábiles"
+      date={date}
       qrCodeValue={trackUrl}
       trackLabel="Rastrear pedido"
-      onTrackClick={() => router.push("/rastrear")}
+      onTrackClick={() => router.push(`/rastrear?o=${encodeURIComponent(orderNumber)}`)}
       packageImage={<Package size={104} weight="duotone" className="text-accent drop-shadow-lg" />}
     />
   );
