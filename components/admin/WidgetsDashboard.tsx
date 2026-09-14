@@ -28,9 +28,19 @@ const fmt = (unidad: "mxn" | "numero") => (v: unknown) => {
   return unidad === "mxn" ? `$${Math.round(n).toLocaleString("es-MX")}` : n.toLocaleString("es-MX");
 };
 
-function Caja({ titulo, w, children }: { titulo?: string; w: number; children: React.ReactNode }) {
+// Cada widget declara un ancho de 12 columnas, pero una fila rara vez suma 12
+// (3 KPIs de 3 = 9) y el hueco quedaba a la derecha. Con flex-wrap, w es a la
+// vez la base (w/12 del ancho) y el factor de crecimiento: cada fila reparte
+// el sobrante en proporcion y siempre llena el ancho completo.
+export const CLASE_WIDGET =
+  "min-w-0 basis-full sm:[flex:var(--w)_1_min(100%,calc(var(--w)*100%/6_-_1rem))] lg:[flex:var(--w)_1_calc(var(--w)*100%/12_-_1rem)]";
+
+export const estiloWidget = (w: number) =>
+  ({ "--w": Math.min(12, Math.max(2, w)) }) as React.CSSProperties;
+
+function Caja({ titulo, w, children, suelto }: { titulo?: string; w: number; children: React.ReactNode; suelto?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4" style={{ gridColumn: `span ${Math.min(12, Math.max(2, w))}` }}>
+    <div className={`rounded-2xl border border-border bg-surface p-4 ${suelto ? "h-full" : CLASE_WIDGET}`} style={suelto ? undefined : estiloWidget(w)}>
       {titulo && <p className="text-sm font-semibold">{titulo}</p>}
       {children}
     </div>
@@ -55,10 +65,10 @@ function TooltipCard({ active, payload, label, unidad }: {
   );
 }
 
-export function Widget({ datos }: { datos: WidgetDatos }) {
+export function Widget({ datos, suelto }: { datos: WidgetDatos; suelto?: boolean }) {
   if (datos.tipo === "nota") {
     return (
-      <Caja titulo={datos.titulo} w={datos.w}>
+      <Caja titulo={datos.titulo} w={datos.w} suelto={suelto}>
         <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-muted">{datos.texto}</p>
       </Caja>
     );
@@ -68,7 +78,7 @@ export function Widget({ datos }: { datos: WidgetDatos }) {
     const f = fmt(datos.unidad);
     const d = datos.delta;
     return (
-      <Caja w={datos.w}>
+      <Caja w={datos.w} suelto={suelto}>
         <p className="text-xs text-muted">{datos.titulo}</p>
         <p className="nums mt-1.5 text-2xl font-semibold tracking-tight">{f(datos.valor)}</p>
         {d != null && (
@@ -83,7 +93,7 @@ export function Widget({ datos }: { datos: WidgetDatos }) {
 
   if (datos.tipo === "tabla") {
     return (
-      <Caja titulo={datos.titulo} w={datos.w}>
+      <Caja titulo={datos.titulo} w={datos.w} suelto={suelto}>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted">
@@ -105,7 +115,7 @@ export function Widget({ datos }: { datos: WidgetDatos }) {
     const f = fmt(datos.unidad);
     const total = datos.datos.reduce((s, x) => s + x.valor, 0);
     return (
-      <Caja titulo={datos.titulo} w={datos.w}>
+      <Caja titulo={datos.titulo} w={datos.w} suelto={suelto}>
         <div className="mt-2 flex items-center gap-4">
           <div className="h-40 w-40 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -165,7 +175,7 @@ export function Widget({ datos }: { datos: WidgetDatos }) {
   );
 
   return (
-    <Caja titulo={datos.titulo} w={datos.w}>
+    <Caja titulo={datos.titulo} w={datos.w} suelto={suelto}>
       <div className="mt-2" style={{ height: esCategorias ? Math.max(140, data.length * 40 + 20) : 230 }}>
         <ResponsiveContainer width="100%" height="100%">
           {datos.forma === "linea" ? (

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { PaperPlaneRight, Sparkle, X, ArrowLeft, Wrench } from "@phosphor-icons/react";
-import { Widget, type WidgetDatos } from "@/components/admin/WidgetsDashboard";
+import { Widget, CLASE_WIDGET, estiloWidget, type WidgetDatos } from "@/components/admin/WidgetsDashboard";
 
 // Editor del dashboard: chat de parcheo a la IZQUIERDA, canvas a la derecha
 // (referencia del usuario). El estado compartido agente<->UI es el spec en la
@@ -122,16 +122,16 @@ export function EditorDashboard({ dashboardId, titulo, widgets }: {
       {/* canvas */}
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-6 lg:grid-cols-12">
+          <div className="flex flex-wrap items-stretch gap-4">
             {widgets.map((w, i) => (
               <div
                 key={i}
                 onClick={() => setSeleccion(seleccion === i ? null : i)}
-                style={{ gridColumn: `span ${Math.min(12, Math.max(2, w.w))}`, display: "grid" }}
-                className={`cursor-pointer rounded-2xl transition-shadow [&>div]:!col-span-full ${seleccion === i ? "ring-2 ring-accent" : "hover:ring-1 hover:ring-border"}`}
+                style={estiloWidget(w.w)}
+                className={`${CLASE_WIDGET} cursor-pointer rounded-2xl transition-shadow ${seleccion === i ? "ring-2 ring-accent" : "hover:ring-1 hover:ring-border"}`}
                 title={`widget ${i} — clic para seleccionar`}
               >
-                <Widget datos={w} />
+                <Widget datos={w} suelto />
               </div>
             ))}
           </div>

@@ -35,7 +35,7 @@ export default async function DashboardPage({
   const widgets = await Promise.all(spec.widgets.map((w) => resuelveWidget(w, rango)));
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-6xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link href="/admin/dashboards" className="text-xs text-muted hover:text-text">← Dashboards</Link>
@@ -57,7 +57,7 @@ export default async function DashboardPage({
         </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-6 lg:grid-cols-12">
+      <div className="flex flex-wrap items-stretch gap-4">
         {widgets.map((w, i) => <Widget key={i} datos={w} />)}
       </div>
     </div>
