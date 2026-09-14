@@ -2,42 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requirePagePermiso } from "@/lib/permisos-guard";
-import { dashboardSpecSchema, ejecutarConsulta, type WidgetSpec, RANGOS } from "@/lib/dashboards";
-import { Widget, type WidgetDatos } from "@/components/admin/WidgetsDashboard";
+import { dashboardSpecSchema, RANGOS } from "@/lib/dashboards";
+import { resuelveWidget } from "@/lib/dashboards-widgets";
+import { Widget } from "@/components/admin/WidgetsDashboard";
 
 // Render del dashboard generativo: el spec (JSON declarativo) se resuelve a
 // datos AQUI, al abrirlo — dashboards vivos, nunca fotos viejas.
 export const instant = false;
 
 const ETIQUETA_RANGO = { hoy: "Hoy", "7d": "7 días", "30d": "30 días", "90d": "90 días" } as const;
-
-async function resuelveWidget(w: WidgetSpec, rango: keyof typeof RANGOS): Promise<WidgetDatos> {
-  if (w.tipo === "nota") return { tipo: "nota", titulo: w.titulo, w: w.w, texto: w.texto };
-  if (w.tipo === "kpi") {
-    const r = await ejecutarConsulta(w.consulta, rango);
-    return { tipo: "kpi", titulo: w.titulo, w: w.w, unidad: r.unidad, valor: r.valor ?? 0, delta: r.delta };
-  }
-  if (w.tipo === "serie") {
-    const series = await Promise.all(w.series.map(async (s) => {
-      const r = await ejecutarConsulta(s.consulta, rango);
-      return { nombre: s.nombre, datos: r.serie ?? [], unidad: r.unidad };
-    }));
-    return { tipo: "serie", titulo: w.titulo, w: w.w, forma: w.forma, unidad: series[0]?.unidad ?? "numero", series };
-  }
-  if (w.tipo === "distribucion") {
-    const r = await ejecutarConsulta(w.consulta, rango);
-    return { tipo: "distribucion", titulo: w.titulo, w: w.w, unidad: r.unidad, datos: (r.serie ?? []).slice(0, 5) };
-  }
-  const r = await ejecutarConsulta(w.consulta, rango);
-  const nomCol = w.consulta.agrupar !== "ninguno" ? w.consulta.agrupar : "concepto";
-  const nomVal = w.consulta.metrica;
-  const filas = r.filas ?? (r.serie ?? []).map((s) => ({
-    [nomCol]: s.etiqueta,
-    [nomVal]: r.unidad === "mxn" ? `$${Math.round(s.valor).toLocaleString("es-MX")}` : s.valor,
-  }));
-  const columnas = r.columnas ?? [nomCol, nomVal];
-  return { tipo: "tabla", titulo: w.titulo, w: w.w, columnas, filas };
-}
 
 export default async function DashboardPage({
   params, searchParams,
@@ -69,6 +42,11 @@ export default async function DashboardPage({
           <h1 className="text-xl font-semibold tracking-tight">{spec.titulo}</h1>
           {spec.descripcion && <p className="text-xs text-muted">{spec.descripcion}</p>}
         </div>
+        <div className="flex items-center gap-2">
+        <Link href={`/admin/dashboards/${fila.id}/editar`}
+          className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-contrast transition-transform active:scale-[0.98]">
+          Editar con el Asistente
+        </Link>
         <div className="flex gap-1 rounded-full border border-border p-1">
           {(Object.keys(RANGOS) as (keyof typeof RANGOS)[]).map((r) => (
             <Link key={r} href={`/admin/dashboards/${fila.id}?d=${r}`}
@@ -76,6 +54,7 @@ export default async function DashboardPage({
               {ETIQUETA_RANGO[r]}
             </Link>
           ))}
+        </div>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-6 lg:grid-cols-12">

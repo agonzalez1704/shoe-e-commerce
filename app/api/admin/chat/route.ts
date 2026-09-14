@@ -6,7 +6,7 @@ import {
   ventasResumen, masVendidos, buscarPedido, estadoPedido, verificarPago,
   estadoInventario, embudoCheckout, fiadosPendientes, type Periodo,
 } from "@/lib/analytics";
-import { dashboardSpecSchema } from "@/lib/dashboards";
+import { dashboardSpecSchema, operacionSchema, aplicarOperaciones } from "@/lib/dashboards";
 
 // Asistente del negocio: chat con herramientas SOLO de lectura mas una
 // propuesta de edicion de combos que NUNCA se ejecuta sola — el modelo propone
@@ -34,7 +34,19 @@ export async function POST(req: Request) {
     return new Response("No autorizado", { status: 403 });
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages, dashboardId }: { messages: UIMessage[]; dashboardId?: string } = await req.json();
+
+  // Modo editor: el chat vive junto a un dashboard concreto. El spec actual
+  // viaja en el sistema (con indices) y parcharDashboard lo muta con
+  // operaciones validadas — el canvas se re-renderiza del spec guardado.
+  let contextoDashboard = "";
+  if (dashboardId) {
+    const db = createAdminClient();
+    const { data } = await db.from("dashboards").select("spec, nombre").eq("id", dashboardId).maybeSingle();
+    if (data) {
+      contextoDashboard = `\nESTAS EDITANDO el dashboard "${data.nombre}" (id ${dashboardId}). Spec actual (widgets con indice desde 0):\n${JSON.stringify(data.spec)}\nPara cualquier cambio usa parcharDashboard con operaciones (agregar/quitar/reemplazar/configurar). Si el usuario se refiere a "el widget N" o llega un mensaje con [widget N], opera sobre ese indice. Tras parchar, confirma en una frase que cambio.`;
+    }
+  }
 
   const result = streamText({
     model: MODELO,
@@ -42,7 +54,7 @@ export async function POST(req: Request) {
 Respondes en español, directo y con numeros concretos. Usa las herramientas para TODO dato del negocio — nunca inventes cifras. Montos en MXN.
 Para cambios al combo (meter/sacar modelos, cambiar precio o cantidad) usa proponerCambioCombo: tu solo PROPONES; el administrador confirma en pantalla. Nunca afirmes que un cambio ya se aplico hasta ver el resultado de la herramienta.
 Cuando te pidan graficas o visualizaciones usa mostrarGrafica (se pinta dentro del chat). No ofrezcas PNGs ni archivos: no puedes generarlos. Para ventas por dia usa ventasPorDia y grafica el resultado.
-Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spec con widgets (kpi con comparar para deltas, serie linea/barras/area, distribucion para donas, tabla, nota) y consultas del DSL (fuente pedidos/trafico/garantias/resenas + metrica + agrupar). El grid es de 12 columnas: kpis w=3, graficas w=6, anchas w=12. El dashboard queda guardado y VIVO (se actualiza al abrirlo). Reparte 3-4 KPIs arriba y 2-4 graficas abajo salvo que pidan otra cosa.`,
+Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spec con widgets (kpi con comparar para deltas, serie linea/barras/area, distribucion para donas, tabla, nota) y consultas del DSL (fuente pedidos/trafico/garantias/resenas + metrica + agrupar). El grid es de 12 columnas: kpis w=3, graficas w=6, anchas w=12. El dashboard queda guardado y VIVO (se actualiza al abrirlo). Reparte 3-4 KPIs arriba y 2-4 graficas abajo salvo que pidan otra cosa.${contextoDashboard}`,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(8),
     tools: {
@@ -136,6 +148,31 @@ Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spe
         }),
         execute: async (input) => input,
       }),
+      ...(dashboardId ? {
+        parcharDashboard: tool({
+          description: "Aplica cambios al dashboard en edicion: agregar/quitar/reemplazar widgets (por indice) o configurar titulo/rango. El resultado completo se valida; si algo falla nada se aplica.",
+          inputSchema: z.object({ operaciones: z.array(operacionSchema).min(1).max(10) }),
+          execute: async ({ operaciones }) => {
+            const db = createAdminClient();
+            const { data } = await db.from("dashboards").select("spec").eq("id", dashboardId).maybeSingle();
+            if (!data) return { ok: false, error: "dashboard no encontrado" };
+            const actual = dashboardSpecSchema.parse(data.spec);
+            let nuevo;
+            try {
+              nuevo = aplicarOperaciones(actual, operaciones);
+            } catch (e) {
+              return { ok: false, error: e instanceof Error ? e.message : "operacion invalida" };
+            }
+            // la version anterior queda en el historial antes de pisar
+            await db.from("dashboards_versiones").insert({ dashboard_id: dashboardId, spec: actual });
+            const { error } = await db.from("dashboards")
+              .update({ spec: nuevo, nombre: nuevo.titulo, updated_at: new Date().toISOString() })
+              .eq("id", dashboardId);
+            if (error) return { ok: false, error: error.message };
+            return { ok: true, widgets: nuevo.widgets.length };
+          },
+        }),
+      } : {}),
       crearDashboard: tool({
         description: "Crea un dashboard guardado y vivo a partir de un spec declarativo. Devuelve la URL para abrirlo.",
         inputSchema: z.object({ spec: dashboardSpecSchema }),
