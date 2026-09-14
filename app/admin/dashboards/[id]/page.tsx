@@ -29,8 +29,13 @@ async function resuelveWidget(w: WidgetSpec, rango: keyof typeof RANGOS): Promis
     return { tipo: "distribucion", titulo: w.titulo, w: w.w, unidad: r.unidad, datos: (r.serie ?? []).slice(0, 5) };
   }
   const r = await ejecutarConsulta(w.consulta, rango);
-  const filas = r.filas ?? (r.serie ?? []).map((s) => ({ etiqueta: s.etiqueta, valor: s.valor }));
-  const columnas = r.columnas ?? ["etiqueta", "valor"];
+  const nomCol = w.consulta.agrupar !== "ninguno" ? w.consulta.agrupar : "concepto";
+  const nomVal = w.consulta.metrica;
+  const filas = r.filas ?? (r.serie ?? []).map((s) => ({
+    [nomCol]: s.etiqueta,
+    [nomVal]: r.unidad === "mxn" ? `$${Math.round(s.valor).toLocaleString("es-MX")}` : s.valor,
+  }));
+  const columnas = r.columnas ?? [nomCol, nomVal];
   return { tipo: "tabla", titulo: w.titulo, w: w.w, columnas, filas };
 }
 

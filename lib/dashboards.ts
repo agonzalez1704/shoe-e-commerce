@@ -71,6 +71,9 @@ function ventana(rango: keyof typeof RANGOS, atras = 0) {
 
 const diaMX = (iso: string) =>
   new Date(iso).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", month: "2-digit", day: "2-digit" });
+// llave ordenable AAAA-MM-DD en zona MX — DD/MM como texto ordenaba sep antes que ago
+const diaISO = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
 const semanaMX = (iso: string) => {
   const d = new Date(iso);
   const lunes = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 864e5);
@@ -104,18 +107,20 @@ async function filasPedidos(rango: keyof typeof RANGOS, atras: number, filtroMod
   return filas;
 }
 
-function agrega(filas: Awaited<ReturnType<typeof filasPedidos>>, metrica: string, llave: (f: (typeof filas)[number]) => string) {
-  const m = new Map<string, { v: number; pedidos: Set<string> }>();
+function agrega(filas: Awaited<ReturnType<typeof filasPedidos>>, metrica: string, llave: (f: (typeof filas)[number]) => string, orden?: (f: (typeof filas)[number]) => string) {
+  const m = new Map<string, { v: number; pedidos: Set<string>; orden: string }>();
   for (const f of filas) {
     const k = llave(f);
-    const e = m.get(k) ?? { v: 0, pedidos: new Set<string>() };
+    const e = m.get(k) ?? { v: 0, pedidos: new Set<string>(), orden: orden ? orden(f) : k };
     if (metrica === "ingresos") e.v += f.line_total_cents / 100;
     else if (metrica === "pares") e.v += f.quantity;
     e.pedidos.add(f.orders.id);
+    if (orden) e.orden = e.orden < orden(f) ? e.orden : orden(f);
     m.set(k, e);
   }
   return [...m.entries()].map(([etiqueta, e]) => ({
     etiqueta,
+    orden: e.orden,
     valor: metrica === "pedidos" ? e.pedidos.size : metrica === "ticket" ? (e.v || 0) / Math.max(1, e.pedidos.size) : e.v,
   }));
 }
@@ -142,18 +147,17 @@ async function consultaPedidos(c: ConsultaDSL, rango: keyof typeof RANGOS, atras
     modelo: (f) => f.modelo,
     talla: (f) => f.talla,
     color: (f) => f.color || "(sin color)",
-    metodo: (f) => f.orders.payment_method ?? "(sin método)",
+    metodo: (f) => ({ card: "Tarjeta", oxxo: "Efectivo", spei: "SPEI", aplazo: "Aplazo", mercadopago: "Mercado Pago" }[f.orders.payment_method ?? ""] ?? f.orders.payment_method ?? "(sin método)"),
     estado: (f) => f.orders.fulfillment_stage,
   };
   const llave = llaves[c.agrupar];
   if (!llave) return { unidad, serie: [] };
-  let serie = agrega(filas, c.metrica, llave);
-  if (c.agrupar === "dia" || c.agrupar === "semana") {
-    serie = serie.sort((a, b) => a.etiqueta.localeCompare(b.etiqueta)); // MM/DD ordena bien
-  } else {
-    serie = serie.sort((a, b) => b.valor - a.valor).slice(0, c.limite ?? 10);
-  }
-  return { unidad, serie };
+  const esFecha = c.agrupar === "dia" || c.agrupar === "semana";
+  let serie = agrega(filas, c.metrica, llave, esFecha ? (f) => diaISO(f.orders.created_at) : undefined);
+  serie = esFecha
+    ? serie.sort((a, b) => a.orden.localeCompare(b.orden))
+    : serie.sort((a, b) => b.valor - a.valor).slice(0, c.limite ?? 10);
+  return { unidad, serie: serie.map(({ etiqueta, valor }) => ({ etiqueta, valor })) };
 }
 
 async function consultaTrafico(c: ConsultaDSL, rango: keyof typeof RANGOS, atras = 0): Promise<ResultadoConsulta> {
@@ -183,11 +187,14 @@ async function consultaTrafico(c: ConsultaDSL, rango: keyof typeof RANGOS, atras
     const k = llave(f);
     grupos.set(k, [...(grupos.get(k) ?? []), f]);
   }
-  let serie = [...grupos.entries()].map(([etiqueta, fs]) => ({ etiqueta, valor: valorDe(fs) }));
+  let serie = [...grupos.entries()].map(([etiqueta, fs]) => ({
+    etiqueta, valor: valorDe(fs),
+    orden: fs[0] ? diaISO(fs[0].created_at) : etiqueta,
+  }));
   serie = c.agrupar === "dia" || c.agrupar === "semana"
-    ? serie.sort((a, b) => a.etiqueta.localeCompare(b.etiqueta))
+    ? serie.sort((a, b) => a.orden.localeCompare(b.orden))
     : serie.sort((a, b) => b.valor - a.valor).slice(0, c.limite ?? 10);
-  return { unidad: "numero", serie };
+  return { unidad: "numero", serie: serie.map(({ etiqueta, valor }) => ({ etiqueta, valor })) };
 }
 
 async function consultaGarantias(c: ConsultaDSL, rango: keyof typeof RANGOS): Promise<ResultadoConsulta> {

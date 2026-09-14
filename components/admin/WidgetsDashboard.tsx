@@ -118,13 +118,17 @@ export function Widget({ datos }: { datos: WidgetDatos }) {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <ul className="min-w-0 flex-1 space-y-1.5 text-xs">
+          <ul className="min-w-0 flex-1 space-y-2 text-xs">
             {datos.datos.map((x, i) => (
-              <li key={x.etiqueta} className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CATEGORICA[i % CATEGORICA.length] }} />
-                <span className="min-w-0 flex-1 truncate capitalize">{x.etiqueta}</span>
-                <span className="nums shrink-0 font-medium">{f(x.valor)}</span>
-                <span className="nums shrink-0 w-10 text-right text-muted">{total ? Math.round((x.valor / total) * 100) : 0}%</span>
+              <li key={x.etiqueta}>
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CATEGORICA[i % CATEGORICA.length] }} />
+                  <span className="min-w-0 flex-1 truncate capitalize" title={x.etiqueta}>{x.etiqueta || "(sin dato)"}</span>
+                </div>
+                <div className="nums mt-0.5 flex justify-between pl-4 text-muted">
+                  <span className="font-medium text-text">{f(x.valor)}</span>
+                  <span>{total ? Math.round((x.valor / total) * 100) : 0}%</span>
+                </div>
               </li>
             ))}
           </ul>
