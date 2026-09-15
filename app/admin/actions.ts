@@ -28,7 +28,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   if (status === "fulfilled") {
     const { data: o } = await supabase
       .from("orders")
-      .select("email, order_number, total_cents")
+      .select("email, order_number, total_cents, carrier, tracking_number, review_token, shipped_at")
       .eq("id", orderId)
       .maybeSingle();
     if (o) {
@@ -40,6 +40,12 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
         to: o.email,
         orderNumber: o.order_number,
         totalCents: o.total_cents,
+        // Mismo correo que el boton de etapa "En camino": este salia sin guia.
+        carrier: o.carrier ?? undefined,
+        tracking: o.tracking_number ?? undefined,
+        carrierUrl: trackingUrlFor(o.carrier, o.tracking_number) ?? undefined,
+        trackUrl: linkSeguimiento(o.order_number, o.review_token),
+        eta: o.shipped_at ? ventanaEntrega(o.shipped_at, o.shipped_at).texto : undefined,
         lines: (items ?? []).map((i) => ({
           name: `${i.product_name} (${i.variant_label})`,
           quantity: i.quantity,

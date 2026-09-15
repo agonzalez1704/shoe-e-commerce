@@ -430,7 +430,7 @@ export function FulfillmentPanel({ order }: { order: Order }) {
             </button>
             {next === "shipped" && (
               <span className="text-xs text-muted">
-                {!isPaid ? "Requiere pago confirmado." : "Notificará al cliente por correo con la guía."}
+                {!isPaid ? "Requiere pago confirmado." : conGuia ? "Le enviará al cliente un correo con la guía y el botón para rastrearla." : "Aún no tiene guía: el correo saldrá sin número. Genérala o captúrala primero."}
               </span>
             )}
           </>

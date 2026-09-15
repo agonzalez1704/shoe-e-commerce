@@ -3,6 +3,7 @@ import "server-only";
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
+import { carrierName } from "@/lib/fulfillment";
 import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 
 // Brand promises, not email plumbing: a lead time written for made-to-order
@@ -260,7 +261,7 @@ export async function sendAbandonedCart2Email(a: { to: string; name?: string; li
 export async function sendShippedEmail(a: Base & { carrier?: string; tracking?: string; carrierUrl?: string; eta?: string }) {
   const track =
     a.carrier || a.tracking
-      ? `<p style="margin-top:8px">Guía: <strong>${a.carrier ?? ""} ${a.tracking ?? ""}</strong></p>`
+      ? `<p style="margin-top:8px">Guía: <strong>${carrierName(a.carrier) ?? ""} ${a.tracking ?? ""}</strong></p>`
       : "";
   await send(
     a.to,
