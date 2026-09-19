@@ -236,6 +236,41 @@ export type Database = {
         }
         Relationships: []
       }
+      capi_envios: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          ok: boolean
+          order_id: string
+          respuesta: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          ok: boolean
+          order_id: string
+          respuesta?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          ok?: boolean
+          order_id?: string
+          respuesta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capi_envios_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_items: {
         Row: {
           cart_id: string
@@ -862,6 +897,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          atribucion: Json | null
           billing_address: Json | null
           carrier: string | null
           combo_parent_order_id: string | null
@@ -873,6 +909,7 @@ export type Database = {
           dev_commission_marked_by: string | null
           dev_commission_paid_at: string | null
           discount_cents: number
+          efectos_pago_at: string | null
           email: string
           estimated_delivery: string | null
           expires_at: string | null
@@ -901,6 +938,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          atribucion?: Json | null
           billing_address?: Json | null
           carrier?: string | null
           combo_parent_order_id?: string | null
@@ -912,6 +950,7 @@ export type Database = {
           dev_commission_marked_by?: string | null
           dev_commission_paid_at?: string | null
           discount_cents?: number
+          efectos_pago_at?: string | null
           email: string
           estimated_delivery?: string | null
           expires_at?: string | null
@@ -940,6 +979,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          atribucion?: Json | null
           billing_address?: Json | null
           carrier?: string | null
           combo_parent_order_id?: string | null
@@ -951,6 +991,7 @@ export type Database = {
           dev_commission_marked_by?: string | null
           dev_commission_paid_at?: string | null
           discount_cents?: number
+          efectos_pago_at?: string | null
           email?: string
           estimated_delivery?: string | null
           expires_at?: string | null

@@ -15,9 +15,8 @@ const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 type PaidMethod = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
 
 // Commit a paid order and fire the confirm-time side effects (email, Meta CAPI,
-// admin push, CFDI). Shared by the Conekta and MercadoPago webhooks so the money
-// path lives in one place. Idempotent: commit_order no-ops on a non-pending
-// order, so webhook retries are safe.
+// admin push, CFDI). Shared by the checkout (card cleared at once) and the
+// Conekta / MercadoPago webhooks so the money path lives in one place.
 export async function markOrderPaid(opts: {
   orderId: string;
   chargeId: string;
@@ -26,11 +25,7 @@ export async function markOrderPaid(opts: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const admin = createAdminClient();
 
-  // La accion sincrona y el webhook confirman el mismo pago: el segundo en
-  // llegar no debe repetir correo, pixel ni push (llegaban dobles).
-  const { data: pre } = await admin.from("orders").select("status").eq("id", opts.orderId).maybeSingle();
-  if (pre?.status === "paid" || pre?.status === "fulfilled") return { ok: true };
-
+  // commit_order no-ops on a non-pending order, so retries are safe for stock.
   const { error } = await admin.rpc("commit_order", {
     p_order_id: opts.orderId,
     p_charge_id: opts.chargeId,
@@ -38,6 +33,19 @@ export async function markOrderPaid(opts: {
     p_method: opts.method,
   });
   if (error) return { ok: false, error: error.message };
+
+  // Efectos una sola vez. Dos webhooks simultaneos (o checkout + webhook)
+  // confirmaban el mismo pago y ambos mandaban correo, Meta y push. Gana quien
+  // sella efectos_pago_at; el UPDATE condicional es atomico en Postgres.
+  const { data: gano } = await admin
+    .from("orders")
+    .update({ efectos_pago_at: new Date().toISOString() })
+    .eq("id", opts.orderId)
+    .is("efectos_pago_at", null)
+    .in("status", ["paid", "fulfilled"])
+    .select("id")
+    .maybeSingle();
+  if (!gano) return { ok: true };
 
   const { data: order } = await admin
     .from("orders")
@@ -50,7 +58,7 @@ export async function markOrderPaid(opts: {
 
   const { data: items } = await admin
     .from("order_items")
-    .select("product_name, variant_label, unit_price_cents, quantity, variants(color, products(slug))")
+    .select("product_name, variant_label, unit_price_cents, quantity")
     .eq("order_id", opts.orderId);
 
   await sendPaidEmail({
@@ -72,24 +80,7 @@ export async function markOrderPaid(opts: {
     },
   });
 
-  // report the confirmed conversion to Meta (browser pixel can't for redirect /
-  // async methods: the buyer already left the page)
-  const ship = (order as { shipping_address?: Record<string, string> }).shipping_address;
-  const contentIds = (items ?? [])
-    .map((i) => {
-      const v = i.variants as unknown as { color?: string; products?: { slug?: string } } | null;
-      return v?.products?.slug && v.color ? metaContentId(v.products.slug, v.color) : null;
-    })
-    .filter((x): x is string => !!x);
-  await sendPurchaseToMeta({
-    eventId: order.order_number,
-    orderNumber: order.order_number,
-    email: order.email,
-    phone: ship?.phone,
-    valueCents: order.total_cents,
-    contentIds,
-    sourceUrl: `${SITE_URL}/checkout`,
-  });
+  await reportarCompraMeta(opts.orderId);
 
   await notifyAdmins({
     title: `Pago recibido · ${mxn(order.total_cents)}`,
@@ -105,4 +96,53 @@ export async function markOrderPaid(opts: {
   // stamp CFDI on payment if requested (non-fatal; records failure for admin retry)
   if (order.needs_invoice) await stampOrderCfdi(opts.orderId);
   return { ok: true };
+}
+
+// Reporta la compra a Meta desde el servidor y deja constancia en capi_envios.
+// La usa markOrderPaid y la reconciliacion del cron (reenvio de las que no
+// llegaron). event_id = numero de pedido: Meta junta los reenvios y la copia
+// del navegador en una sola compra.
+export async function reportarCompraMeta(orderId: string) {
+  const admin = createAdminClient();
+  const { data: o } = await admin
+    .from("orders")
+    .select("order_number, email, total_cents, paid_at, shipping_address, atribucion")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!o) return;
+  const { data: items } = await admin
+    .from("order_items")
+    .select("variants(color, products(slug))")
+    .eq("order_id", orderId);
+
+  const ship = (o.shipping_address ?? {}) as Record<string, string>;
+  const atrib = (o.atribucion ?? {}) as Record<string, string>;
+  const contentIds = (items ?? [])
+    .map((i) => {
+      const v = i.variants as unknown as { color?: string; products?: { slug?: string } } | null;
+      return v?.products?.slug && v.color ? metaContentId(v.products.slug, v.color) : null;
+    })
+    .filter((x): x is string => !!x);
+
+  const r = await sendPurchaseToMeta({
+    eventId: o.order_number,
+    orderNumber: o.order_number,
+    email: o.email,
+    phone: ship.phone,
+    valueCents: o.total_cents,
+    contentIds,
+    sourceUrl: `${SITE_URL}/checkout`,
+    eventTime: o.paid_at ? Math.floor(new Date(o.paid_at).getTime() / 1000) : undefined,
+    fbc: atrib.fbc,
+    fbp: atrib.fbp,
+    ip: atrib.ip,
+    userAgent: atrib.ua,
+  });
+  if ("skipped" in r) return;
+  await admin.from("capi_envios").insert({
+    order_id: orderId,
+    event_id: o.order_number,
+    ok: r.ok,
+    respuesta: (r.detail ?? "").slice(0, 500),
+  });
 }

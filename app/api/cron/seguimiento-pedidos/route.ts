@@ -4,6 +4,7 @@ import { sendProductionUpdateEmail, sendShippedEmail, sendDeliveredEmail, linkSe
 import { ventanaEntrega, trackingUrlFor, diasDesde } from "@/lib/fulfillment";
 import { estadosDeGuias } from "@/lib/skydropx";
 import { activeBrand } from "@/lib/brand";
+import { reportarCompraMeta } from "@/lib/order-fulfillment";
 
 // Seguimiento proactivo, dos veces al dia:
 //  1. Correo "va en fabricacion" a los 4 dias del pago — el tramo de ~7 dias
@@ -122,5 +123,26 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ avances, enviados, entregados, silenciosos });
+  // ---- 3. reconciliacion con Meta: toda compra pagada de los ultimos 3 dias
+  // debe tener un envio aceptado; las que no, se reenvian (mismo event_id, Meta
+  // las junta). Meta rechaza compras de mas de 7 dias, de ahi la ventana corta.
+  let reenviadas = 0;
+  const { data: pagadas } = await admin
+    .from("orders")
+    .select("id")
+    .in("status", ["paid", "fulfilled"])
+    .not("efectos_pago_at", "is", null)
+    .gte("paid_at", new Date(Date.now() - 3 * 864e5).toISOString());
+  const ids = (pagadas ?? []).map((o) => o.id);
+  if (ids.length) {
+    const { data: okEnvios } = await admin.from("capi_envios").select("order_id").in("order_id", ids).eq("ok", true);
+    const confirmadas = new Set((okEnvios ?? []).map((e) => e.order_id));
+    for (const id of ids) {
+      if (confirmadas.has(id)) continue;
+      await reportarCompraMeta(id);
+      reenviadas++;
+    }
+  }
+
+  return NextResponse.json({ avances, enviados, entregados, silenciosos, reenviadas });
 }

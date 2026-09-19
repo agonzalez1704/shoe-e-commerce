@@ -45,6 +45,27 @@ function source(): string {
   }
 }
 
+// Atribucion propia (ultimo toque, 30 dias): de que campaña y anuncio viene la
+// visita. Cookie de primera parte para que el checkout la lea en el servidor;
+// solo se escribe cuando la URL trae parametros, asi que navegar no la borra.
+const CAMPOS_ATRIB = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ad_id", "fbclid"];
+function guardaAtribucion() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    const a: Record<string, string> = {};
+    for (const c of CAMPOS_ATRIB) {
+      const v = q.get(c);
+      if (v) a[c] = v.slice(0, 200);
+    }
+    if (!Object.keys(a).length) return;
+    a.landing = window.location.pathname.slice(0, 200);
+    a.ts = String(Date.now());
+    document.cookie = `blade_atrib=${encodeURIComponent(JSON.stringify(a))}; Max-Age=${30 * 86400}; Path=/; SameSite=Lax`;
+  } catch {
+    /* nunca rompe la pagina */
+  }
+}
+
 function send(payload: Record<string, unknown>) {
   try {
     const body = JSON.stringify({ ...payload, sid: sessionId() });
@@ -69,6 +90,7 @@ export function AnalyticsBeacon() {
   // pageview on every navigation (skip our own admin)
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
+    guardaAtribucion();
     send({ type: "pageview", path: pathname, referrer: document.referrer.slice(0, 300), source: source(), device: device() });
   }, [pathname]);
 

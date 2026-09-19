@@ -23,24 +23,34 @@ export type CapiPurchase = {
   contentIds?: string[]; // catalog ids, so the server Purchase matches the feed
   sourceUrl?: string;
   testEventCode?: string; // Events Manager "Probar eventos" code; omit in production
+  eventTime?: number;     // unix s; la hora real del pago (efectivo confirma horas despues)
+  fbc?: string;           // clic del anuncio (fb.1.<ts>.<fbclid>)
+  fbp?: string;           // cookie del navegador
+  ip?: string;
+  userAgent?: string;
 };
 
 export async function sendPurchaseToMeta(p: CapiPurchase) {
   if (!PIXEL_ID || !TOKEN) return { skipped: "no configurado" as const }; // not configured -> silently skip
 
-  const userData: Record<string, string[]> = {};
+  const userData: Record<string, string | string[]> = {};
   if (p.email) userData.em = [hash(p.email)];
   if (p.phone) {
     const digits = p.phone.replace(/\D/g, "");
     if (digits) userData.ph = [hash(digits.length === 10 ? `52${digits}` : digits)];
   }
+  // Sin hash, por especificacion de Meta: son los que atan la compra al anuncio.
+  if (p.fbc) userData.fbc = p.fbc;
+  if (p.fbp) userData.fbp = p.fbp;
+  if (p.ip) userData.client_ip_address = p.ip;
+  if (p.userAgent) userData.client_user_agent = p.userAgent;
 
   const body: Record<string, unknown> = {
     ...(p.testEventCode ? { test_event_code: p.testEventCode } : {}),
     data: [
       {
         event_name: "Purchase",
-        event_time: Math.floor(Date.now() / 1000),
+        event_time: p.eventTime ?? Math.floor(Date.now() / 1000),
         event_id: p.eventId,
         action_source: "website",
         event_source_url: p.sourceUrl,

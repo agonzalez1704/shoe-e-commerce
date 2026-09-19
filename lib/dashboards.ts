@@ -20,7 +20,7 @@ export const RANGOS = { hoy: 1, "7d": 7, "30d": 30, "90d": 90 } as const;
 const consultaSchema = z.object({
   fuente: z.enum(["pedidos", "trafico", "garantias", "resenas"]),
   metrica: z.enum(["ingresos", "pedidos", "pares", "ticket", "visitas", "sesiones", "conteo", "calificacion"]).default("conteo"),
-  agrupar: z.enum(["ninguno", "dia", "semana", "modelo", "talla", "color", "metodo", "estado", "pagina", "origen", "dispositivo"]).default("ninguno"),
+  agrupar: z.enum(["ninguno", "dia", "semana", "modelo", "talla", "color", "metodo", "estado", "pagina", "origen", "dispositivo", "campana", "anuncio", "canal"]).default("ninguno"),
   rango: z.enum(["hoy", "7d", "30d", "90d"]).optional(),   // hereda el del dashboard
   comparar: z.enum(["periodo_anterior"]).optional(),        // KPI: delta; serie: 2a linea
   filtroModelo: z.string().optional(),
@@ -86,13 +86,13 @@ async function filasPedidos(rango: keyof typeof RANGOS, atras: number, filtroMod
   const { desde, hasta } = ventana(rango, atras);
   const { data } = await db
     .from("order_items")
-    .select("product_name, quantity, line_total_cents, variant_label, orders!inner(status, created_at, payment_method, fulfillment_stage, total_cents, id)")
+    .select("product_name, quantity, line_total_cents, variant_label, orders!inner(status, created_at, payment_method, fulfillment_stage, total_cents, id, atribucion)")
     .in("orders.status", [...PAGADOS])
     .gte("orders.created_at", desde)
     .lt("orders.created_at", hasta);
   type Fila = {
     product_name: string; quantity: number; line_total_cents: number; variant_label: string;
-    orders: { status: string; created_at: string; payment_method: string | null; fulfillment_stage: string; total_cents: number; id: string };
+    orders: { status: string; created_at: string; payment_method: string | null; fulfillment_stage: string; total_cents: number; id: string; atribucion: Record<string, string> | null };
   };
   let filas = ((data ?? []) as unknown as Fila[]).map((f) => ({
     ...f,
@@ -149,6 +149,10 @@ async function consultaPedidos(c: ConsultaDSL, rango: keyof typeof RANGOS, atras
     color: (f) => f.color || "(sin color)",
     metodo: (f) => ({ card: "Tarjeta", oxxo: "Efectivo", spei: "SPEI", aplazo: "Aplazo", mercadopago: "Mercado Pago" }[f.orders.payment_method ?? ""] ?? f.orders.payment_method ?? "(sin método)"),
     estado: (f) => f.orders.fulfillment_stage,
+    // atribucion propia (cookie del beacon guardada en el pedido)
+    campana: (f) => f.orders.atribucion?.utm_campaign ?? "(sin campaña)",
+    anuncio: (f) => f.orders.atribucion?.utm_content ?? f.orders.atribucion?.ad_id ?? "(sin anuncio)",
+    canal: (f) => f.orders.atribucion?.utm_source ?? (f.orders.atribucion?.fbclid ? "facebook" : "(directo u orgánico)"),
   };
   const llave = llaves[c.agrupar];
   if (!llave) return { unidad, serie: [] };

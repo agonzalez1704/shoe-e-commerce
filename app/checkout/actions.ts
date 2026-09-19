@@ -6,13 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { createMpPreference } from "@/lib/mercadopago";
-import { sendVoucherEmail, sendPaidEmail, linkSeguimiento } from "@/lib/email";
+import { sendVoucherEmail } from "@/lib/email";
+import { markOrderPaid } from "@/lib/order-fulfillment";
+import { cookies, headers } from "next/headers";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 import { notifyAdmins } from "@/lib/push";
 import { methodLabel } from "@/lib/payment-method";
 import { formatCents } from "@/lib/money";
-import { ventanaEntrega } from "@/lib/fulfillment";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -336,6 +337,10 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     p_expires_at: pm.expires_at ? new Date(pm.expires_at * 1000).toISOString() : undefined,
   });
 
+  // 6a. De donde vino el pedido: campaña/anuncio (cookie del beacon) y los
+  //     datos con que Meta casa la compra. Nunca rompe el checkout.
+  await guardaAtribucionPedido(orderId);
+
   // 6b. Aplazo también sale del sitio a aprobar un crédito, y `create_order` lo
   //     dejó sin fecha de vencimiento igual que a MercadoPago. Sin ella el
   //     pedido nunca expira ni entra al recordatorio, así que se queda colgado
@@ -353,13 +358,10 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   //    (webhook also fires, idempotent). With 3DS, the webhook commits after the challenge.
   let cardPaid = false;
   if (input.method === "card" && co.payment_status === "paid" && !redirectUrl) {
-    await admin.rpc("commit_order", {
-      p_order_id: orderId,
-      p_charge_id: co.id,
-      p_amount_cents: totalCents,
-      p_method: "card",
-    });
-    cardPaid = true;
+    // Mismo camino que el webhook: commit + correo, Meta, push y CFDI una sola
+    // vez (el sello de efectos decide quien los manda si el webhook llega a la par).
+    const r = await markOrderPaid({ orderId, chargeId: co.id, amountCents: totalCents, method: "card" });
+    cardPaid = r.ok;
   }
 
   // 8. notify the buyer (non-fatal). Skip card emails until payment confirms (webhook handles it).
@@ -375,10 +377,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     taxCents: Math.round((totalCents * 16) / 116), // IVA-inclusive of the final total
   };
 
-  if (cardPaid) {
-    const { data: seg } = await admin.from("orders").select("review_token, paid_at").eq("id", orderId).maybeSingle();
-    await sendPaidEmail({ to: input.email, orderNumber: created.order_number, totalCents, lines: emailLines, breakdown, trackUrl: linkSeguimiento(created.order_number, seg?.review_token), eta: ventanaEntrega(seg?.paid_at ?? new Date().toISOString()).texto });
-  } else if (input.method === "oxxo" || input.method === "spei") {
+  if (input.method === "oxxo" || input.method === "spei") {
     await sendVoucherEmail({
       to: input.email,
       orderNumber: created.order_number,
@@ -396,12 +395,15 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
 
   // ping the admin phone: a cash/SPEI order is only a lead until it's paid, a
   // card one is already money in
-  await notifyAdmins({
-    title: cardPaid ? `Pedido pagado · ${mxn(totalCents)}` : `Pedido nuevo · ${mxn(totalCents)}`,
-    body: `${created.order_number} — ${methodLabel(input.method)} · ${input.customerName}`,
-    url: `/admin/orders/${orderId}`,
-    tag: `order-${orderId}`,
-  });
+  // (la tarjeta cobrada ya avisa "Pago recibido" desde markOrderPaid)
+  if (!cardPaid) {
+    await notifyAdmins({
+      title: `Pedido nuevo · ${mxn(totalCents)}`,
+      body: `${created.order_number} — ${methodLabel(input.method)} · ${input.customerName}`,
+      url: `/admin/orders/${orderId}`,
+      tag: `order-${orderId}`,
+    });
+  }
 
   return {
     orderNumber: created.order_number,
@@ -413,4 +415,37 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     spei: input.method === "spei" ? { clabe: clabe ?? "", bank } : undefined,
     card: input.method === "card" ? { paid: cardPaid } : undefined,
   };
+}
+
+// Atribucion propia del pedido. La cookie blade_atrib la escribe el beacon al
+// llegar desde un anuncio (utm_*, ad_id, fbclid); aqui se suma lo que Meta usa
+// para casar la compra: _fbc/_fbp del pixel, IP y navegador.
+async function guardaAtribucionPedido(orderId: string) {
+  try {
+    const c = await cookies();
+    const h = await headers();
+    const a: Record<string, string> = {};
+    const raw = c.get("blade_atrib")?.value;
+    if (raw) {
+      const p: unknown = JSON.parse(decodeURIComponent(raw));
+      if (p && typeof p === "object") {
+        for (const [k, v] of Object.entries(p as Record<string, unknown>)) {
+          if (typeof v === "string") a[k.slice(0, 40)] = v.slice(0, 200);
+        }
+      }
+    }
+    const fbp = c.get("_fbp")?.value;
+    const fbc = c.get("_fbc")?.value;
+    if (fbp) a.fbp = fbp.slice(0, 200);
+    if (fbc) a.fbc = fbc.slice(0, 200);
+    else if (a.fbclid && a.ts) a.fbc = `fb.1.${a.ts}.${a.fbclid}`;
+    const ua = h.get("user-agent");
+    if (ua) a.ua = ua.slice(0, 300);
+    const ip = (h.get("x-forwarded-for") ?? "").split(",")[0]?.trim();
+    if (ip) a.ip = ip;
+    if (!Object.keys(a).length) return;
+    await createAdminClient().from("orders").update({ atribucion: a }).eq("id", orderId);
+  } catch (e) {
+    console.error("[atribucion]", e);
+  }
 }
