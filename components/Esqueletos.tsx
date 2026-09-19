@@ -47,3 +47,62 @@ export function EsqueletoPdp() {
     </div>
   );
 }
+
+// Admin: el layout (sidebar) queda montado; estos llenan solo la columna de
+// contenido con la forma de cada tipo de pantalla.
+function EncabezadoAdmin() {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className={`${PULSO} h-7 w-40 rounded-lg`} />
+      <div className={`${PULSO} h-9 w-56 rounded-full`} />
+    </div>
+  );
+}
+
+// Listas: pedidos, productos, inventario, descuentos, promociones, combos...
+export function EsqueletoAdminLista({ filas = 8 }: { filas?: number }) {
+  return (
+    <div className="space-y-5">
+      <EncabezadoAdmin />
+      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
+        {Array.from({ length: filas }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+            <div className={`${PULSO} h-4 w-24 rounded-md`} />
+            <div className={`${PULSO} h-4 flex-1 rounded-md`} />
+            <div className={`${PULSO} h-4 w-16 rounded-md`} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Detalle: pedido, editar producto.
+export function EsqueletoAdminDetalle() {
+  return (
+    <div className="space-y-6">
+      <div className={`${PULSO} h-4 w-20 rounded-md`} />
+      <div className={`${PULSO} h-8 w-48 rounded-lg`} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className={`${PULSO} h-96 lg:col-span-2`} />
+        <div className={`${PULSO} h-64`} />
+      </div>
+    </div>
+  );
+}
+
+// Tableros: metricas, dashboards.
+export function EsqueletoAdminTablero() {
+  return (
+    <div className="space-y-8">
+      <EncabezadoAdmin />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => <div key={i} className={`${PULSO} h-24`} />)}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={`${PULSO} h-72`} />
+        <div className={`${PULSO} h-72`} />
+      </div>
+    </div>
+  );
+}
