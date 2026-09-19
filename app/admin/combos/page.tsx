@@ -14,7 +14,7 @@ export default async function AdminCombos() {
   const [{ data: prods }, { data: promos }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, base_price_cents, combo_group, combo_min_qty, combo_price_cents")
+      .select("id, name, base_price_cents, combo_group, combo_min_qty, combo_price_cents, variants(color, status, fuera_de_combo)")
       .eq("status", "active")
       .order("name"),
     // Un par con promocion vigente no es elegible para combo (create_order los
@@ -32,7 +32,15 @@ export default async function AdminCombos() {
     (promos ?? []).flatMap((p) => (p.promocion_productos ?? []).map((x) => x.product_id)),
   );
 
-  const pares: ParCombo[] = (prods ?? []).map((p) => ({ ...p, promo: enPromo.has(p.id) }));
+  const pares: ParCombo[] = (prods ?? []).map(({ variants, ...p }) => {
+    // un color esta dentro si alguna de sus tallas activas lo esta
+    const porColor = new Map<string, boolean>();
+    for (const v of variants ?? []) {
+      if (v.status !== "active" || !v.color) continue;
+      porColor.set(v.color, (porColor.get(v.color) ?? false) || !v.fuera_de_combo);
+    }
+    return { ...p, promo: enPromo.has(p.id), colores: [...porColor].map(([color, dentro]) => ({ color, dentro })) };
+  });
 
   return (
     <div className="space-y-5">

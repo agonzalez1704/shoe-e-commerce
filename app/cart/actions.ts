@@ -213,7 +213,7 @@ export async function getCart(): Promise<CartSummary> {
     .from("cart_items")
     .select(
       "quantity, variant_id, " +
-        "variants(sku, size_value, size_system, width, color, price_cents, " +
+        "variants(sku, size_value, size_system, width, color, price_cents, fuera_de_combo, " +
         "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_group, product_images(url, position, color)))",
     )
     .eq("cart_id", cartId);
@@ -225,6 +225,7 @@ export async function getCart(): Promise<CartSummary> {
     variants: {
       size_system: string; size_value: string; width: string; color: string;
       price_cents: number | null;
+      fuera_de_combo: boolean;
       products: {
         id: string; name: string; slug: string; base_price_cents: number;
         combo_min_qty: number | null; combo_price_cents: number | null; combo_group: string | null;
@@ -279,7 +280,8 @@ export async function getCart(): Promise<CartSummary> {
   for (const it of rows) {
     const p = it.variants.products;
     const combo = comboOf(p.combo_min_qty, p.combo_price_cents);
-    if (!p.combo_group || !combo) continue;
+    // un color fuera de combo no entra al pool (espejo de create_order 0064)
+    if (!p.combo_group || !combo || it.variants.fuera_de_combo) continue;
     // promo-discounted, same as the line price — the pool discount then only
     // applies when the combo beats 2×(promo price). Mirrors create_order (0037).
     const unit = precioConPromo(it.variants.price_cents ?? p.base_price_cents, promo.get(p.id) ?? null);

@@ -92,13 +92,13 @@ export default async function ComboExpresPage({
   // trae un par suelto de un grupo de combo.
   const { data: items } = await admin
     .from("order_items")
-    .select("quantity, line_total_cents, variants(products(combo_group, combo_min_qty, combo_price_cents))")
+    .select("quantity, line_total_cents, variants(fuera_de_combo, products(combo_group, combo_min_qty, combo_price_cents))")
     .eq("order_id", order.id);
-  type Fila = { quantity: number; line_total_cents: number; variants: { products: { combo_group: string | null; combo_min_qty: number | null; combo_price_cents: number | null } | null } | null };
+  type Fila = { quantity: number; line_total_cents: number; variants: { fuera_de_combo: boolean; products: { combo_group: string | null; combo_min_qty: number | null; combo_price_cents: number | null } | null } | null };
   const grupos = new Map<string, { min: number; precio: number; unidades: number; pagado: number }>();
   for (const it of (items ?? []) as unknown as Fila[]) {
     const p = it.variants?.products;
-    if (!p?.combo_group || p.combo_min_qty == null || p.combo_price_cents == null) continue;
+    if (it.variants?.fuera_de_combo || !p?.combo_group || p.combo_min_qty == null || p.combo_price_cents == null) continue;
     const g = grupos.get(p.combo_group) ?? { min: p.combo_min_qty, precio: p.combo_price_cents, unidades: 0, pagado: 0 };
     g.unidades += it.quantity;
     g.pagado += it.line_total_cents;
@@ -125,7 +125,7 @@ export default async function ComboExpresPage({
   // del color y sus tallas.
   const { data: prods } = await admin
     .from("products")
-    .select("id, name, slug, base_price_cents, product_images(url, position, color), variants(id, size_system, size_value, width, color, status)")
+    .select("id, name, slug, base_price_cents, product_images(url, position, color), variants(id, size_system, size_value, width, color, status, fuera_de_combo)")
     .eq("combo_group", elegible[0])
     .eq("status", "active")
     .order("name");
@@ -133,7 +133,7 @@ export default async function ComboExpresPage({
   const pares: ParElegible[] = (prods ?? []).flatMap((p) => {
     const porColor = new Map<string, { variantes: { id: string; talla: string }[] }>();
     for (const v of p.variants ?? []) {
-      if (v.status !== "active") continue;
+      if (v.status !== "active" || v.fuera_de_combo) continue;
       const c = porColor.get(v.color) ?? { variantes: [] };
       c.variantes.push({ id: v.id, talla: `${v.size_system} ${v.size_value}` });
       porColor.set(v.color, c);

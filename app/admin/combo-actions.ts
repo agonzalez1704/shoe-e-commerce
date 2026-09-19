@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { requirePermiso } from "@/lib/permisos-guard";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Armador de combos. La membresia vive en products.combo_group (+ combo_min_qty
 // y combo_price_cents): los productos que comparten grupo forman el pool y cada
@@ -90,6 +91,20 @@ export async function crearCombo(grupo: string, minQty: number, priceCents: numb
     .from("products")
     .update({ combo_group: g, combo_min_qty: Math.round(minQty), combo_price_cents: Math.round(priceCents) })
     .in("id", ids);
+  if (error) throw new Error(error.message);
+  refresca();
+}
+
+// Mete o saca UN color del combo (todas sus tallas). El permiso se valida
+// arriba; la escritura va con el cliente de servicio porque la RLS de
+// variantes pide permiso de productos, no de promociones.
+export async function alternarColorCombo(productId: string, color: string, dentro: boolean): Promise<void> {
+  await db();
+  const { error } = await createAdminClient()
+    .from("variants")
+    .update({ fuera_de_combo: !dentro })
+    .eq("product_id", productId)
+    .eq("color", color);
   if (error) throw new Error(error.message);
   refresca();
 }

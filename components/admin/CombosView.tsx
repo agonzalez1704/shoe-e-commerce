@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatCents } from "@/lib/money";
-import { alternarCombo, configurarCombo, crearCombo } from "@/app/admin/combo-actions";
+import { alternarCombo, alternarColorCombo, configurarCombo, crearCombo } from "@/app/admin/combo-actions";
 
 // Armador de combos: un tablero por grupo con switches por par. La decision de
 // "entra / no entra" es un clic, pensado para moverse sobre la marcha.
@@ -16,6 +16,7 @@ export type ParCombo = {
   combo_min_qty: number | null;
   combo_price_cents: number | null;
   promo: boolean; // tiene promocion vigente — combos y promos son excluyentes
+  colores: { color: string; dentro: boolean }[]; // el combo se decide por color
 };
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -137,7 +138,8 @@ function GrupoCard({
       <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
         {miembros.map((p) => (
           <FilaPar key={p.id} par={p} dentro pending={pending}
-            onToggle={() => run(() => alternarCombo(p.id, null))} />
+            onToggle={() => run(() => alternarCombo(p.id, null))}
+            onColor={(color, dentro) => run(() => alternarColorCombo(p.id, color, dentro))} />
         ))}
         {candidatos.map((p) => (
           <FilaPar key={p.id} par={p} dentro={false} pending={pending}
@@ -148,8 +150,9 @@ function GrupoCard({
   );
 }
 
-function FilaPar({ par, dentro, pending, onToggle }: {
+function FilaPar({ par, dentro, pending, onToggle, onColor }: {
   par: ParCombo; dentro: boolean; pending: boolean; onToggle: () => void;
+  onColor?: (color: string, dentro: boolean) => void;
 }) {
   // Un par con promocion vigente no puede entrar: el cobro (create_order)
   // excluye combos de promos y viceversa; permitirlo aqui prometeria un
@@ -167,7 +170,28 @@ function FilaPar({ par, dentro, pending, onToggle }: {
       >
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-[left] ${dentro ? "left-[18px]" : "left-0.5"}`} />
       </button>
-      <span className={`min-w-0 flex-1 truncate ${dentro ? "" : "text-muted"}`}>{par.name}</span>
+      <div className="min-w-0 flex-1">
+        <span className={`block truncate ${dentro ? "" : "text-muted"}`}>{par.name}</span>
+        {/* Por color: un modelo del combo puede tener colores fuera (New Jersey).
+            Tachado = fuera; clic alterna. Solo si el modelo tiene más de un color. */}
+        {dentro && onColor && par.colores.length > 1 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {par.colores.map((c) => (
+              <button
+                key={c.color}
+                type="button"
+                disabled={pending}
+                aria-pressed={c.dentro}
+                onClick={() => onColor(c.color, !c.dentro)}
+                title={c.dentro ? "En el combo — clic para sacarlo" : "Fuera del combo — clic para meterlo"}
+                className={`rounded-full px-2 py-0.5 text-[11px] capitalize transition-colors disabled:opacity-50 ${c.dentro ? "bg-accent-soft text-accent" : "border border-border text-muted line-through"}`}
+              >
+                {c.color}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       {bloqueado && <span className="shrink-0 text-xs text-muted">en promoción — no elegible</span>}
       <span className="nums shrink-0 text-muted">{mxn(par.base_price_cents)}</span>
     </li>

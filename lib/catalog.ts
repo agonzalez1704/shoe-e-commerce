@@ -79,7 +79,7 @@ function toVariantCards(
     combo_min_qty?: number | null; combo_price_cents?: number | null;
     brands: { name: string } | null;
     product_images: { url: string; position: number; color: string | null }[];
-    variants: { id: string; color: string | null; status: string; price_cents?: number | null; size_value?: string | null }[];
+    variants: { id: string; color: string | null; status: string; price_cents?: number | null; size_value?: string | null; fuera_de_combo?: boolean }[];
   },
   promoPct: number | null = null,
   stock: Map<string, number> = new Map(),
@@ -114,7 +114,13 @@ function toVariantCards(
   return colors.map((c) => {
     const ci = imgs.filter((i) => i.color === c);
     const use = ci.length ? ci : imgs; // fall back to all images if none tagged
-    return { key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, tallas: tallasDe(c), ...common };
+    // un color con todas sus variantes fuera de combo no lleva la etiqueta del combo
+    const activas = (p.variants ?? []).filter((v) => v.status === "active" && v.color === c);
+    const fueraCombo = activas.length > 0 && activas.every((v) => v.fuera_de_combo);
+    return {
+      key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, tallas: tallasDe(c), ...common,
+      ...(fueraCombo ? { comboMinQty: null, comboPriceCents: null } : {}),
+    };
   });
 }
 
@@ -127,7 +133,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   let q = supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
     .eq("status", "active");
 
   if (filters.gender) q = q.eq("gender", filters.gender);
@@ -158,7 +164,7 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
     .eq("status", "active")
     .neq("slug", excludeSlug)
     .order("created_at", { ascending: false });
@@ -194,7 +200,7 @@ export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCa
 
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
     .in("id", ids)
     .eq("status", "active");
 
@@ -220,7 +226,7 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
     .eq("status", "active")
     .eq("featured", true)
     .order("created_at", { ascending: false })
@@ -288,7 +294,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value), " +
+      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo), " +
         "product_categories!inner(categories!inner(slug))",
     )
     .eq("status", "active")
@@ -329,6 +335,7 @@ export type ProductDetail = {
   made_to_order: boolean;
   comboMinQty: number | null;
   comboPriceCents: number | null;
+  coloresFueraCombo: string[];
   promoPercent: number | null;
   // free-form specs, per category — empty on products that have none
   attributes: Record<string, string | number | boolean>;
@@ -349,7 +356,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
         "brands(name), " +
         "product_images(url, alt, color, position), " +
         "product_categories(categories(slug)), " +
-        "variants(id, sku, size_value, size_system, width, color, price_cents, status)",
+        "variants(id, sku, size_value, size_system, width, color, price_cents, status, fuera_de_combo)",
     )
     .eq("slug", slug)
     .eq("status", "active")
@@ -368,7 +375,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     product_categories: { categories: { slug: string } | null }[] | null;
     variants: {
       id: string; sku: string; size_value: string | null; size_system: string | null;
-      width: string | null; color: string; price_cents: number | null; status: string;
+      width: string | null; color: string; price_cents: number | null; status: string; fuera_de_combo: boolean;
     }[];
   };
   const p = data as unknown as ProductRow;
@@ -412,6 +419,11 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     made_to_order: p.made_to_order,
     comboMinQty: p.combo_min_qty,
     comboPriceCents: p.combo_price_cents,
+    // colores cuyas variantes activas estan todas fuera del combo
+    coloresFueraCombo: [...new Set(activeVariants.map((v) => v.color))].filter((c) => {
+      const vs = activeVariants.filter((v) => v.color === c);
+      return vs.length > 0 && vs.every((v) => v.fuera_de_combo);
+    }),
     promoPercent,
     attributes: p.attributes ?? {},
   };

@@ -104,14 +104,18 @@ Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spe
         execute: async () => {
           const db = createAdminClient();
           const { data } = await db.from("products")
-            .select("name, status, combo_group, combo_min_qty, combo_price_cents")
+            .select("name, status, combo_group, combo_min_qty, combo_price_cents, variants(color, fuera_de_combo)")
             .eq("status", "active").order("name");
           const dentro = (data ?? []).filter((p) => p.combo_group);
           const fuera = (data ?? []).filter((p) => !p.combo_group);
           const cfg = dentro[0];
           return {
             combo: cfg ? { grupo: cfg.combo_group, pares: cfg.combo_min_qty, precio_mxn: (cfg.combo_price_cents ?? 0) / 100 } : null,
-            dentro: dentro.map((p) => p.name),
+            // el combo es por color: se reportan los colores que quedaron fuera
+            dentro: dentro.map((p) => {
+              const fuera = [...new Set((p.variants ?? []).filter((v) => v.fuera_de_combo).map((v) => v.color))];
+              return fuera.length ? `${p.name} (fuera del combo: ${fuera.join(", ")})` : p.name;
+            }),
             fuera: fuera.map((p) => p.name),
           };
         },

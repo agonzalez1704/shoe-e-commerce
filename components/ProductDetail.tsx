@@ -71,7 +71,8 @@ export function ProductDetail({
 
   const [hero, ...rest] = gallery;
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const combo = comboOf(product.comboMinQty, product.comboPriceCents);
+  // el combo es por color: el color elegido puede estar fuera aunque el modelo este dentro
+  const combo = product.coloresFueraCombo.includes(color) ? null : comboOf(product.comboMinQty, product.comboPriceCents);
 
   // headline price follows the chosen colour (variant override, else base)
   const colorPriceCents = useMemo(

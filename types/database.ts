@@ -1709,6 +1709,7 @@ export type Database = {
           barcode: string | null
           color: string
           created_at: string
+          fuera_de_combo: boolean
           id: string
           price_cents: number | null
           product_id: string
@@ -1722,6 +1723,7 @@ export type Database = {
           barcode?: string | null
           color: string
           created_at?: string
+          fuera_de_combo?: boolean
           id?: string
           price_cents?: number | null
           product_id: string
@@ -1735,6 +1737,7 @@ export type Database = {
           barcode?: string | null
           color?: string
           created_at?: string
+          fuera_de_combo?: boolean
           id?: string
           price_cents?: number | null
           product_id?: string
