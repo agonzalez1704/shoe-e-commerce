@@ -12,6 +12,19 @@ export function precioConPromo(cents: number, percent: number | null | undefined
   return Math.round((cents * (100 - percent)) / 100);
 }
 
+// Una promo cubre todo el modelo (colores null) o solo algunos colores (0065).
+export type PromoEntry = { percent: number; colores: string[] | null };
+
+/** % de promo vigente para un color del modelo, o null. Gana el mayor. */
+export function promoDe(entries: PromoEntry[] | undefined, color: string | null): number | null {
+  let pct = 0;
+  for (const e of entries ?? []) {
+    if (e.colores && !(color && e.colores.includes(color))) continue;
+    pct = Math.max(pct, e.percent);
+  }
+  return pct > 0 ? pct : null;
+}
+
 export type ComboConfig = { minQty: number; priceCents: number };
 
 /** Combo config for a product, or null when it has none / is misconfigured. */

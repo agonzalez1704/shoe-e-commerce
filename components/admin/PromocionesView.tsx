@@ -12,7 +12,9 @@ import {
   eliminarPromocion,
 } from "@/app/admin/promo-actions";
 
-export type ProductoOpcion = { id: string; name: string; base_price_cents: number };
+export type ProductoOpcion = { id: string; name: string; base_price_cents: number; colores: string[] };
+// colores null = todo el modelo; lista = solo esos colores
+type Seleccion = Map<string, string[] | null>;
 export type PromoRow = {
   id: string;
   nombre: string;
@@ -20,7 +22,7 @@ export type PromoRow = {
   startsAt: string;
   endsAt: string;
   active: boolean;
-  productIds: string[];
+  items: { productId: string; colores: string[] | null }[];
 };
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -110,7 +112,7 @@ function PromoItem({ promo, onEdit }: { promo: PromoRow; onEdit: () => void }) {
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${e.cls}`}>{e.label}</span>
         </div>
         <p className="mt-0.5 text-xs text-muted">
-          {fecha(promo.startsAt)} – {fecha(promo.endsAt)} · {promo.productIds.length} pares
+          {fecha(promo.startsAt)} – {fecha(promo.endsAt)} · {promo.items.length} pares
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
@@ -161,7 +163,7 @@ function PromoForm({ productos, promo, onClose }: { productos: ProductoOpcion[];
   const [percent, setPercent] = useState(promo ? String(promo.percent) : "15");
   const [startsAt, setStartsAt] = useState(promo ? aLocal(promo.startsAt) : "");
   const [endsAt, setEndsAt] = useState(promo ? aLocal(promo.endsAt) : "");
-  const [sel, setSel] = useState<Set<string>>(new Set(promo?.productIds ?? []));
+  const [sel, setSel] = useState<Seleccion>(new Map((promo?.items ?? []).map((i) => [i.productId, i.colores])));
   const [q, setQ] = useState("");
 
   const pct = Number(percent);
@@ -172,15 +174,27 @@ function PromoForm({ productos, promo, onClose }: { productos: ProductoOpcion[];
 
   const toggle = (id: string) =>
     setSel((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      const n = new Map(prev);
+      if (n.has(id)) n.delete(id); else n.set(id, null);
+      return n;
+    });
+
+  // Alterna un color. Todos marcados = null (modelo completo, incluye colores
+  // futuros); ninguno = el modelo sale de la promo.
+  const toggleColor = (p: ProductoOpcion, color: string) =>
+    setSel((prev) => {
+      const n = new Map(prev);
+      const actuales = n.get(p.id) ?? p.colores;
+      const sig = actuales.includes(color) ? actuales.filter((c) => c !== color) : [...actuales, color];
+      if (sig.length === 0) n.delete(p.id);
+      else n.set(p.id, sig.length === p.colores.length ? null : sig);
       return n;
     });
 
   function guardar() {
     start(async () => {
       try {
-        const input = { nombre, percent: pct, startsAt, endsAt, productIds: [...sel] };
+        const input = { nombre, percent: pct, startsAt, endsAt, items: [...sel].map(([productId, colores]) => ({ productId, colores })) };
         if (promo) await editarPromocion(promo.id, input);
         else await crearPromocion(input);
         onClose();
@@ -240,7 +254,7 @@ function PromoForm({ productos, promo, onClose }: { productos: ProductoOpcion[];
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-muted">
-            Pares ({sel.size} seleccionados) · combos no aplican
+            Pares ({sel.size} seleccionados)
           </span>
           <input
             value={q}
@@ -269,6 +283,25 @@ function PromoForm({ productos, promo, onClose }: { productos: ProductoOpcion[];
                     )}
                   </span>
                 </label>
+                {/* Por color: solo si el modelo tiene más de uno. Tachado = fuera. */}
+                {on && p.colores.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5 px-3 pb-2 pl-9">
+                    {p.colores.map((c) => {
+                      const dentro = (sel.get(p.id) ?? p.colores).includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          aria-pressed={dentro}
+                          onClick={() => toggleColor(p, c)}
+                          className={`rounded-full px-2 py-0.5 text-[11px] capitalize transition-colors ${dentro ? "bg-accent-soft text-accent" : "border border-border text-muted line-through"}`}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </li>
             );
           })}

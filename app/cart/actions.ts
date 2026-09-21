@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { comboOf, cartComboDiscountCents, poolNudge, precioConPromo, type ComboPool } from "@/lib/pricing";
+import { comboOf, cartComboDiscountCents, poolNudge, precioConPromo, promoDe, type ComboPool } from "@/lib/pricing";
 import { getPromoMap } from "@/lib/catalog";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -251,7 +251,7 @@ export async function getCart(): Promise<CartSummary> {
     const v = it.variants;
     const unit = precioConPromo(
       v.price_cents ?? v.products.base_price_cents,
-      promo.get(v.products.id) ?? null,
+      promoDe(promo.get(v.products.id), v.color),
     );
     const lineTotal = unit * it.quantity;
     subtotal += lineTotal;
@@ -284,7 +284,7 @@ export async function getCart(): Promise<CartSummary> {
     if (!p.combo_group || !combo || it.variants.fuera_de_combo) continue;
     // promo-discounted, same as the line price — the pool discount then only
     // applies when the combo beats 2×(promo price). Mirrors create_order (0037).
-    const unit = precioConPromo(it.variants.price_cents ?? p.base_price_cents, promo.get(p.id) ?? null);
+    const unit = precioConPromo(it.variants.price_cents ?? p.base_price_cents, promoDe(promo.get(p.id), it.variants.color));
     const pool = pools.get(p.combo_group);
     const units = Array(it.quantity).fill(unit);
     if (pool) { pool.unitPrices.push(...units); pool.minPrice = Math.min(pool.minPrice, unit); }
@@ -313,7 +313,8 @@ export async function getCart(): Promise<CartSummary> {
     comboSuggestions = ((sug ?? []) as unknown as Sug[]).map((p) => ({
       slug: p.slug,
       name: p.name,
-      priceCents: precioConPromo(p.base_price_cents, promo.get(p.id) ?? null),
+      // sugerencia por modelo: solo promo de todo el modelo
+      priceCents: precioConPromo(p.base_price_cents, promoDe(promo.get(p.id), null)),
       image: [...(p.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url ?? null,
     }));
   }

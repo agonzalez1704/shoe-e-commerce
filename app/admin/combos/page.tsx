@@ -22,14 +22,15 @@ export default async function AdminCombos() {
     // caja no cobraria.
     supabase
       .from("promociones")
-      .select("promocion_productos(product_id)")
+      .select("promocion_productos(product_id, colores)")
       .eq("active", true)
       .lte("starts_at", ahora)
       .gte("ends_at", ahora),
   ]);
 
   const enPromo = new Set(
-    (promos ?? []).flatMap((p) => (p.promocion_productos ?? []).map((x) => x.product_id)),
+    // solo promos de modelo completo bloquean; una de algunos colores no
+    (promos ?? []).flatMap((p) => (p.promocion_productos ?? []).filter((x) => !x.colores).map((x) => x.product_id)),
   );
 
   const pares: ParCombo[] = (prods ?? []).map(({ variants, ...p }) => {

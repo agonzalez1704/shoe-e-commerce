@@ -1249,14 +1249,17 @@ export type Database = {
       }
       promocion_productos: {
         Row: {
+          colores: string[] | null
           product_id: string
           promocion_id: string
         }
         Insert: {
+          colores?: string[] | null
           product_id: string
           promocion_id: string
         }
         Update: {
+          colores?: string[] | null
           product_id?: string
           promocion_id?: string
         }
@@ -2016,7 +2019,10 @@ export type Database = {
       is_dev: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       iva_of: { Args: { p_inclusive: number }; Returns: number }
-      promo_percent: { Args: { p_product_id: string }; Returns: number }
+      promo_percent: {
+        Args: { p_color?: string; p_product_id: string }
+        Returns: number
+      }
       record_payment: {
         Args: {
           p_amount_cents: number

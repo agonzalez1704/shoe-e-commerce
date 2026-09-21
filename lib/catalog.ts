@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/publico";
 import { cacheLife, cacheTag } from "next/cache";
+import { promoDe, type PromoEntry } from "@/lib/pricing";
 
 export type ProductFilters = {
   brand?: string;   // brand slug
@@ -49,10 +50,11 @@ type FilaConVariantes = { variants?: { id: string }[] };
 const idsDeVariantes = (rows: FilaConVariantes[]) =>
   rows.flatMap((r) => (r.variants ?? []).map((v) => v.id));
 
-// Active promo % per product id, for the storefront to render sale prices.
-// Applies to every product (combos included); when combo units pair up, the
-// combo price reprices them instead. Mirrors promo_percent() + create_order (0037).
-export async function getPromoMap(): Promise<Map<string, number>> {
+// Active promos per product id (each one for all colours or only some), for the
+// storefront to render sale prices; resolve a colour with promoDe(). Applies to
+// every product (combos included); when combo units pair up, the combo price
+// reprices them instead. Mirrors promo_percent() + create_order (0065).
+export async function getPromoMap(): Promise<Map<string, PromoEntry[]>> {
   "use cache";
   cacheLife("minutes");
   cacheTag("promos");
@@ -60,14 +62,14 @@ export async function getPromoMap(): Promise<Map<string, number>> {
   const now = new Date().toISOString();
   const { data } = await supabase
     .from("promocion_productos")
-    .select("product_id, promociones!inner(percent, active, starts_at, ends_at)")
+    .select("product_id, colores, promociones!inner(percent, active, starts_at, ends_at)")
     .eq("promociones.active", true)
     .lte("promociones.starts_at", now)
     .gt("promociones.ends_at", now);
-  const m = new Map<string, number>();
-  for (const r of (data ?? []) as unknown as { product_id: string; promociones: { percent: number } | null }[]) {
+  const m = new Map<string, PromoEntry[]>();
+  for (const r of (data ?? []) as unknown as { product_id: string; colores: string[] | null; promociones: { percent: number } | null }[]) {
     const pct = r.promociones?.percent ?? 0;
-    if (pct > 0 && pct > (m.get(r.product_id) ?? 0)) m.set(r.product_id, pct);
+    if (pct > 0) m.set(r.product_id, [...(m.get(r.product_id) ?? []), { percent: pct, colores: r.colores }]);
   }
   return m;
 }
@@ -81,7 +83,7 @@ function toVariantCards(
     product_images: { url: string; position: number; color: string | null }[];
     variants: { id: string; color: string | null; status: string; price_cents?: number | null; size_value?: string | null; fuera_de_combo?: boolean }[];
   },
-  promoPct: number | null = null,
+  promos: PromoEntry[] | undefined = undefined,
   stock: Map<string, number> = new Map(),
 ): ProductCard[] {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
@@ -105,7 +107,7 @@ function toVariantCards(
   const common = {
     name: p.name, slug: p.slug, brand,
     comboMinQty: p.combo_min_qty ?? null, comboPriceCents: p.combo_price_cents ?? null,
-    promoPercent: promoPct,
+    promoPercent: promoDe(promos, null),
   };
 
   if (colors.length === 0) {
@@ -119,6 +121,7 @@ function toVariantCards(
     const fueraCombo = activas.length > 0 && activas.every((v) => v.fuera_de_combo);
     return {
       key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, tallas: tallasDe(c), ...common,
+      promoPercent: promoDe(promos, c),
       ...(fueraCombo ? { comboMinQty: null, comboPriceCents: null } : {}),
     };
   });
@@ -152,7 +155,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
   return (data ?? []).flatMap((p) => {
     const row = p as Parameters<typeof toVariantCards>[0];
-    return toVariantCards(row, promo.get(row.id) ?? null, stock);
+    return toVariantCards(row, promo.get(row.id), stock);
   });
 }
 
@@ -173,7 +176,7 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
   type Row = Parameters<typeof toVariantCards>[0];
   const promo = await getPromoMap();
   const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
-  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null, stock));
+  const cards = ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id), stock));
   // one card per model
   const bySlug = new Map<string, ProductCard>();
   for (const c of cards) if (!bySlug.has(c.slug)) bySlug.set(c.slug, c);
@@ -212,7 +215,7 @@ export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCa
   return ids
     .map((id) => byId.get(id))
     .filter((p): p is Row => !!p)
-    .map((p) => toVariantCards(p, promo.get(p.id) ?? null, stock)[0])
+    .map((p) => toVariantCards(p, promo.get(p.id), stock)[0])
     .filter(Boolean);
 }
 
@@ -236,7 +239,7 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
   const promo = await getPromoMap();
   const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
   return ((data ?? []) as unknown as Row[])
-    .map((p) => toVariantCards(p, promo.get(p.id) ?? null, stock)[0])
+    .map((p) => toVariantCards(p, promo.get(p.id), stock)[0])
     .filter(Boolean);
 }
 
@@ -305,7 +308,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   type Row = Parameters<typeof toVariantCards>[0];
   const promo = await getPromoMap();
   const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
-  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id) ?? null, stock));
+  return ((data ?? []) as unknown as Row[]).flatMap((p) => toVariantCards(p, promo.get(p.id), stock));
 }
 
 export type ProductDetail = {
@@ -336,7 +339,7 @@ export type ProductDetail = {
   comboMinQty: number | null;
   comboPriceCents: number | null;
   coloresFueraCombo: string[];
-  promoPercent: number | null;
+  promoPorColor: Record<string, number>; // % de promo por color (0065)
   // free-form specs, per category — empty on products that have none
   attributes: Record<string, string | number | boolean>;
 };
@@ -391,9 +394,13 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
 
   const availMap = new Map((avail ?? []).map((a) => [a.variant_id, a.qty_available]));
 
-  // Active promo % via the SQL helper (all products) — single source of truth.
-  const { data: pct } = await supabase.rpc("promo_percent", { p_product_id: p.id });
-  const promoPercent = typeof pct === "number" && pct > 0 ? pct : null;
+  // Promo por color, del mismo mapa que catalogo y carrito (espejo de create_order).
+  const promos = (await getPromoMap()).get(p.id);
+  const promoPorColor: Record<string, number> = {};
+  for (const c of new Set(activeVariants.map((v) => v.color))) {
+    const pct = promoDe(promos, c);
+    if (pct) promoPorColor[c] = pct;
+  }
 
   return {
     id: p.id,
@@ -424,7 +431,7 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
       const vs = activeVariants.filter((v) => v.color === c);
       return vs.length > 0 && vs.every((v) => v.fuera_de_combo);
     }),
-    promoPercent,
+    promoPorColor,
     attributes: p.attributes ?? {},
   };
 });

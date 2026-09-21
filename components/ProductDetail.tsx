@@ -81,8 +81,9 @@ export function ProductDetail({
   );
   // sale price with the active promo (null for combos). precioEfectivo is what
   // the buyer pays and what create_order will charge.
-  const precioEfectivo = precioConPromo(colorPriceCents, product.promoPercent);
-  const onSale = product.promoPercent != null && precioEfectivo < colorPriceCents;
+  const promoPercent = product.promoPorColor[color] ?? null; // la promo puede ser solo de algunos colores
+  const precioEfectivo = precioConPromo(colorPriceCents, promoPercent);
+  const onSale = promoPercent != null && precioEfectivo < colorPriceCents;
 
   // Meta: ViewContent per colour, since each colour is its own catalog item —
   // dynamic ads match on this id
@@ -112,7 +113,7 @@ export function ProductDetail({
       <span className="text-2xl font-medium text-accent">{mxn(precioEfectivo)}</span>
       <span className="text-lg text-muted line-through">{mxn(colorPriceCents)}</span>
       <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-contrast">
-        -{product.promoPercent}%
+        -{promoPercent}%
       </span>
     </p>
   ) : (

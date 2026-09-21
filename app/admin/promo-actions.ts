@@ -13,8 +13,19 @@ export type PromoInput = {
   percent: number;
   startsAt: string; // datetime-local
   endsAt: string;
-  productIds: string[];
+  // colores null = todo el modelo; lista = solo esos colores (0065)
+  items: { productId: string; colores: string[] | null }[];
 };
+
+// Un par por modelo; colores vacios = nada seleccionado de ese modelo.
+function filas(promocionId: string, items: PromoInput["items"]) {
+  const porModelo = new Map<string, string[] | null>();
+  for (const it of items) {
+    if (it.colores && it.colores.length === 0) continue;
+    porModelo.set(it.productId, it.colores ? [...new Set(it.colores)] : null);
+  }
+  return [...porModelo].map(([product_id, colores]) => ({ promocion_id: promocionId, product_id, colores }));
+}
 
 export async function crearPromocion(input: PromoInput): Promise<void> {
   const supabase = await db();
@@ -26,8 +37,7 @@ export async function crearPromocion(input: PromoInput): Promise<void> {
   const starts = new Date(input.startsAt);
   const ends = new Date(input.endsAt);
   if (isNaN(+starts) || isNaN(+ends) || ends <= starts) throw new Error("Rango de fechas inválido");
-  const ids = [...new Set(input.productIds)];
-  if (ids.length === 0) throw new Error("Selecciona al menos un par");
+  if (filas("x", input.items).length === 0) throw new Error("Selecciona al menos un par");
 
   const { data: promo, error } = await supabase
     .from("promociones")
@@ -36,7 +46,7 @@ export async function crearPromocion(input: PromoInput): Promise<void> {
     .single();
   if (error || !promo) throw new Error(error?.message ?? "No se pudo crear la promoción");
 
-  const rows = ids.map((product_id) => ({ promocion_id: promo.id, product_id }));
+  const rows = filas(promo.id, input.items);
   const { error: e2 } = await supabase.from("promocion_productos").insert(rows);
   if (e2) throw new Error(e2.message ?? "No se pudieron asignar los productos");
 
@@ -54,8 +64,7 @@ export async function editarPromocion(id: string, input: PromoInput): Promise<vo
   const starts = new Date(input.startsAt);
   const ends = new Date(input.endsAt);
   if (isNaN(+starts) || isNaN(+ends) || ends <= starts) throw new Error("Rango de fechas inválido");
-  const ids = [...new Set(input.productIds)];
-  if (ids.length === 0) throw new Error("Selecciona al menos un par");
+  if (filas("x", input.items).length === 0) throw new Error("Selecciona al menos un par");
 
   const { error } = await supabase
     .from("promociones")
@@ -66,7 +75,7 @@ export async function editarPromocion(id: string, input: PromoInput): Promise<vo
   // Los pares se reemplazan completos: el formulario manda la selección final.
   const { error: eDel } = await supabase.from("promocion_productos").delete().eq("promocion_id", id);
   if (eDel) throw new Error(eDel.message);
-  const rows = ids.map((product_id) => ({ promocion_id: id, product_id }));
+  const rows = filas(id, input.items);
   const { error: eIns } = await supabase.from("promocion_productos").insert(rows);
   if (eIns) throw new Error(eIns.message ?? "No se pudieron asignar los productos");
 
