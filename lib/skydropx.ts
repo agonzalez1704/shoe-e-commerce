@@ -237,6 +237,17 @@ export async function createShipment(quotationId: string, rate: Rate, to: Addres
         ...(ocurre ? { office_delivery: true, ...(officePointId ? { office_delivery_point_id: officePointId } : {}) } : {}),
       },
     }),
+  }).catch((e: Error) => {
+    // Algunas paqueterias (Estafeta desde sep 2026) piden la cuenta de Skydropx
+    // verificada aunque la cotizacion diga requires_origin_verification=false.
+    // No se compro nada: se explica en vez de mostrar el JSON crudo.
+    if (/unverified headquarter/i.test(e.message)) {
+      throw new Error(
+        `${rate.provider_name} pide que la cuenta de Skydropx esté verificada. No se compró la guía: ` +
+          "elige otra paquetería (FedEx funciona) o verifica la cuenta en Skydropx.",
+      );
+    }
+    throw e;
   });
 
   const id: string | null = j.data?.id ?? j.id ?? null;
