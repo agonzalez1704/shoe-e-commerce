@@ -35,11 +35,11 @@ export function ComboBand({ picks }: { picks: ProductCard[] }) {
               {combo && <> por <span className="text-accent">{mxn(combo.priceCents)}</span></>}
             </h2>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-              Combina 2 {ITEMS} de los modelos del combo — mismo o distinto modelo, cualquier color.
+              Combina 2 {ITEMS} con la etiqueta del combo — mismo o distinto modelo.
               El descuento se aplica solo al agregar 2 al carrito.
             </p>
             <Link
-              href={`/products/${picks[0].slug}`}
+              href="/products?combo=1"
               className="group mt-6 inline-flex items-center gap-2 rounded-full bg-text px-6 py-3 text-sm font-semibold text-bg transition-transform active:scale-[0.98]"
             >
               Armar mi combo

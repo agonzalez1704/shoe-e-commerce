@@ -48,7 +48,7 @@ export default async function AdminCombos() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Combos</h1>
         <p className="mt-1 text-sm text-muted">
-          Decide qué pares entran al combo. La oferta aplica combinando cualquier modelo del grupo.
+          Decide qué pares entran al combo. La oferta aplica combinando los modelos y colores que dejes dentro.
         </p>
       </div>
       <CombosView pares={pares} />

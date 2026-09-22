@@ -408,7 +408,7 @@ const BRANDS: Record<string, BrandConfig> = {
     description:
       "Calzado de piel hecho a mano en León, Guanajuato. Diseño afilado, todas las tallas y anchos, envío gratis a todo el país. Pago con tarjeta, efectivo o Aplazo.",
     emailFrom: "Blade <pedidos@calzadoblade.com>",
-    announcement: "2 PARES POR $1,999 · combina cualquier modelo · Envío gratis a todo México",
+    announcement: "2 PARES POR $1,999 en modelos seleccionados · Envío gratis a todo México",
     seoSuffix: "calzado de piel hecho en México",
     catalogNote: "piel genuina · envío gratis",
     // silver wordmark (transparent PNG); inverted to dark on light theme

@@ -26,20 +26,23 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
     gender: sp.gender,
     sort: (sp.sort as ProductFilters["sort"]) ?? "newest",
   };
-  const products = await listProducts(filters);
+  // ?combo=1: solo los colores que entran al combo (el combo ya no abarca todo el catalogo)
+  const todos = await listProducts(filters);
+  const soloCombo = sp.combo === "1";
+  const products = soloCombo ? todos.filter((p) => p.comboMinQty != null) : todos;
   const { pagina, items } = paginar(products, Number(sp.p));
 
   return (
     <div className="reveal py-8 sm:py-10">
       <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Tienda</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{soloCombo ? "Modelos del combo" : "Tienda"}</h1>
           <p className="mt-1.5 text-sm text-muted">
             {products.length} {products.length === 1 ? "producto" : "productos"}
             {activeBrand.catalogNote ? ` · ${activeBrand.catalogNote}` : ""}
           </p>
         </div>
-        <SortLinks current={filters.sort} />
+        <SortLinks current={filters.sort} combo={soloCombo} />
       </div>
 
       {products.length === 0 ? (
@@ -53,7 +56,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
             pagina={pagina}
             total={products.length}
             base="/products"
-            params={{ brand: sp.brand, gender: sp.gender, sort: sp.sort }}
+            params={{ brand: sp.brand, gender: sp.gender, sort: sp.sort, combo: sp.combo }}
           />
         </>
       )}
@@ -61,7 +64,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   );
 }
 
-function SortLinks({ current }: { current?: string }) {
+function SortLinks({ current, combo }: { current?: string; combo: boolean }) {
   const opts = [
     ["newest", "Nuevo"],
     ["price_asc", "Precio ↑"],
@@ -72,7 +75,7 @@ function SortLinks({ current }: { current?: string }) {
       {opts.map(([val, label]) => (
         <Link
           key={val}
-          href={`/products?sort=${val}`}
+          href={`/products?sort=${val}${combo ? "&combo=1" : ""}`}
           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
             current === val ? "bg-text text-bg" : "text-muted hover:text-text"
           }`}

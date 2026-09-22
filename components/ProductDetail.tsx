@@ -155,10 +155,10 @@ export function ProductDetail({
         Combo {combo.minQty} {ITEMS} — <span className="text-accent">{mxn(combo.priceCents)}</span>
       </p>
       <p className="mt-1.5 text-sm text-muted">
-        Combina {combo.minQty} {ITEMS} del combo — este u otro modelo, cualquier color. El descuento se aplica
+        Combina {combo.minQty} {ITEMS} con la etiqueta del combo — este u otro modelo. El descuento se aplica
         solo al agregar {combo.minQty} al carrito.
       </p>
-      <Link href="/products" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
+      <Link href="/products?combo=1" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
         Ver modelos del combo →
       </Link>
     </div>
