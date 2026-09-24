@@ -225,3 +225,10 @@ input:-webkit-autofill:active {
 }
 .animate-brinco { animation: brinco 0.42s cubic-bezier(.34,1.56,.64,1); }
 @media (prefers-reduced-motion: reduce) { .animate-brinco { animation: none; } }
+
+/* El admin es una herramienta, no una pagina de lectura: ocupa todo el ancho.
+   La tienda sigue centrada en max-w-6xl (app/layout.tsx). */
+main:has([data-admin]) {
+  max-width: none;
+  padding-inline: 1.25rem;
+}

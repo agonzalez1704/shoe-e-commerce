@@ -137,7 +137,7 @@ export default async function AdminProducts({
         ))}
       </div>
 
-      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
+      <div className="divide-y divide-border rounded-2xl border border-border">
         <div className="hidden bg-elevated px-4 py-2.5 text-xs uppercase tracking-wide text-muted md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_120px_120px_120px] md:gap-4">
           <span>Modelo</span>
           <span>Colores</span>
@@ -149,10 +149,7 @@ export default async function AdminProducts({
         {productos.map((p) => (
           <div key={p.id} className="grid gap-3 px-4 py-3 transition-colors hover:bg-elevated/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_120px_120px_120px] md:items-center md:gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-elevated">
-                {p.portada && /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={p.portada} alt="" className="h-full w-full object-cover" />}
-              </span>
+              <Foto url={p.portada} alt={p.name} className="h-14 w-14 rounded-xl" />
               <span className="min-w-0">
                 <Link href={`/admin/products/${p.id}/edit`} className="block truncate text-sm font-medium hover:text-accent">
                   {p.name}
@@ -169,10 +166,7 @@ export default async function AdminProducts({
                   title={`${c.color} · ${c.tallas} tallas${c.enCombo ? " · en combo" : ""}${c.promo ? ` · -${c.promo}%` : ""}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border py-0.5 pl-0.5 pr-2.5 text-xs capitalize text-muted transition-colors hover:border-text hover:text-text"
                 >
-                  <span className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-elevated">
-                    {c.foto && /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={c.foto} alt="" className="h-full w-full object-cover" />}
-                  </span>
+                  <Foto url={c.foto} alt={`${p.name} ${c.color}`} className="h-8 w-8 rounded-full" />
                   {c.color}
                 </Link>
               ))}
@@ -211,5 +205,22 @@ export default async function AdminProducts({
         )}
       </div>
     </div>
+  );
+}
+
+// Los modelos se parecen entre si: la miniatura sola no basta para saber cual
+// es cual, asi que al pasar el cursor se abre la foto en grande.
+function Foto({ url, alt, className }: { url: string | null; alt: string; className: string }) {
+  if (!url) return <span className={`${className} shrink-0 border border-border bg-elevated`} />;
+  return (
+    <span className="group/foto relative shrink-0">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt={alt} className={`${className} border border-border bg-elevated object-cover`} />
+      <span className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 hidden w-64 rounded-xl border border-border bg-surface p-2 shadow-[var(--shadow-md)] group-hover/foto:block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" className="aspect-square w-full rounded-lg object-cover" />
+        <span className="mt-1 block truncate text-center text-xs capitalize text-muted">{alt}</span>
+      </span>
+    </span>
   );
 }

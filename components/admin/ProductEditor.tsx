@@ -214,10 +214,7 @@ export function ProductEditor({
             <CaretLeft size={14} /> Productos
           </Link>
           <span className="hidden h-7 w-px bg-border sm:block" />
-          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-elevated">
-            {portada && /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={portada} alt="" className="h-full w-full object-cover" />}
-          </div>
+          <Foto url={portada} alt={name} className="h-12 w-12 rounded-xl" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="truncate text-base font-semibold tracking-tight">{name || "Producto nuevo"}</span>
@@ -289,10 +286,7 @@ export function ProductEditor({
                       aria-expanded={open}
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
-                      <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-elevated">
-                        {fotos[0] && /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={fotos[0].url} alt="" className="h-full w-full object-cover" />}
-                      </span>
+                      <Foto url={fotos[0]?.url ?? null} alt={`${name} ${color}`} className="h-16 w-16 rounded-xl" />
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium capitalize">{color || "sin color"}</span>
@@ -717,4 +711,21 @@ function EstadoPill({ status }: { status: ProductInput["status"] }) {
   } as const;
   const [label, cls] = map[status];
   return <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${cls}`}>{label}</span>;
+}
+
+// Miniatura con lupa: los modelos se parecen y hay que ver el grabado para
+// distinguirlos, asi que al pasar el cursor se abre la foto en grande.
+function Foto({ url, alt, className }: { url: string | null; alt: string; className: string }) {
+  if (!url) return <span className={`${className} shrink-0 border border-border bg-elevated`} />;
+  return (
+    <span className="group/foto relative shrink-0">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt={alt} className={`${className} border border-border bg-elevated object-cover`} />
+      <span className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 hidden w-72 rounded-xl border border-border bg-surface p-2 shadow-[var(--shadow-md)] group-hover/foto:block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" className="aspect-square w-full rounded-lg object-cover" />
+        <span className="mt-1 block truncate text-center text-xs capitalize text-muted">{alt}</span>
+      </span>
+    </span>
+  );
 }
