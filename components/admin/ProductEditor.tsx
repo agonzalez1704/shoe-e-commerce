@@ -306,28 +306,32 @@ export function ProductEditor({
                       <CaretDown size={16} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
                     </button>
 
-                    <label className="flex items-center gap-2 text-xs text-muted">
-                      Precio del color
-                      <input
-                        value={precioColor}
-                        onChange={(e) => setPrecioColor(idx, e.target.value)}
-                        inputMode="decimal"
-                        placeholder={`usa el base · ${mxn(baseCents)}`}
-                        className={`${IN} nums w-44`}
-                      />
-                    </label>
-
-                    {comboGroup && (
-                      <label className="flex items-center gap-2 border-l border-border pl-3 text-xs">
+                    {/* en pantallas angostas el precio y el combo bajan a su
+                        propio renglon en vez de exprimir el nombre del color */}
+                    <div className="flex w-full items-center gap-3 xl:w-auto">
+                      <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted xl:flex-none">
+                        <span className="shrink-0">Precio</span>
                         <input
-                          type="checkbox"
-                          checked={dentroCombo}
-                          onChange={(e) => setComboColor(idx, e.target.checked)}
-                          className="accent-[var(--accent)]"
+                          value={precioColor}
+                          onChange={(e) => setPrecioColor(idx, e.target.value)}
+                          inputMode="decimal"
+                          placeholder={`usa el base · ${mxn(baseCents)}`}
+                          className={`${IN} nums w-full min-w-0 xl:w-52`}
                         />
-                        En el combo
                       </label>
-                    )}
+
+                      {comboGroup && (
+                        <label className="flex shrink-0 items-center gap-2 border-l border-border pl-3 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={dentroCombo}
+                            onChange={(e) => setComboColor(idx, e.target.checked)}
+                            className="accent-[var(--accent)]"
+                          />
+                          En el combo
+                        </label>
+                      )}
+                    </div>
                   </div>
 
                   {open && (
