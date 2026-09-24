@@ -294,7 +294,7 @@ export function ProductEditor({
                           {fotos.length === 0 && <Pill tone="warn">sin fotos</Pill>}
                         </span>
                         <span className="block truncate text-xs text-muted">
-                          {idx.length} tallas · {madeToOrder ? "sobre pedido" : `${stock} en stock`} · {fotos.length} fotos
+                          {idx.length} tallas · {madeToOrder ? "sobre pedido" : `${stock} en stock`} · {fotos.length === 1 ? "1 foto" : `${fotos.length} fotos`}
                         </span>
                       </span>
                       <CaretDown size={16} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
@@ -309,7 +309,7 @@ export function ProductEditor({
                           value={precioColor}
                           onChange={(e) => setPrecioColor(idx, e.target.value)}
                           inputMode="decimal"
-                          placeholder={`usa el base · ${mxn(baseCents)}`}
+                          placeholder={`usa el base (${mxn(baseCents)})`}
                           className={`${IN} nums w-full min-w-0 xl:w-52`}
                         />
                       </label>
