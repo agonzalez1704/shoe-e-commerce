@@ -9,6 +9,37 @@ import { useAngleJob, useAngleJobsStore } from "@/lib/stores/angle-jobs";
 
 const BUCKET = "product-images";
 
+const MAX_LADO = 2000;   // px: mas que esto no lo aprovecha ninguna pantalla
+const MAX_SUBIDA = 4.5;  // MB: el bucket corta en 5, se deja margen
+
+// Reduce y convierte a WebP en el navegador. Si algo falla (formato raro, canvas
+// bloqueado) devuelve el archivo original: subir tal cual es mejor que no subir.
+async function comprime(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  const pequeno = file.size < MAX_SUBIDA * 1024 * 1024;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const escala = Math.min(1, MAX_LADO / Math.max(bitmap.width, bitmap.height));
+    if (pequeno && escala === 1 && file.type === "image/webp") return file;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * escala);
+    canvas.height = Math.round(bitmap.height * escala);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/webp", 0.86));
+    if (!blob || (pequeno && blob.size >= file.size)) return file;
+    const nombre = file.name.replace(/\.[^.]+$/, "") + ".webp";
+    return new File([blob], nombre, { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
+
 export function ImageUploader({
   images,
   colors,
@@ -73,7 +104,11 @@ export function ImageUploader({
     const defaultColor = colors[0] ?? null;
 
     try {
-      for (const file of Array.from(files)) {
+      for (const original of Array.from(files)) {
+        // Se comprime ANTES de subir: los PNG que salen de auto-toon pesan 5-6 MB
+        // y el bucket corta en 5 ("The object exceeded the maximum allowed size").
+        // WebP a 2000 px deja la misma foto en ~350 KB y baja el egreso de Supabase.
+        const file = await comprime(original);
         const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const path = `${crypto.randomUUID()}-${safe}`;
         const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
