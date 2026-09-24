@@ -16,6 +16,8 @@ export type VariantInput = {
   sku: string;
   price_cents: number | null;
   qty_on_hand: number;
+  fuera_de_combo: boolean; // este color no entra al combo (0064)
+  activo: boolean;         // apagar una talla sin borrarla
 };
 
 export type ProductImageInput = { url: string; color: string | null };
@@ -85,7 +87,8 @@ async function writeVariants(
       width: v.width,
       color: v.color,
       price_cents: v.price_cents,
-      status: "active" as const,
+      fuera_de_combo: v.fuera_de_combo,
+      status: (v.activo ? "active" : "inactive") as "active" | "inactive",
     };
 
     let variantId = v.id;

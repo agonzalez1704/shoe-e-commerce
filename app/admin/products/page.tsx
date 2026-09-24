@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
+import { getPromoMap } from "@/lib/catalog";
+import { promoDe } from "@/lib/pricing";
 import { ProductStatusToggle } from "@/components/ProductStatusToggle";
 import { requirePagePermiso } from "@/lib/permisos-guard";
 
@@ -11,60 +13,202 @@ export const instant = false;
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
-export default async function AdminProducts() {
+type Row = {
+  id: string; name: string; slug: string; status: "draft" | "active" | "archived";
+  base_price_cents: number; made_to_order: boolean; combo_group: string | null;
+  brands: { name: string } | null;
+  product_images: { url: string; color: string | null; position: number }[];
+  variants: { id: string; color: string; status: string; fuera_de_combo: boolean; inventory: { qty_on_hand: number } | null }[];
+};
+
+const FILTROS = [
+  ["", "Todos"],
+  ["activos", "Activos"],
+  ["combo", "En combo"],
+  ["promo", "Con promoción"],
+  ["borradores", "Borradores"],
+] as const;
+
+export default async function AdminProducts({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; f?: string }>;
+}) {
   await requirePagePermiso("productos_gestionar");
+  const sp = await searchParams;
   const supabase = await createClient();
+
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, status, base_price_cents, brands(name), variants(id)")
+    .select(
+      "id, name, slug, status, base_price_cents, made_to_order, combo_group, brands(name), " +
+        "product_images(url, color, position), " +
+        "variants(id, color, status, fuera_de_combo, inventory(qty_on_hand))",
+    )
     .order("created_at", { ascending: false });
 
-  type Row = {
-    id: string; name: string; slug: string; status: "draft" | "active" | "archived";
-    base_price_cents: number; brands: { name: string } | null; variants: { id: string }[];
+  const promoMap = await getPromoMap();
+  const todos = (data ?? []) as unknown as Row[];
+
+  // Una ficha por color: foto, si entra al combo y su promo. Es lo que el
+  // listado viejo no decia — solo daba el numero de variantes.
+  const filas = todos.map((p) => {
+    const activas = p.variants.filter((v) => v.status === "active");
+    const promos = promoMap.get(p.id);
+    const colores = [...new Set(activas.map((v) => v.color))].map((color) => {
+      const suyas = activas.filter((v) => v.color === color);
+      return {
+        color,
+        foto: p.product_images.find((i) => i.color === color)?.url ?? null,
+        tallas: suyas.length,
+        enCombo: !!p.combo_group && suyas.some((v) => !v.fuera_de_combo),
+        promo: promoDe(promos, color),
+      };
+    });
+    const stock = activas.reduce((s, v) => s + (v.inventory?.qty_on_hand ?? 0), 0);
+    const enCombo = colores.filter((c) => c.enCombo).length;
+    const conPromo = colores.filter((c) => c.promo).length;
+    return {
+      ...p,
+      portada: [...p.product_images].sort((a, b) => a.position - b.position)[0]?.url ?? null,
+      colores,
+      variantes: activas.length,
+      stock,
+      enCombo,
+      conPromo,
+      pctMax: Math.max(0, ...colores.map((c) => c.promo ?? 0)),
+    };
+  });
+
+  const q = (sp.q ?? "").trim().toLowerCase();
+  const f = sp.f ?? "";
+  const productos = filas.filter((p) => {
+    if (q && !(`${p.name} ${p.slug} ${p.colores.map((c) => c.color).join(" ")}`.toLowerCase().includes(q))) return false;
+    if (f === "activos") return p.status === "active";
+    if (f === "borradores") return p.status !== "active";
+    if (f === "combo") return p.enCombo > 0;
+    if (f === "promo") return p.conPromo > 0;
+    return true;
+  });
+
+  const totalColores = productos.reduce((s, p) => s + p.colores.length, 0);
+  const href = (params: { q?: string; f?: string }) => {
+    const u = new URLSearchParams();
+    if (params.q) u.set("q", params.q);
+    if (params.f) u.set("f", params.f);
+    const s = u.toString();
+    return s ? `/admin/products?${s}` : "/admin/products";
   };
-  const products = (data ?? []) as unknown as Row[];
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">Productos</h1>
-          <span className="text-sm text-muted">{products.length}</span>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-xl font-semibold tracking-tight">Productos</h1>
+        <span className="nums rounded-full border border-border bg-elevated px-2.5 py-0.5 text-xs text-muted">
+          {productos.length} modelos · {totalColores} colores
+        </span>
+        <div className="flex-1" />
         <Link href="/admin/products/new" className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-contrast">
           Nuevo producto
         </Link>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="bg-elevated text-left text-xs uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3 text-right">Variantes</th>
-              <th className="px-4 py-3 text-right">Precio</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3 text-right">Editar</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {products.map((p) => (
-              <tr key={p.id} className="transition-colors hover:bg-elevated">
-                <td className="px-4 py-3">
-                  <Link href={`/products/${p.slug}`} className="font-medium hover:text-accent">{p.name}</Link>
-                  {p.brands?.name && <p className="text-xs text-muted">{p.brands.name}</p>}
-                </td>
-                <td className="nums px-4 py-3 text-right">{p.variants?.length ?? 0}</td>
-                <td className="nums px-4 py-3 text-right">{mxn(p.base_price_cents)}</td>
-                <td className="px-4 py-3"><ProductStatusToggle productId={p.id} status={p.status} /></td>
-                <td className="px-4 py-3 text-right">
-                  <Link href={`/admin/products/${p.id}/edit`} className="text-sm text-accent hover:underline">Editar</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap items-center gap-2">
+        <form className="contents">
+          <input
+            type="search"
+            name="q"
+            defaultValue={sp.q ?? ""}
+            placeholder="Buscar por modelo, color o slug"
+            className="w-72 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-text"
+          />
+          {f && <input type="hidden" name="f" value={f} />}
+        </form>
+        {FILTROS.map(([id, label]) => (
+          <Link
+            key={id || "todos"}
+            href={href({ q: sp.q, f: id })}
+            className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
+              f === id ? "bg-text font-medium text-bg" : "border border-border text-muted hover:text-text"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
+        <div className="hidden bg-elevated px-4 py-2.5 text-xs uppercase tracking-wide text-muted md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_120px_120px_120px] md:gap-4">
+          <span>Modelo</span>
+          <span>Colores</span>
+          <span>Tallas y stock</span>
+          <span>Precio</span>
+          <span>Estado</span>
+        </div>
+
+        {productos.map((p) => (
+          <div key={p.id} className="grid gap-3 px-4 py-3 transition-colors hover:bg-elevated/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_120px_120px_120px] md:items-center md:gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-elevated">
+                {p.portada && /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={p.portada} alt="" className="h-full w-full object-cover" />}
+              </span>
+              <span className="min-w-0">
+                <Link href={`/admin/products/${p.id}/edit`} className="block truncate text-sm font-medium hover:text-accent">
+                  {p.name}
+                </Link>
+                <span className="nums block truncate text-xs text-muted">/{p.slug}</span>
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {p.colores.map((c) => (
+                <Link
+                  key={c.color}
+                  href={`/admin/products/${p.id}/edit`}
+                  title={`${c.color} · ${c.tallas} tallas${c.enCombo ? " · en combo" : ""}${c.promo ? ` · -${c.promo}%` : ""}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border py-0.5 pl-0.5 pr-2.5 text-xs capitalize text-muted transition-colors hover:border-text hover:text-text"
+                >
+                  <span className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-elevated">
+                    {c.foto && /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={c.foto} alt="" className="h-full w-full object-cover" />}
+                  </span>
+                  {c.color}
+                </Link>
+              ))}
+              {p.colores.length === 0 && <span className="text-xs text-muted">Sin variantes</span>}
+            </div>
+
+            <div className="text-sm">
+              <span className="nums">{p.variantes} variantes</span>
+              <span className="block text-xs text-muted">{p.made_to_order ? "Sobre pedido" : `${p.stock} en stock`}</span>
+            </div>
+
+            <div className="text-sm">
+              <span className="nums">{mxn(p.base_price_cents)}</span>
+              {p.pctMax > 0 && (
+                <span className="nums block text-xs text-accent">
+                  -{p.pctMax}% · {mxn(Math.round((p.base_price_cents * (100 - p.pctMax)) / 100))}
+                </span>
+              )}
+              <span className="block text-xs text-muted">
+                {p.enCombo === 0
+                  ? "Fuera del combo"
+                  : p.enCombo === p.colores.length
+                    ? "En combo"
+                    : `Combo: ${p.enCombo} de ${p.colores.length}`}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <ProductStatusToggle productId={p.id} status={p.status} />
+            </div>
+          </div>
+        ))}
+
+        {productos.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-muted">Ningún producto coincide.</p>
+        )}
       </div>
     </div>
   );

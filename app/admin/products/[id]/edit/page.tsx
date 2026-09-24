@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
-import { ProductForm } from "@/components/ProductForm";
+import { ProductEditor } from "@/components/admin/ProductEditor";
+import { getPromoMap } from "@/lib/catalog";
+import { promoDe } from "@/lib/pricing";
 import type { ProductInput } from "@/app/admin/product-actions";
 
 // Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
@@ -18,9 +18,9 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     supabase
       .from("products")
       .select(
-        "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, featured, attributes, " +
+        "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, featured, attributes, combo_group, " +
           "product_images(url, color, position), " +
-          "variants(id, size_value, size_system, width, color, sku, price_cents, inventory(qty_on_hand))",
+          "variants(id, size_value, size_system, width, color, sku, price_cents, status, fuera_de_combo, inventory(qty_on_hand))",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -34,14 +34,24 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     gender: string | null; base_price_cents: number; status: "draft" | "active" | "archived";
     made_to_order: boolean;
     featured: boolean;
+    combo_group: string | null;
     attributes: Record<string, string | number | boolean> | null;
     product_images: { url: string; color: string | null; position: number }[];
     variants: {
-      id: string; size_value: string; size_system: "US" | "EU" | "UK"; width: "narrow" | "medium" | "wide";
-      color: string; sku: string; price_cents: number | null; inventory: { qty_on_hand: number } | null;
+      id: string; size_value: string; size_system: "MX" | "US" | "EU" | "UK"; width: "narrow" | "medium" | "wide";
+      color: string; sku: string; price_cents: number | null; status: string; fuera_de_combo: boolean;
+      inventory: { qty_on_hand: number } | null;
     }[];
   };
   const p = product as unknown as Raw;
+
+  // % de promo por color, del mismo mapa que usa la tienda (0065).
+  const promos = (await getPromoMap()).get(p.id);
+  const promoPorColor: Record<string, number> = {};
+  for (const c of new Set(p.variants.map((v) => v.color))) {
+    const pct = promoDe(promos, c);
+    if (pct) promoPorColor[c] = pct;
+  }
 
   const initial: ProductInput = {
     id: p.id,
@@ -58,25 +68,29 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     made_to_order: p.made_to_order,
     featured: p.featured,
     images: [...p.product_images].sort((a, b) => a.position - b.position).map((i) => ({ url: i.url, color: i.color })),
-    variants: p.variants.map((v) => ({
-      id: v.id,
-      size_value: v.size_value,
-      size_system: v.size_system,
-      width: v.width,
-      color: v.color,
-      sku: v.sku,
-      price_cents: v.price_cents,
-      qty_on_hand: v.inventory?.qty_on_hand ?? 0,
-    })),
+    // ordenadas por color y luego por talla: el editor las agrupa por color
+    variants: [...p.variants]
+      .sort((a, b) => a.color.localeCompare(b.color, "es") || Number(a.size_value) - Number(b.size_value))
+      .map((v) => ({
+        id: v.id,
+        size_value: v.size_value,
+        size_system: v.size_system,
+        width: v.width,
+        color: v.color,
+        sku: v.sku,
+        price_cents: v.price_cents,
+        qty_on_hand: v.inventory?.qty_on_hand ?? 0,
+        fuera_de_combo: v.fuera_de_combo,
+        activo: v.status === "active",
+      })),
   };
 
   return (
-    <div className="space-y-6">
-      <Link href="/admin/products" className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
-        <CaretLeft size={14} /> Productos
-      </Link>
-      <h1 className="text-xl font-semibold tracking-tight">Editar: {p.name}</h1>
-      <ProductForm brands={brands ?? []} initial={initial} />
-    </div>
+    <ProductEditor
+      brands={brands ?? []}
+      initial={initial}
+      promoPorColor={promoPorColor}
+      comboGroup={p.combo_group}
+    />
   );
 }
