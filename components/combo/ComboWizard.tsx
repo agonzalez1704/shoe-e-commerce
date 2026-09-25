@@ -26,10 +26,16 @@ export function ComboWizard({
   cards,
   combo,
   par1Inicial,
+  par1EnCarrito = false,
+  abrir = null,
 }: {
   cards: ProductCard[];
   combo: ComboConfig;
-  par1Inicial: { slug: string; color: string | null } | null;
+  // Desde la ficha: con `variantId` la talla ya esta elegida y se salta al paso 2.
+  par1Inicial: { slug: string; color: string | null; variantId?: string | null } | null;
+  // El par 1 ya se agrego al carrito desde la ficha: al cerrar solo se agrega el 2.
+  par1EnCarrito?: boolean;
+  abrir?: string | null; // key de una tarjeta cuya hoja de talla abre de entrada
 }) {
   const porKey = useMemo(() => new Map(cards.map((c) => [c.key, c])), [cards]);
   const precioDe = (c: ProductCard) => precioConPromo(c.base_price_cents, c.promoPercent);
@@ -53,10 +59,15 @@ export function ComboWizard({
     // Desde una ficha de producto: ese color abre su hoja de talla como par 1.
     if (par1Inicial) {
       const c = cards.find((x) => x.slug === par1Inicial.slug && (!par1Inicial.color || x.color === par1Inicial.color));
-      if (c) { setPar1(null); setPar2(null); setHoja(c.key); }
+      const t = c && par1Inicial.variantId ? c.tallas.find((x) => x.variantId === par1Inicial.variantId) : null;
+      if (c && t) {
+        setPar1({ key: c.key, variantId: t.variantId, talla: `MX ${t.talla}` });
+        setPar2(null);
+        setHoja(abrir && porKey.has(abrir) ? abrir : null);
+      } else if (c) { setPar1(null); setPar2(null); setHoja(c.key); }
     }
     setCargado(true);
-  }, [cards, porKey, par1Inicial]);
+  }, [cards, porKey, par1Inicial, abrir]);
   useEffect(() => {
     if (!cargado) return;
     try { sessionStorage.setItem(STORAGE, JSON.stringify({ par1, par2 })); } catch { /* nada */ }
@@ -159,7 +170,7 @@ export function ComboWizard({
       )}
 
       {paso === 3 && c1 && c2 && par1 && par2 && (
-        <Resumen c1={c1} c2={c2} par1={par1} par2={par2} combo={combo} precioDe={precioDe} onCambiar={(n) => (n === 1 ? setHoja(c1.key) : setPar2(null))} />
+        <Resumen c1={c1} c2={c2} par1={par1} par2={par2} combo={combo} precioDe={precioDe} yaEnCarrito={par1EnCarrito ? par1Inicial?.variantId ?? null : null} onCambiar={(n) => (n === 1 ? setHoja(c1.key) : setPar2(null))} />
       )}
 
       {/* barra inferior: los dos huecos del combo, siempre visibles */}
@@ -299,9 +310,10 @@ function HojaTalla({ card, hermanas, n, precioDesde, precioDe, onCambiarColor, o
   );
 }
 
-function Resumen({ c1, c2, par1, par2, combo, precioDe, onCambiar }: {
+function Resumen({ c1, c2, par1, par2, combo, precioDe, yaEnCarrito, onCambiar }: {
   c1: ProductCard; c2: ProductCard; par1: Sel; par2: Sel; combo: ComboConfig;
   precioDe: (c: ProductCard) => number;
+  yaEnCarrito: string | null; // variante del par 1 que ya se agrego desde la ficha
   onCambiar: (n: 1 | 2) => void;
 }) {
   const [pending, start] = useTransition();
@@ -316,7 +328,9 @@ function Resumen({ c1, c2, par1, par2, combo, precioDe, onCambiar }: {
   const ir = (destino: "checkout" | "cart") =>
     start(async () => {
       setError(null);
-      const r = await agregarCombo([par1.variantId, par2.variantId], destino);
+      // si el par 1 ya esta en el carrito (se agrego desde la ficha) no se duplica
+      const ids = yaEnCarrito === par1.variantId ? [par2.variantId] : [par1.variantId, par2.variantId];
+      const r = await agregarCombo(ids, destino);
       if (r && !r.ok) setError(r.error);
       else { try { sessionStorage.removeItem(STORAGE); } catch { /* nada */ } }
     });

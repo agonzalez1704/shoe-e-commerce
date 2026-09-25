@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
-import { getProduct, listRelatedProducts } from "@/lib/catalog";
+import { getProduct, listProducts, listRelatedProducts, type ProductCard } from "@/lib/catalog";
 import { activeBrand } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
 import { getProductReviews } from "@/lib/reviews";
@@ -64,10 +64,21 @@ export default async function ProductPage({
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  const [reviews, related] = await Promise.all([
+  const [reviews, related, catalogo] = await Promise.all([
     getProductReviews(product.id),
     listRelatedProducts(slug, 3),
+    listProducts(),
   ]);
+
+  // Pares del combo para la invitacion al segundo par: dos clasicos y un
+  // exotico, de modelos distintos a este (cache compartida con la tienda).
+  const sugeridos: ProductCard[] = [];
+  for (const exotico of [false, false, true]) {
+    const c = catalogo.find((x) =>
+      x.slug !== slug && x.exotico === exotico && x.comboMinQty != null && x.image &&
+      !sugeridos.some((s) => s.slug === x.slug));
+    if (c) sugeridos.push(c);
+  }
 
   const url = `${SITE_URL}/products/${slug}`;
   const productJsonLd = {
@@ -105,16 +116,16 @@ export default async function ProductPage({
   };
 
   return (
-    <div className="py-8">
+    <div className="pt-0 md:py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      <nav className="mb-6 flex items-center gap-1 text-xs text-muted">
+      <nav className="mb-6 hidden items-center gap-1 text-xs text-muted md:flex">
         <Link href="/products" className="transition-colors hover:text-text">Tienda</Link>
         <CaretRight size={12} />
         <span className="text-text">{product.name}</span>
       </nav>
 
-      <ProductDetail product={product} initialColor={color} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
+      <ProductDetail product={product} initialColor={color} sugeridos={sugeridos} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
 
       {/* Editorial bands for whichever category this product belongs to. Nothing
           renders until the brand supplies the art, so a store without it just
@@ -122,6 +133,8 @@ export default async function ProductPage({
       {categoryFeatures.map((f, i) => (
         <EditorialFeature key={`${f.eyebrow}-${i}`} f={f} />
       ))}
+
+      <ProductReviews summary={reviews} />
 
       {related.length > 0 && (
         <section className="mt-16 border-t border-border pt-10">
@@ -137,8 +150,6 @@ export default async function ProductPage({
           <ProductGrid products={related} />
         </section>
       )}
-
-      <ProductReviews summary={reviews} />
     </div>
   );
 }

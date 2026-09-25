@@ -10,7 +10,7 @@ export const metadata = { title: "Arma tu combo" };
 export default async function ArmarCombo({
   searchParams,
 }: {
-  searchParams: Promise<{ par1?: string; color?: string }>;
+  searchParams: Promise<{ par1?: string; color?: string; variante?: string; enCarrito?: string; abrir?: string }>;
 }) {
   const sp = await searchParams;
   const cards = (await listProducts()).filter((c) => c.comboMinQty != null && c.comboPriceCents != null);
@@ -22,7 +22,9 @@ export default async function ArmarCombo({
     <ComboWizard
       cards={cards}
       combo={combo}
-      par1Inicial={sp.par1 ? { slug: sp.par1, color: sp.color ?? null } : null}
+      par1Inicial={sp.par1 ? { slug: sp.par1, color: sp.color ?? null, variantId: sp.variante ?? null } : null}
+      par1EnCarrito={sp.enCarrito === "1"}
+      abrir={sp.abrir ?? null}
     />
   );
 }

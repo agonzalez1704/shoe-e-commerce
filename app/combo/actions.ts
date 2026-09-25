@@ -6,7 +6,7 @@ import { addToCart } from "@/app/cart/actions";
 // Cierra el wizard: mete los dos pares al carrito y manda a pagar (o a seguir
 // viendo). El precio del combo lo calcula el carrito/create_order, no aqui.
 export async function agregarCombo(
-  variantIds: [string, string],
+  variantIds: string[],
   destino: "checkout" | "cart" = "checkout",
 ): Promise<{ ok: false; error: string } | never> {
   try {

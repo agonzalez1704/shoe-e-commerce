@@ -12,10 +12,12 @@ import { SpecHighlights } from "@/components/SpecHighlights";
 import { ZoomImage } from "@/components/ZoomImage";
 import { Lightbox } from "@/components/Lightbox";
 import { VariantPicker } from "@/components/VariantPicker";
+import { GaleriaPdp } from "@/components/pdp/GaleriaPdp";
+import { CompraPdp } from "@/components/pdp/CompraPdp";
 import { Stars } from "@/components/Stars";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
-import type { ProductDetail as Product } from "@/lib/catalog";
+import type { ProductDetail as Product, ProductCard } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -46,10 +48,12 @@ export function ProductDetail({
   product,
   rating,
   initialColor,
+  sugeridos = [],
 }: {
   product: Product;
   rating?: { average: number; count: number };
   initialColor?: string;
+  sugeridos?: ProductCard[]; // pares del combo para la invitacion al segundo par
 }) {
   const colors = useMemo(
     () => Array.from(new Set(product.variants.map((v) => v.color))),
@@ -225,84 +229,82 @@ export function ProductDetail({
   // recorte cerrado es el correcto.
   const unaFoto = gallery.length === 1;
 
-  // La galería del showcase. Sin esto, una tienda con 13 fotos por producto
-  // mostraría una sola: el layout nació para un catálogo de una foto.
-  const galeria = (
-    <div className="order-1 md:order-2">
-      <div className={`aspect-square overflow-hidden rounded-3xl ${unaFoto ? "bg-white" : "border border-border bg-elevated"}`}>
-        {foto(unaFoto ? "contain" : "cover")}
-      </div>
-      {rest.length > 0 && (
-        <ul className="no-scrollbar mt-3 flex gap-2 overflow-x-auto overscroll-x-contain">
-          {rest.map((img, i) => (
-            <li key={i} className="w-16 shrink-0 sm:w-20">
-              <div className="aspect-square overflow-hidden rounded-xl border border-border bg-elevated">
-                <ZoomImage src={img.url} alt={img.alt ?? product.name} onClick={() => setLightbox(i + 1)} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-
-  // ---- showcase: bandas a sangre, nombre en escala editorial, cifras grandes.
-  // Es la lectura del sitio de referencia que estos datos aguantan: una foto por
-  // producto y dos a cuatro cifras. Va por marca porque cambiar el layout de una
-  // tienda que ya vende no es gratis.
+  // ---- showcase (default de todas las tiendas). Rediseño 2026-09: la compra
+  // manda. En celular (96% de las visitas) foto deslizable, precio, color y
+  // talla sin bajar, y una barra fija con las dos compras. En escritorio,
+  // fotos en rejilla y el panel de compra fijo a la derecha. Los detalles van
+  // plegados abajo: antes empujaban la talla ~1,500 px.
   if (SHOWCASE) {
+    const colores = colors.map((c) => ({
+      color: c,
+      foto: product.images.find((i) => i.color === c)?.url ?? null,
+    }));
+    const conClasico = combo ? precioPar(combo, esExotico ? 1 : 0) : null;
     return (
-      <div>
+      <div className="pb-28 md:pb-0">
         {lightboxEl}
 
-        {/* banda del hero */}
-        <section className="ml-[calc(50%-50vw)] w-screen border-b border-border bg-elevated/40">
-          <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-[1.05fr_1fr] md:items-center md:gap-12 md:py-16">
-            <div className="order-2 md:order-1">
-              {product.brand && (
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent">{product.brand}</p>
-              )}
-              <h1 className="mt-3 text-4xl font-semibold uppercase leading-[0.9] tracking-tight sm:text-6xl md:text-7xl">
-                {product.name}
-              </h1>
-              {estrellas && <div className="mt-3">{estrellas}</div>}
-              {product.description && (
-                <p className="mt-4 max-w-prose text-sm leading-relaxed text-muted">{product.description}</p>
-              )}
-              <div className="mt-6">{precio}{notaPrecio}</div>
-              <a
-                href="#comprar"
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98] md:hidden"
-              >
-                Comprar
-              </a>
+        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_420px] md:gap-12 lg:gap-16">
+          <GaleriaPdp images={gallery} name={product.name} onOpen={setLightbox} />
+
+          <div className="space-y-5 md:sticky md:top-24 md:self-start">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                {product.brand && (
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-accent">{product.brand}</p>
+                )}
+                <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight md:text-4xl">{product.name}</h1>
+                {estrellas && <div className="mt-1.5">{estrellas}</div>}
+              </div>
+              <div className="shrink-0 text-right">
+                {onSale ? (
+                  <>
+                    <p className="nums text-[22px] font-bold text-accent md:text-[28px]">{mxn(precioEfectivo)}</p>
+                    <p className="nums text-xs text-muted line-through">{mxn(colorPriceCents)}</p>
+                  </>
+                ) : (
+                  <p className="nums text-[22px] font-bold md:text-[28px]">{mxn(colorPriceCents)}</p>
+                )}
+                {conClasico != null && (
+                  <p className="text-xs text-muted">o 2 pares <strong className="nums text-text">{mxn(conClasico)}</strong></p>
+                )}
+              </div>
             </div>
-            {galeria}
-          </div>
-        </section>
+            {notaPrecio}
 
-        {/* banda de cifras */}
-        <section className="ml-[calc(50%-50vw)] w-screen border-b border-border">
-          <div className="mx-auto max-w-6xl">
-            <SpecHighlights attributes={product.attributes} variant="band" />
-          </div>
-        </section>
+            <CompraPdp
+              slug={product.slug}
+              name={product.name}
+              variants={product.variants}
+              color={color}
+              colores={colores}
+              onColorChange={setColor}
+              madeToOrder={product.made_to_order}
+              precioCents={precioEfectivo}
+              combo={combo}
+              esExotico={esExotico}
+              sugeridos={sugeridos.filter((s) => s.slug !== product.slug)}
+              sizeHint={activeBrand.pdp?.sizeHint}
+            />
 
-        {/* comprar */}
-        <div id="comprar" className="mx-auto grid max-w-6xl scroll-mt-20 gap-10 py-12 md:grid-cols-2 md:gap-14">
-          <div className="space-y-6">
             {valueProps}
-            {comboBox}
-            {reassuranceBox}
-            {info}
           </div>
-          <div className="md:sticky md:top-24 md:self-start">
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              {precio}
-              {notaPrecio}
-              {picker}
-            </div>
-          </div>
+        </div>
+
+        {/* los detalles, plegados */}
+        <div className="mx-auto mt-10 max-w-3xl md:mt-16">
+          <SpecHighlights attributes={product.attributes} variant="band" />
+          {product.description && (
+            <details open className="group border-b border-border py-1">
+              <summary className="flex cursor-pointer list-none items-center py-3 text-sm font-medium marker:hidden [&::-webkit-details-marker]:hidden">
+                Descripción
+                <span className="ml-auto text-muted transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <p className="pb-4 text-sm leading-relaxed text-muted">{product.description}</p>
+            </details>
+          )}
+          {reassuranceBox && <div className="my-4">{reassuranceBox}</div>}
+          {info}
         </div>
       </div>
     );
