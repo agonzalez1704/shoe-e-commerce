@@ -247,11 +247,13 @@ const BRANDS: Record<string, BrandConfig> = {
       // y ya aprobadas, no material inventado para llenar el carrusel.
       slides: [
         {
-          // Poster del Thunder con "Nueva coleccion" horneado a la izquierda:
-          // sin texto DOM, el boton abajo para no taparlo. En movil el 4:5 se
-          // centra en el zapato (el texto no cabe en vertical).
+          // Poster del Thunder con "Nueva coleccion" horneado: sin texto DOM y el
+          // boton abajo para no taparlo. En movil va la version vertical (2:3);
+          // el hero es 4:5, asi que `focal` la recorta arriba y abajo sin perder
+          // el logo ni la suela.
           image: "/blade-hero-thunder.webp",
-          focal: "87% 50%",
+          imageMobile: "/blade-hero-thunder-movil.webp",
+          focal: "50% 30%",
           eyebrow: "",
           titleTop: "",
           badge: { label: "Nuevo", detail: "Thunder", href: "/products/thunder?color=shedron" },

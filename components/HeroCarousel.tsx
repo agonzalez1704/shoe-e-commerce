@@ -221,7 +221,8 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
       </div>
       {s.badge && (
         <div className="absolute inset-x-0 top-4 sm:top-6">
-          <div className="mx-auto max-w-6xl px-5">
+          {/* a la derecha en movil: arriba a la izquierda va el logo del poster */}
+          <div className="mx-auto flex max-w-6xl justify-end px-5 sm:justify-start">
             <Link
               href={s.badge.href}
               className="group inline-flex items-center gap-2 rounded-full bg-white/95 py-1.5 pl-1.5 pr-3.5 text-sm font-semibold text-black shadow-[var(--shadow-md)] backdrop-blur-sm transition-transform active:scale-[0.98]"
