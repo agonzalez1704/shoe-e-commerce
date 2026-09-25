@@ -104,17 +104,19 @@ Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spe
         execute: async () => {
           const db = createAdminClient();
           const { data } = await db.from("products")
-            .select("name, status, combo_group, combo_min_qty, combo_price_cents, variants(color, fuera_de_combo)")
+            .select("name, status, combo_group, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, variants(color, fuera_de_combo, exotico)")
             .eq("status", "active").order("name");
           const dentro = (data ?? []).filter((p) => p.combo_group);
           const fuera = (data ?? []).filter((p) => !p.combo_group);
           const cfg = dentro[0];
           return {
-            combo: cfg ? { grupo: cfg.combo_group, pares: cfg.combo_min_qty, precio_mxn: (cfg.combo_price_cents ?? 0) / 100 } : null,
+            combo: cfg ? { grupo: cfg.combo_group, pares: cfg.combo_min_qty, precio_mxn: (cfg.combo_price_cents ?? 0) / 100, precio_mixto_mxn: cfg.combo_price_mixto_cents != null ? cfg.combo_price_mixto_cents / 100 : null, precio_exotico_mxn: cfg.combo_price_exotico_cents != null ? cfg.combo_price_exotico_cents / 100 : null } : null,
             // el combo es por color: se reportan los colores que quedaron fuera
             dentro: dentro.map((p) => {
               const fuera = [...new Set((p.variants ?? []).filter((v) => v.fuera_de_combo).map((v) => v.color))];
-              return fuera.length ? `${p.name} (fuera del combo: ${fuera.join(", ")})` : p.name;
+              const exot = [...new Set((p.variants ?? []).filter((v) => v.exotico && !v.fuera_de_combo).map((v) => v.color))];
+              const notas = [fuera.length ? `fuera del combo: ${fuera.join(", ")}` : "", exot.length ? `exoticos: ${exot.join(", ")}` : ""].filter(Boolean);
+              return notas.length ? `${p.name} (${notas.join("; ")})` : p.name;
             }),
             fuera: fuera.map((p) => p.name),
           };

@@ -38,7 +38,7 @@ export async function alternarCombo(productId: string, grupo: string | null): Pr
 
   const { data: miembro } = await supabase
     .from("products")
-    .select("combo_min_qty, combo_price_cents")
+    .select("combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents")
     .eq("combo_group", grupo)
     .not("combo_min_qty", "is", null)
     .limit(1)
@@ -51,23 +51,36 @@ export async function alternarCombo(productId: string, grupo: string | null): Pr
       combo_group: grupo,
       combo_min_qty: miembro.combo_min_qty,
       combo_price_cents: miembro.combo_price_cents,
+      combo_price_mixto_cents: miembro.combo_price_mixto_cents,
+      combo_price_exotico_cents: miembro.combo_price_exotico_cents,
     })
     .eq("id", productId);
   if (error) throw new Error(error.message);
   refresca();
 }
 
-// Cambia la oferta del grupo (p. ej. 2x$1,999 -> 2x$2,099) para TODOS sus
-// miembros de un golpe: la config vive repetida por fila y desincronizarla
-// romperia el pool.
-export async function configurarCombo(grupo: string, minQty: number, priceCents: number): Promise<void> {
+// Cambia la oferta del grupo para TODOS sus miembros de un golpe: la config
+// vive repetida por fila y desincronizarla romperia el pool. Tres tarifas por
+// piel (0066): clasico (base), mixto y exotico; las dos ultimas en null caen
+// al base.
+export async function configurarCombo(
+  grupo: string, minQty: number, priceCents: number,
+  mixtoCents: number | null = null, exoticoCents: number | null = null,
+): Promise<void> {
   const supabase = await db();
   if (!(minQty >= 2)) throw new Error("El combo necesita al menos 2 pares.");
   if (!(priceCents > 0)) throw new Error("El precio del combo debe ser mayor a 0.");
+  if (mixtoCents != null && !(mixtoCents > 0)) throw new Error("El precio mixto debe ser mayor a 0.");
+  if (exoticoCents != null && !(exoticoCents > 0)) throw new Error("El precio exótico debe ser mayor a 0.");
 
   const { error } = await supabase
     .from("products")
-    .update({ combo_min_qty: Math.round(minQty), combo_price_cents: Math.round(priceCents) })
+    .update({
+      combo_min_qty: Math.round(minQty),
+      combo_price_cents: Math.round(priceCents),
+      combo_price_mixto_cents: mixtoCents == null ? null : Math.round(mixtoCents),
+      combo_price_exotico_cents: exoticoCents == null ? null : Math.round(exoticoCents),
+    })
     .eq("combo_group", grupo);
   if (error) throw new Error(error.message);
   refresca();
@@ -103,6 +116,19 @@ export async function alternarColorCombo(productId: string, color: string, dentr
   const { error } = await createAdminClient()
     .from("variants")
     .update({ fuera_de_combo: !dentro })
+    .eq("product_id", productId)
+    .eq("color", color);
+  if (error) throw new Error(error.message);
+  refresca();
+}
+
+// Marca o quita la piel exotica de UN color (todas sus tallas). Decide la
+// tarifa del combo: un exotico en el par lo vuelve mixto; dos, exotico.
+export async function alternarColorExotico(productId: string, color: string, exotico: boolean): Promise<void> {
+  await db();
+  const { error } = await createAdminClient()
+    .from("variants")
+    .update({ exotico })
     .eq("product_id", productId)
     .eq("color", color);
   if (error) throw new Error(error.message);

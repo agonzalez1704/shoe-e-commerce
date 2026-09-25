@@ -24,6 +24,9 @@ export type ProductCard = {
   imageAlt: string | null;  // that colour's 2nd image (hover crossfade)
   comboMinQty: number | null;
   comboPriceCents: number | null;
+  comboMixtoCents: number | null;   // tarifas por piel (0066)
+  comboExoticoCents: number | null;
+  exotico: boolean;                 // piel con grabado exotico: sube la tarifa del combo
   promoPercent: number | null;  // active promo %, or null
   // Tallas de ESE color, para poder agregar al carrito desde la reja sin entrar
   // al producto. Vacío cuando el modelo no maneja tallas (un casco, un scooter).
@@ -79,9 +82,10 @@ function toVariantCards(
   p: {
     id: string; name: string; slug: string; base_price_cents: number;
     combo_min_qty?: number | null; combo_price_cents?: number | null;
+    combo_price_mixto_cents?: number | null; combo_price_exotico_cents?: number | null;
     brands: { name: string } | null;
     product_images: { url: string; position: number; color: string | null }[];
-    variants: { id: string; color: string | null; status: string; price_cents?: number | null; size_value?: string | null; fuera_de_combo?: boolean }[];
+    variants: { id: string; color: string | null; status: string; price_cents?: number | null; size_value?: string | null; fuera_de_combo?: boolean; exotico?: boolean }[];
   },
   promos: PromoEntry[] | undefined = undefined,
   stock: Map<string, number> = new Map(),
@@ -107,6 +111,8 @@ function toVariantCards(
   const common = {
     name: p.name, slug: p.slug, brand,
     comboMinQty: p.combo_min_qty ?? null, comboPriceCents: p.combo_price_cents ?? null,
+    comboMixtoCents: p.combo_price_mixto_cents ?? null, comboExoticoCents: p.combo_price_exotico_cents ?? null,
+    exotico: false,
     promoPercent: promoDe(promos, null),
   };
 
@@ -119,9 +125,11 @@ function toVariantCards(
     // un color con todas sus variantes fuera de combo no lleva la etiqueta del combo
     const activas = (p.variants ?? []).filter((v) => v.status === "active" && v.color === c);
     const fueraCombo = activas.length > 0 && activas.every((v) => v.fuera_de_combo);
+    const exotico = activas.some((v) => v.exotico);
     return {
       key: `${p.id}:${c}`, color: c, base_price_cents: priceOf(c), image: use[0]?.url ?? null, imageAlt: use[1]?.url ?? null, tallas: tallasDe(c), ...common,
       promoPercent: promoDe(promos, c),
+      exotico,
       ...(fueraCombo ? { comboMinQty: null, comboPriceCents: null } : {}),
     };
   });
@@ -136,7 +144,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
 
   let q = supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, gender, brands(name, slug), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, gender, brands(name, slug), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo, exotico)")
     .eq("status", "active");
 
   if (filters.gender) q = q.eq("gender", filters.gender);
@@ -167,7 +175,7 @@ export async function listRelatedProducts(excludeSlug: string, limit = 4): Promi
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo, exotico)")
     .eq("status", "active")
     .neq("slug", excludeSlug)
     .order("created_at", { ascending: false });
@@ -203,7 +211,7 @@ export async function listBestSellers(limit = 8, minimum = 3): Promise<ProductCa
 
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo, exotico)")
     .in("id", ids)
     .eq("status", "active");
 
@@ -229,7 +237,7 @@ export async function listFeatured(limit = 8): Promise<ProductCard[]> {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("products")
-    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo)")
+    .select("id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo, exotico)")
     .eq("status", "active")
     .eq("featured", true)
     .order("created_at", { ascending: false })
@@ -297,7 +305,7 @@ export async function listProductsByCategory(slug: string): Promise<ProductCard[
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo), " +
+      "id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, brands(name), product_images(url, position, color), variants(id, color, status, price_cents, size_value, fuera_de_combo, exotico), " +
         "product_categories!inner(categories!inner(slug))",
     )
     .eq("status", "active")
@@ -338,7 +346,10 @@ export type ProductDetail = {
   made_to_order: boolean;
   comboMinQty: number | null;
   comboPriceCents: number | null;
+  comboMixtoCents: number | null;
+  comboExoticoCents: number | null;
   coloresFueraCombo: string[];
+  coloresExoticos: string[]; // colores con grabado exotico (tarifa mixta/exotica)
   promoPorColor: Record<string, number>; // % de promo por color (0065)
   // free-form specs, per category — empty on products that have none
   attributes: Record<string, string | number | boolean>;
@@ -355,11 +366,11 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, attributes, " +
+      "id, name, slug, description, base_price_cents, made_to_order, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, attributes, " +
         "brands(name), " +
         "product_images(url, alt, color, position), " +
         "product_categories(categories(slug)), " +
-        "variants(id, sku, size_value, size_system, width, color, price_cents, status, fuera_de_combo)",
+        "variants(id, sku, size_value, size_system, width, color, price_cents, status, fuera_de_combo, exotico)",
     )
     .eq("slug", slug)
     .eq("status", "active")
@@ -372,13 +383,14 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
   type ProductRow = {
     id: string; name: string; slug: string; description: string | null; base_price_cents: number;
     made_to_order: boolean; combo_min_qty: number | null; combo_price_cents: number | null;
+    combo_price_mixto_cents: number | null; combo_price_exotico_cents: number | null;
     attributes: Record<string, string | number | boolean> | null;
     brands: { name: string } | null;
     product_images: { url: string; alt: string | null; color: string | null; position: number }[];
     product_categories: { categories: { slug: string } | null }[] | null;
     variants: {
       id: string; sku: string; size_value: string | null; size_system: string | null;
-      width: string | null; color: string; price_cents: number | null; status: string; fuera_de_combo: boolean;
+      width: string | null; color: string; price_cents: number | null; status: string; fuera_de_combo: boolean; exotico: boolean;
     }[];
   };
   const p = data as unknown as ProductRow;
@@ -426,6 +438,9 @@ export const getProduct = cache(async (slug: string): Promise<ProductDetail | nu
     made_to_order: p.made_to_order,
     comboMinQty: p.combo_min_qty,
     comboPriceCents: p.combo_price_cents,
+    comboMixtoCents: p.combo_price_mixto_cents,
+    comboExoticoCents: p.combo_price_exotico_cents,
+    coloresExoticos: [...new Set(activeVariants.filter((v) => v.exotico).map((v) => v.color))],
     // colores cuyas variantes activas estan todas fuera del combo
     coloresFueraCombo: [...new Set(activeVariants.map((v) => v.color))].filter((c) => {
       const vs = activeVariants.filter((v) => v.color === c);

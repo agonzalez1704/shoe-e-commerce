@@ -23,7 +23,7 @@ export function ProductCardItem({ p, priority, badge, tallaGuardada }: { p: Prod
   const href = p.color ? `/products/${p.slug}?color=${encodeURIComponent(p.color)}` : `/products/${p.slug}`;
   // unique per colourway so view-transition names don't collide on the grid
   const vtName = p.key.replace(/[^a-zA-Z0-9_-]/g, "-");
-  const combo = comboOf(p.comboMinQty, p.comboPriceCents);
+  const combo = comboOf(p.comboMinQty, p.comboPriceCents, p.comboMixtoCents, p.comboExoticoCents);
   const salePrice = precioConPromo(p.base_price_cents, p.promoPercent);
   const onSale = p.promoPercent != null && salePrice < p.base_price_cents;
 
@@ -57,7 +57,7 @@ export function ProductCardItem({ p, priority, badge, tallaGuardada }: { p: Prod
               top of each other on any product that had both. Stacking means a
               card can carry all three without collision. */}
           <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
-            {combo && <span className={PILL_ACCENT}>{comboLabel(combo, mxn)}</span>}
+            {combo && <span className={PILL_ACCENT}>{comboLabel(combo, mxn, p.exotico)}</span>}
           </div>
           <div className="pointer-events-none absolute right-2.5 top-2.5 flex flex-col items-end gap-1.5">
             {onSale && <span className={PILL_ACCENT}>-{p.promoPercent}%</span>}

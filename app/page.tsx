@@ -15,6 +15,9 @@ import {
 import { listProducts, listBestSellers, listFeatured, type ProductCard } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
+import { ComboFlotante } from "@/components/ComboFlotante";
+import { comboOf, precioPar } from "@/lib/pricing";
+import { formatCents } from "@/lib/money";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
 import { HeroCarousel } from "@/components/HeroCarousel";
@@ -62,6 +65,7 @@ export default async function Home() {
   const shelf = curated ? await listFeatured(8) : bestSellers;
   const featured = products.slice(0, 6);
   const combos = comboPicks(products);
+  const comboCfg = combos[0] ? comboOf(combos[0].comboMinQty, combos[0].comboPriceCents, combos[0].comboMixtoCents, combos[0].comboExoticoCents) : null;
 
   return (
     <div className="reveal">
@@ -76,6 +80,12 @@ export default async function Home() {
       <Editorial />
       <HowItWorks />
       <FinalCta />
+      {comboCfg && (
+        <ComboFlotante
+          precioDesde={formatCents(precioPar(comboCfg, 0), "MXN", "es-MX")}
+          fotos={combos.map((c) => c.image).filter((u): u is string => !!u).slice(0, 2)}
+        />
+      )}
     </div>
   );
 }

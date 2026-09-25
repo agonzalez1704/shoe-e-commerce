@@ -13,14 +13,15 @@ export type ParElegible = {
   nombre: string;
   color: string;
   imagen: string | null;
+  exotico: boolean;
+  diffCents: number; // lo que falta pagar si se elige este par (por tarifa)
   variantes: { id: string; talla: string }[];
 };
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
-export function ComboExpress({ pares, diffCents, orderNumber, token }: {
+export function ComboExpress({ pares, orderNumber, token }: {
   pares: ParElegible[];
-  diffCents: number;
   orderNumber: string;
   token: string | null;
 }) {
@@ -58,7 +59,7 @@ export function ComboExpress({ pares, diffCents, orderNumber, token }: {
                 </div>
               )}
               <p className="font-medium">{p.nombre}</p>
-              <p className="text-xs capitalize text-muted">{p.color}</p>
+              <p className="text-xs capitalize text-muted">{p.color}{p.exotico && <span className="ml-1.5 rounded-full bg-text px-1.5 py-0.5 text-[10px] font-semibold uppercase normal-case tracking-wide text-bg">exótico</span>}</p>
               <div className="mt-3">
                 <Select
                   value={sel[llave] ?? null}
@@ -81,7 +82,7 @@ export function ComboExpress({ pares, diffCents, orderNumber, token }: {
                 onClick={() => pagar(llave)}
                 className="mt-3 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98] disabled:opacity-50"
               >
-                {isPending ? "Apartando…" : `Pagar ${mxn(diffCents)}`}
+                {isPending ? "Apartando…" : `Pagar ${mxn(p.diffCents)}`}
               </button>
             </div>
           );

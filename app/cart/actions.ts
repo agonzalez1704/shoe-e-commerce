@@ -213,8 +213,8 @@ export async function getCart(): Promise<CartSummary> {
     .from("cart_items")
     .select(
       "quantity, variant_id, " +
-        "variants(sku, size_value, size_system, width, color, price_cents, fuera_de_combo, " +
-        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_group, product_images(url, position, color)))",
+        "variants(sku, size_value, size_system, width, color, price_cents, fuera_de_combo, exotico, " +
+        "products(id, name, slug, base_price_cents, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents, combo_group, product_images(url, position, color)))",
     )
     .eq("cart_id", cartId);
 
@@ -225,10 +225,10 @@ export async function getCart(): Promise<CartSummary> {
     variants: {
       size_system: string; size_value: string; width: string; color: string;
       price_cents: number | null;
-      fuera_de_combo: boolean;
+      fuera_de_combo: boolean; exotico: boolean;
       products: {
         id: string; name: string; slug: string; base_price_cents: number;
-        combo_min_qty: number | null; combo_price_cents: number | null; combo_group: string | null;
+        combo_min_qty: number | null; combo_price_cents: number | null; combo_price_mixto_cents: number | null; combo_price_exotico_cents: number | null; combo_group: string | null;
         product_images: { url: string; position: number; color: string | null }[];
       };
     };
@@ -279,16 +279,16 @@ export async function getCart(): Promise<CartSummary> {
   const pools = new Map<string, ComboPool & { minPrice: number }>();
   for (const it of rows) {
     const p = it.variants.products;
-    const combo = comboOf(p.combo_min_qty, p.combo_price_cents);
+    const combo = comboOf(p.combo_min_qty, p.combo_price_cents, p.combo_price_mixto_cents, p.combo_price_exotico_cents);
     // un color fuera de combo no entra al pool (espejo de create_order 0064)
     if (!p.combo_group || !combo || it.variants.fuera_de_combo) continue;
     // promo-discounted, same as the line price — the pool discount then only
-    // applies when the combo beats 2×(promo price). Mirrors create_order (0037).
+    // applies when the combo beats the promo prices. Mirrors create_order (0066).
     const unit = precioConPromo(it.variants.price_cents ?? p.base_price_cents, promoDe(promo.get(p.id), it.variants.color));
     const pool = pools.get(p.combo_group);
-    const units = Array(it.quantity).fill(unit);
-    if (pool) { pool.unitPrices.push(...units); pool.minPrice = Math.min(pool.minPrice, unit); }
-    else pools.set(p.combo_group, { group: p.combo_group, combo, unitPrices: units, minPrice: unit });
+    const units = Array.from({ length: it.quantity }, () => ({ price: unit, exotico: it.variants.exotico }));
+    if (pool) { pool.units.push(...units); pool.minPrice = Math.min(pool.minPrice, unit); }
+    else pools.set(p.combo_group, { group: p.combo_group, combo, units, minPrice: unit });
   }
   const poolList = [...pools.values()];
   const comboDiscount = cartComboDiscountCents(poolList);
@@ -297,7 +297,7 @@ export async function getCart(): Promise<CartSummary> {
   const nudges: ComboNudge[] = [];
   const groupsNeeding = new Set<string>();
   for (const pool of poolList) {
-    const n = poolNudge(pool.unitPrices, pool.combo, pool.minPrice);
+    const n = poolNudge(pool.units, pool.combo, pool.minPrice);
     if (n) { nudges.push({ href: "/products", ...n }); groupsNeeding.add(pool.group); }
   }
 

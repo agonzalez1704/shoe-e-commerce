@@ -6,7 +6,7 @@ import { useQueryState, parseAsString } from "nuqs";
 import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Lightning, Sparkle, Tag } from "@phosphor-icons/react";
 import { activeBrand } from "@/lib/brand";
 import { formatCents } from "@/lib/money";
-import { comboOf, precioConPromo } from "@/lib/pricing";
+import { comboOf, precioConPromo, precioPar } from "@/lib/pricing";
 import { PdpInfo } from "@/components/PdpInfo";
 import { SpecHighlights } from "@/components/SpecHighlights";
 import { ZoomImage } from "@/components/ZoomImage";
@@ -72,7 +72,8 @@ export function ProductDetail({
   const [hero, ...rest] = gallery;
   const [lightbox, setLightbox] = useState<number | null>(null);
   // el combo es por color: el color elegido puede estar fuera aunque el modelo este dentro
-  const combo = product.coloresFueraCombo.includes(color) ? null : comboOf(product.comboMinQty, product.comboPriceCents);
+  const combo = product.coloresFueraCombo.includes(color) ? null : comboOf(product.comboMinQty, product.comboPriceCents, product.comboMixtoCents, product.comboExoticoCents);
+  const esExotico = product.coloresExoticos.includes(color);
 
   // headline price follows the chosen colour (variant override, else base)
   const colorPriceCents = useMemo(
@@ -148,18 +149,27 @@ export function ProductDetail({
     </ul>
   );
 
+  // Entrada al wizard desde la ficha: este color entra como par 1. El precio
+  // depende de la piel de los dos (0066), asi que se muestran las dos salidas.
   const comboBox = combo && (
-    <div className="rounded-2xl border border-accent/30 bg-accent-soft/60 p-4">
-      <p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold">
-        <Tag size={16} weight="fill" className="text-accent" />
-        Combo {combo.minQty} {ITEMS} — <span className="text-accent">{mxn(combo.priceCents)}</span>
-      </p>
-      <p className="mt-1.5 text-sm text-muted">
-        Combina {combo.minQty} {ITEMS} con la etiqueta del combo — este u otro modelo. El descuento se aplica
-        solo al agregar {combo.minQty} al carrito.
-      </p>
-      <Link href="/products?combo=1" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
-        Ver modelos del combo →
+    <div className="rounded-2xl border border-accent/40 bg-surface p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-2 text-[15px] font-semibold">
+            <Tag size={16} weight="fill" className="text-accent" /> Llévate 2 {ITEMS}
+          </p>
+          <p className="mt-1 text-[13px] text-muted">
+            Este par + un clásico <strong className="nums text-text">{mxn(precioPar(combo, esExotico ? 1 : 0))}</strong>
+            {combo.mixtoCents != null && <> · + un exótico <strong className="nums text-text">{mxn(precioPar(combo, esExotico ? 2 : 1))}</strong></>}
+          </p>
+        </div>
+        {esExotico && <span className="shrink-0 rounded-full bg-text px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bg">exótico</span>}
+      </div>
+      <Link
+        href={`/combo/armar?par1=${product.slug}&color=${encodeURIComponent(color)}`}
+        className="mt-3 flex h-12 items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-semibold text-accent-contrast transition-transform active:scale-[0.99]"
+      >
+        Armar combo con este par →
       </Link>
     </div>
   );

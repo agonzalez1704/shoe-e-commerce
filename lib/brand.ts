@@ -196,6 +196,7 @@ export type BrandConfig = {
   markSrc?: { src: string; width: number; height: number }; // optional logo-mark IMAGE shown before the wordmark text (keeps its own colors in both themes)
   mark?: string; // optional inline SVG (uses var(--accent)/currentColor) shown before the wordmark
   announcement?: string; // top bar text
+  announcementHref?: string; // a donde lleva la barra (default /products)
   seoSuffix?: string;    // appended to <title> default + OG, e.g. "calzado de piel hecho en México"
   catalogNote?: string;  // the line under "Tienda" on the catalogue, e.g. "envío gratis a todo México"
   refineLogoUrl?: string; // brand logo (public path) applied by auto-toon logo correction
@@ -246,8 +247,8 @@ const BRANDS: Record<string, BrandConfig> = {
           titleTop: "Piel con filo,",
           titleBottom: "hecha a tu paso.",
           body: "Sneakers de piel hechos a mano en León. Envío gratis a todo México.",
-          ctaLabel: "Ver tienda",
-          ctaHref: "/products",
+          ctaLabel: "Arma tu combo",
+          ctaHref: "/combo",
         },
         {
           // Póster: trae el logo y el eslogan horneados, así que no lleva texto
@@ -261,8 +262,8 @@ const BRANDS: Record<string, BrandConfig> = {
           // un cuarto del alto —los zapatos— y se veía suave al ampliarla.
           eyebrow: "",
           titleTop: "",
-          ctaLabel: "Ver tienda",
-          ctaHref: "/products",
+          ctaLabel: "Arma tu combo",
+          ctaHref: "/combo",
         },
         {
           image: `${BLADE_LANDING}/new-york-still.jpg`,
@@ -408,7 +409,8 @@ const BRANDS: Record<string, BrandConfig> = {
     description:
       "Calzado de piel hecho a mano en León, Guanajuato. Diseño afilado, todas las tallas y anchos, envío gratis a todo el país. Pago con tarjeta, efectivo o Aplazo.",
     emailFrom: "Blade <pedidos@calzadoblade.com>",
-    announcement: "2 PARES POR $1,999 en modelos seleccionados · Envío gratis a todo México",
+    announcement: "2 PARES DESDE $1,999 · tú eliges la pareja · Envío gratis a todo México",
+    announcementHref: "/combo",
     seoSuffix: "calzado de piel hecho en México",
     catalogNote: "piel genuina · envío gratis",
     // silver wordmark (transparent PNG); inverted to dark on light theme

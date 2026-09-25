@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCents } from "@/lib/money";
+import { comboOf, precioPar, type ComboConfig } from "@/lib/pricing";
 import { ComboExpress, type ParElegible } from "@/components/ComboExpress";
 import { PagoComplemento } from "@/components/PagoComplemento";
 import { pedidoAutorizado } from "./actions";
@@ -92,22 +93,31 @@ export default async function ComboExpresPage({
   // trae un par suelto de un grupo de combo.
   const { data: items } = await admin
     .from("order_items")
-    .select("quantity, line_total_cents, variants(fuera_de_combo, products(combo_group, combo_min_qty, combo_price_cents))")
+    .select("quantity, unit_price_cents, variants(fuera_de_combo, exotico, products(combo_group, combo_min_qty, combo_price_cents, combo_price_mixto_cents, combo_price_exotico_cents))")
     .eq("order_id", order.id);
-  type Fila = { quantity: number; line_total_cents: number; variants: { fuera_de_combo: boolean; products: { combo_group: string | null; combo_min_qty: number | null; combo_price_cents: number | null } | null } | null };
-  const grupos = new Map<string, { min: number; precio: number; unidades: number; pagado: number }>();
+  type Fila = { quantity: number; unit_price_cents: number; variants: { fuera_de_combo: boolean; exotico: boolean; products: { combo_group: string | null; combo_min_qty: number | null; combo_price_cents: number | null; combo_price_mixto_cents: number | null; combo_price_exotico_cents: number | null } | null } | null };
+  const grupos = new Map<string, { combo: ComboConfig; unidades: number; exoticos: number; precios: { unit: number; exotico: boolean }[] }>();
   for (const it of (items ?? []) as unknown as Fila[]) {
-    const p = it.variants?.products;
-    if (it.variants?.fuera_de_combo || !p?.combo_group || p.combo_min_qty == null || p.combo_price_cents == null) continue;
-    const g = grupos.get(p.combo_group) ?? { min: p.combo_min_qty, precio: p.combo_price_cents, unidades: 0, pagado: 0 };
+    const vv = it.variants;
+    const p = vv?.products;
+    const combo = p ? comboOf(p.combo_min_qty, p.combo_price_cents, p.combo_price_mixto_cents, p.combo_price_exotico_cents) : null;
+    if (!vv || vv.fuera_de_combo || !p?.combo_group || !combo) continue;
+    const g = grupos.get(p.combo_group) ?? { combo, unidades: 0, exoticos: 0, precios: [] };
     g.unidades += it.quantity;
-    g.pagado += it.line_total_cents;
+    if (vv.exotico) g.exoticos += it.quantity;
+    for (let i = 0; i < it.quantity; i++) g.precios.push({ unit: it.unit_price_cents, exotico: vv.exotico });
     grupos.set(p.combo_group, g);
   }
-  const elegible = [...grupos.entries()].find(([, g]) => g.unidades % g.min === g.min - 1);
-  const diff = elegible
-    ? elegible[1].precio - (elegible[1].pagado - Math.floor(elegible[1].unidades / elegible[1].min) * elegible[1].precio)
+  const elegible = [...grupos.entries()].find(([, g]) => g.unidades % g.combo.minQty === g.combo.minQty - 1);
+  // El par suelto es el que el pool deja sin pareja (espejo de crear_pedido_complemento
+  // 0066): exotico si los exoticos son impares, el mas barato de su piel.
+  const sueltoExotico = !!elegible && elegible[1].exoticos % 2 === 1;
+  const pagadoSuelto = elegible
+    ? Math.min(...elegible[1].precios.filter((u) => u.exotico === sueltoExotico).map((u) => u.unit))
     : 0;
+  const diffPara = (exotico: boolean) =>
+    elegible ? precioPar(elegible[1].combo, (sueltoExotico ? 1 : 0) + (exotico ? 1 : 0)) - pagadoSuelto : 0;
+  const diff = elegible ? Math.min(diffPara(false), diffPara(true)) : 0;
 
   if (!elegible || (order.status !== "paid" && order.status !== "fulfilled") || diff <= 0) {
     return (
@@ -125,23 +135,26 @@ export default async function ComboExpresPage({
   // del color y sus tallas.
   const { data: prods } = await admin
     .from("products")
-    .select("id, name, slug, base_price_cents, product_images(url, position, color), variants(id, size_system, size_value, width, color, status, fuera_de_combo)")
+    .select("id, name, slug, base_price_cents, product_images(url, position, color), variants(id, size_system, size_value, width, color, status, fuera_de_combo, exotico)")
     .eq("combo_group", elegible[0])
     .eq("status", "active")
     .order("name");
 
   const pares: ParElegible[] = (prods ?? []).flatMap((p) => {
-    const porColor = new Map<string, { variantes: { id: string; talla: string }[] }>();
+    const porColor = new Map<string, { exotico: boolean; variantes: { id: string; talla: string }[] }>();
     for (const v of p.variants ?? []) {
       if (v.status !== "active" || v.fuera_de_combo) continue;
-      const c = porColor.get(v.color) ?? { variantes: [] };
+      const c = porColor.get(v.color) ?? { exotico: false, variantes: [] };
       c.variantes.push({ id: v.id, talla: `${v.size_system} ${v.size_value}` });
+      if (v.exotico) c.exotico = true;
       porColor.set(v.color, c);
     }
     const fotos = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position);
     return [...porColor.entries()].map(([color, c]) => ({
       nombre: p.name,
       color,
+      exotico: c.exotico,
+      diffCents: diffPara(c.exotico),
       imagen: (fotos.find((f) => f.color?.toLowerCase() === color.toLowerCase()) ?? fotos[0])?.url ?? null,
       variantes: c.variantes.sort((a, b) => parseFloat(a.talla.replace(/\D+/, "")) - parseFloat(b.talla.replace(/\D+/, ""))),
     }));
@@ -152,10 +165,11 @@ export default async function ComboExpresPage({
       <p className="text-sm text-muted">Pedido <span className="nums font-medium text-text">{order.order_number}</span></p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight">Completa tu combo 2 pares</h1>
       <p className="mt-2 text-sm text-muted">
-        Ya pagaste tu primer par. Elige el segundo y paga solo{" "}
-        <span className="nums font-semibold text-accent">{mxn(diff)}</span> de diferencia — envío gratis, como siempre.
+        Ya pagaste tu primer par. Elige el segundo y paga solo la diferencia, desde{" "}
+        <span className="nums font-semibold text-accent">{mxn(diff)}</span> — envío gratis, como siempre.
+        {diffPara(true) !== diffPara(false) && " Un par con grabado exótico cuesta un poco más."}
       </p>
-      <ComboExpress pares={pares} diffCents={diff} orderNumber={order.order_number} token={t ?? null} />
+      <ComboExpress pares={pares} orderNumber={order.order_number} token={t ?? null} />
     </div>
   );
 }

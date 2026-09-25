@@ -1190,6 +1190,8 @@ export type Database = {
           combo_group: string | null
           combo_min_qty: number | null
           combo_price_cents: number | null
+          combo_price_exotico_cents: number | null
+          combo_price_mixto_cents: number | null
           created_at: string
           description: string | null
           featured: boolean
@@ -1208,6 +1210,8 @@ export type Database = {
           combo_group?: string | null
           combo_min_qty?: number | null
           combo_price_cents?: number | null
+          combo_price_exotico_cents?: number | null
+          combo_price_mixto_cents?: number | null
           created_at?: string
           description?: string | null
           featured?: boolean
@@ -1226,6 +1230,8 @@ export type Database = {
           combo_group?: string | null
           combo_min_qty?: number | null
           combo_price_cents?: number | null
+          combo_price_exotico_cents?: number | null
+          combo_price_mixto_cents?: number | null
           created_at?: string
           description?: string | null
           featured?: boolean
@@ -1712,6 +1718,7 @@ export type Database = {
           barcode: string | null
           color: string
           created_at: string
+          exotico: boolean
           fuera_de_combo: boolean
           id: string
           price_cents: number | null
@@ -1726,6 +1733,7 @@ export type Database = {
           barcode?: string | null
           color: string
           created_at?: string
+          exotico?: boolean
           fuera_de_combo?: boolean
           id?: string
           price_cents?: number | null
@@ -1740,6 +1748,7 @@ export type Database = {
           barcode?: string | null
           color?: string
           created_at?: string
+          exotico?: boolean
           fuera_de_combo?: boolean
           id?: string
           price_cents?: number | null
@@ -1972,6 +1981,26 @@ export type Database = {
       }
       cleanup_rate_limits: { Args: never; Returns: undefined }
       codigo_bienvenida: { Args: never; Returns: string }
+      combo_descuento_pool: {
+        Args: {
+          p_base: number
+          p_exotico: number
+          p_exoticos: boolean[]
+          p_min: number
+          p_mixto: number
+          p_precios: number[]
+        }
+        Returns: number
+      }
+      combo_precio_par: {
+        Args: {
+          p_base: number
+          p_exotico: number
+          p_mixto: number
+          p_n_exoticos: number
+        }
+        Returns: number
+      }
       commit_order: {
         Args: {
           p_amount_cents: number

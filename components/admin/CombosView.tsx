@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatCents } from "@/lib/money";
-import { alternarCombo, alternarColorCombo, configurarCombo, crearCombo } from "@/app/admin/combo-actions";
+import { alternarCombo, alternarColorCombo, alternarColorExotico, configurarCombo, crearCombo } from "@/app/admin/combo-actions";
 
 // Armador de combos: un tablero por grupo con switches por par. La decision de
 // "entra / no entra" es un clic, pensado para moverse sobre la marcha.
@@ -15,8 +15,10 @@ export type ParCombo = {
   combo_group: string | null;
   combo_min_qty: number | null;
   combo_price_cents: number | null;
+  combo_price_mixto_cents: number | null;   // tarifas por piel (0066)
+  combo_price_exotico_cents: number | null;
   promo: boolean; // tiene promocion vigente — combos y promos son excluyentes
-  colores: { color: string; dentro: boolean }[]; // el combo se decide por color
+  colores: { color: string; dentro: boolean; exotico: boolean }[]; // combo y piel se deciden por color
 };
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
@@ -40,10 +42,10 @@ export function CombosView({ pares }: { pares: ParCombo[] }) {
     });
 
   const grupos = useMemo(() => {
-    const m = new Map<string, { minQty: number; priceCents: number; miembros: ParCombo[] }>();
+    const m = new Map<string, { minQty: number; priceCents: number; mixtoCents: number | null; exoticoCents: number | null; miembros: ParCombo[] }>();
     for (const p of pares) {
       if (!p.combo_group || p.combo_min_qty == null || p.combo_price_cents == null) continue;
-      const g = m.get(p.combo_group) ?? { minQty: p.combo_min_qty, priceCents: p.combo_price_cents, miembros: [] };
+      const g = m.get(p.combo_group) ?? { minQty: p.combo_min_qty, priceCents: p.combo_price_cents, mixtoCents: p.combo_price_mixto_cents, exoticoCents: p.combo_price_exotico_cents, miembros: [] };
       g.miembros.push(p);
       m.set(p.combo_group, g);
     }
@@ -62,6 +64,8 @@ export function CombosView({ pares }: { pares: ParCombo[] }) {
           nombre={nombre}
           minQty={g.minQty}
           priceCents={g.priceCents}
+          mixtoCents={g.mixtoCents}
+          exoticoCents={g.exoticoCents}
           miembros={g.miembros}
           candidatos={fuera}
           pending={pending}
@@ -90,11 +94,13 @@ export function CombosView({ pares }: { pares: ParCombo[] }) {
 }
 
 function GrupoCard({
-  nombre, minQty, priceCents, miembros, candidatos, pending, run,
+  nombre, minQty, priceCents, mixtoCents, exoticoCents, miembros, candidatos, pending, run,
 }: {
   nombre: string;
   minQty: number;
   priceCents: number;
+  mixtoCents: number | null;
+  exoticoCents: number | null;
   miembros: ParCombo[];
   candidatos: ParCombo[];
   pending: boolean;
@@ -102,7 +108,12 @@ function GrupoCard({
 }) {
   const [qty, setQty] = useState(String(minQty));
   const [precio, setPrecio] = useState(String(priceCents / 100));
-  const configCambio = Number(qty) !== minQty || Math.round(Number(precio) * 100) !== priceCents;
+  const [mixto, setMixto] = useState(mixtoCents == null ? "" : String(mixtoCents / 100));
+  const [exotico, setExotico] = useState(exoticoCents == null ? "" : String(exoticoCents / 100));
+  const aCents = (s: string) => (s.trim() === "" ? null : Math.round(Number(s) * 100));
+  const configCambio =
+    Number(qty) !== minQty || Math.round(Number(precio) * 100) !== priceCents ||
+    aCents(mixto) !== mixtoCents || aCents(exotico) !== exoticoCents;
 
   return (
     <section className="space-y-4 rounded-2xl border border-border bg-surface p-5">
@@ -110,7 +121,7 @@ function GrupoCard({
         <div>
           <h2 className="font-semibold capitalize">{nombre}</h2>
           <p className="text-xs text-muted">
-            {miembros.length} pares · la oferta aplica combinando modelos del grupo
+            {miembros.length} pares · el precio del par depende de la piel: clásico, mixto (1 exótico) o 2 exóticos
           </p>
         </div>
         <div className="flex items-end gap-2">
@@ -120,13 +131,21 @@ function GrupoCard({
           </label>
           <span className="pb-1.5 text-sm text-muted">×</span>
           <label className="text-xs text-muted">
-            Precio (MXN)
-            <input value={precio} onChange={(e) => setPrecio(e.target.value)} type="number" min={1} step="0.01" className={`${IN} nums mt-1 block w-28`} />
+            Clásico (MXN)
+            <input value={precio} onChange={(e) => setPrecio(e.target.value)} type="number" min={1} step="0.01" className={`${IN} nums mt-1 block w-24`} />
+          </label>
+          <label className="text-xs text-muted">
+            Mixto
+            <input value={mixto} onChange={(e) => setMixto(e.target.value)} type="number" min={1} step="0.01" placeholder="= clásico" className={`${IN} nums mt-1 block w-24`} />
+          </label>
+          <label className="text-xs text-muted">
+            2 exóticos
+            <input value={exotico} onChange={(e) => setExotico(e.target.value)} type="number" min={1} step="0.01" placeholder="= clásico" className={`${IN} nums mt-1 block w-24`} />
           </label>
           {configCambio && (
             <button
               disabled={pending}
-              onClick={() => run(() => configurarCombo(nombre, Number(qty), Math.round(Number(precio) * 100)))}
+              onClick={() => run(() => configurarCombo(nombre, Number(qty), Math.round(Number(precio) * 100), aCents(mixto), aCents(exotico)))}
               className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast disabled:opacity-50"
             >
               Guardar oferta
@@ -139,7 +158,8 @@ function GrupoCard({
         {miembros.map((p) => (
           <FilaPar key={p.id} par={p} dentro pending={pending}
             onToggle={() => run(() => alternarCombo(p.id, null))}
-            onColor={(color, dentro) => run(() => alternarColorCombo(p.id, color, dentro))} />
+            onColor={(color, dentro) => run(() => alternarColorCombo(p.id, color, dentro))}
+            onExotico={(color, exotico) => run(() => alternarColorExotico(p.id, color, exotico))} />
         ))}
         {candidatos.map((p) => (
           <FilaPar key={p.id} par={p} dentro={false} pending={pending}
@@ -150,9 +170,10 @@ function GrupoCard({
   );
 }
 
-function FilaPar({ par, dentro, pending, onToggle, onColor }: {
+function FilaPar({ par, dentro, pending, onToggle, onColor, onExotico }: {
   par: ParCombo; dentro: boolean; pending: boolean; onToggle: () => void;
   onColor?: (color: string, dentro: boolean) => void;
+  onExotico?: (color: string, exotico: boolean) => void;
 }) {
   // Un par con promocion vigente no puede entrar: el cobro (create_order)
   // excluye combos de promos y viceversa; permitirlo aqui prometeria un
@@ -172,22 +193,35 @@ function FilaPar({ par, dentro, pending, onToggle, onColor }: {
       </button>
       <div className="min-w-0 flex-1">
         <span className={`block truncate ${dentro ? "" : "text-muted"}`}>{par.name}</span>
-        {/* Por color: un modelo del combo puede tener colores fuera (New Jersey).
-            Tachado = fuera; clic alterna. Solo si el modelo tiene más de un color. */}
-        {dentro && onColor && par.colores.length > 1 && (
+        {/* Por color: cada color puede estar fuera (tachado) y ser exótico (la
+            "E" negra). El chip mete/saca; la E cambia la piel. */}
+        {dentro && onColor && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {par.colores.map((c) => (
-              <button
-                key={c.color}
-                type="button"
-                disabled={pending}
-                aria-pressed={c.dentro}
-                onClick={() => onColor(c.color, !c.dentro)}
-                title={c.dentro ? "En el combo — clic para sacarlo" : "Fuera del combo — clic para meterlo"}
-                className={`rounded-full px-2 py-0.5 text-[11px] capitalize transition-colors disabled:opacity-50 ${c.dentro ? "bg-accent-soft text-accent" : "border border-border text-muted line-through"}`}
-              >
-                {c.color}
-              </button>
+              <span key={c.color} className="inline-flex items-stretch overflow-hidden rounded-full border border-border">
+                <button
+                  type="button"
+                  disabled={pending}
+                  aria-pressed={c.dentro}
+                  onClick={() => onColor(c.color, !c.dentro)}
+                  title={c.dentro ? "En el combo — clic para sacarlo" : "Fuera del combo — clic para meterlo"}
+                  className={`px-2 py-0.5 text-[11px] capitalize transition-colors disabled:opacity-50 ${c.dentro ? "bg-accent-soft text-accent" : "text-muted line-through"}`}
+                >
+                  {c.color}
+                </button>
+                {onExotico && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    aria-pressed={c.exotico}
+                    onClick={() => onExotico(c.color, !c.exotico)}
+                    title={c.exotico ? "Piel exótica — clic para marcarla clásica" : "Piel clásica — clic para marcarla exótica"}
+                    className={`border-l border-border px-1.5 text-[10px] font-bold transition-colors disabled:opacity-50 ${c.exotico ? "bg-text text-bg" : "text-muted"}`}
+                  >
+                    E
+                  </button>
+                )}
+              </span>
             ))}
           </div>
         )}
