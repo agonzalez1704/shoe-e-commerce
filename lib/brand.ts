@@ -87,6 +87,11 @@ export type HeroSlide = {
   body?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  // Etiqueta arriba a la izquierda que enlaza a un producto ("Nuevo · Thunder").
+  badge?: { label: string; detail?: string; href: string };
+  // El boton va abajo en vez de a media altura: para posters cuyo texto
+  // horneado ocupa el centro izquierdo.
+  ctaAbajo?: boolean;
 };
 
 export type HomeConfig = {
@@ -242,13 +247,17 @@ const BRANDS: Record<string, BrandConfig> = {
       // y ya aprobadas, no material inventado para llenar el carrusel.
       slides: [
         {
-          image: "/hero-moto.jpg",
-          eyebrow: "Piel genuina, hecha a mano",
-          titleTop: "Piel con filo,",
-          titleBottom: "hecha a tu paso.",
-          body: "Sneakers de piel hechos a mano en León. Envío gratis a todo México.",
+          // Poster del Thunder con "Nueva coleccion" horneado a la izquierda:
+          // sin texto DOM, el boton abajo para no taparlo. En movil el 4:5 se
+          // centra en el zapato (el texto no cabe en vertical).
+          image: "/blade-hero-thunder.webp",
+          focal: "87% 50%",
+          eyebrow: "",
+          titleTop: "",
+          badge: { label: "Nuevo", detail: "Thunder", href: "/products/thunder?color=shedron" },
           ctaLabel: "Arma tu combo",
           ctaHref: "/combo",
+          ctaAbajo: true,
         },
         {
           // Póster: trae el logo y el eslogan horneados, así que no lleva texto
