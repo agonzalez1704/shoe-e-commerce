@@ -125,6 +125,7 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
   // white type on a white rectangle. Those get a split instead — picture and
   // copy in separate bands, no overlap and nothing to make legible.
   const split = s.fit === "contain";
+  const poster = !s.eyebrow && !s.titleTop;
   // Una diapositiva-póster trae el titular horneado en la imagen y deja estos
   // campos vacíos. Sin la guarda se pintaría un <h2> sin contenido, que es un
   // encabezado vacío para un lector de pantalla y para el buscador.
@@ -159,8 +160,15 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
           {s.body}
         </p>
       )}
+      {/* en movil la etiqueta va aqui, junto al boton: arriba choca con el logo
+          horneado de los posters verticales */}
+      {s.badge && (
+        <div className="sm:hidden">
+          <BadgeLink badge={s.badge} />
+        </div>
+      )}
       {s.ctaHref && (
-        <div className="mt-4 sm:mt-6">
+        <div className={s.badge ? "mt-2.5 sm:mt-6" : "mt-4 sm:mt-6"}>
           <Link
             href={s.ctaHref}
             className="group inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
@@ -213,27 +221,38 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
         style={s.focal ? { objectPosition: s.focal } : undefined}
         className={`object-cover object-center ${s.imageMobile ? "hidden sm:block" : ""}`}
       />
-      {/* legibility scrim: darker toward the lower-left where the copy sits */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-transparent" />
+      {/* legibility scrim: darker toward the lower-left where the copy sits.
+          Un poster no lleva texto DOM (su boton es solido), asi que no se
+          oscurece: apagaria el arte. */}
+      {poster ? null : (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-transparent" />
+        </>
+      )}
       <div className={`absolute inset-0 flex items-end ${s.ctaAbajo ? "" : "sm:items-center"}`}>
         <div className={`mx-auto flex w-full max-w-6xl flex-col px-5 pb-16 ${s.ctaAbajo ? "sm:pb-20" : "sm:pb-0"}`}>{copy}</div>
       </div>
       {s.badge && (
-        <div className="absolute inset-x-0 top-4 sm:top-6">
-          {/* a la derecha en movil: arriba a la izquierda va el logo del poster */}
-          <div className="mx-auto flex max-w-6xl justify-end px-5 sm:justify-start">
-            <Link
-              href={s.badge.href}
-              className="group inline-flex items-center gap-2 rounded-full bg-white/95 py-1.5 pl-1.5 pr-3.5 text-sm font-semibold text-black shadow-[var(--shadow-md)] backdrop-blur-sm transition-transform active:scale-[0.98]"
-            >
-              <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-accent-contrast">{s.badge.label}</span>
-              {s.badge.detail}
-              <ArrowRight size={14} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
-            </Link>
+        <div className="absolute inset-x-0 top-6 hidden sm:block">
+          <div className="mx-auto max-w-6xl px-5">
+            <BadgeLink badge={s.badge} />
           </div>
         </div>
       )}
     </>
+  );
+}
+
+function BadgeLink({ badge }: { badge: NonNullable<HeroSlide["badge"]> }) {
+  return (
+    <Link
+      href={badge.href}
+      className="group inline-flex items-center gap-2 rounded-full bg-white/95 py-1.5 pl-1.5 pr-3.5 text-sm font-semibold text-black shadow-[var(--shadow-md)] backdrop-blur-sm transition-transform active:scale-[0.98]"
+    >
+      <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-accent-contrast">{badge.label}</span>
+      {badge.detail}
+      <ArrowRight size={14} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
+    </Link>
   );
 }
