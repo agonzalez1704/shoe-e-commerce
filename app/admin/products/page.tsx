@@ -18,7 +18,7 @@ type Row = {
   base_price_cents: number; made_to_order: boolean; combo_group: string | null;
   brands: { name: string } | null;
   product_images: { url: string; color: string | null; position: number }[];
-  variants: { id: string; color: string; status: string; fuera_de_combo: boolean; inventory: { qty_on_hand: number } | null }[];
+  variants: { id: string; color: string; status: string; fuera_de_combo: boolean; exotico: boolean; inventory: { qty_on_hand: number } | null }[];
 };
 
 const FILTROS = [
@@ -26,6 +26,7 @@ const FILTROS = [
   ["activos", "Activos"],
   ["combo", "En combo"],
   ["promo", "Con promoción"],
+  ["exoticos", "Exóticos"],
   ["borradores", "Borradores"],
 ] as const;
 
@@ -43,7 +44,7 @@ export default async function AdminProducts({
     .select(
       "id, name, slug, status, base_price_cents, made_to_order, combo_group, brands(name), " +
         "product_images(url, color, position), " +
-        "variants(id, color, status, fuera_de_combo, inventory(qty_on_hand))",
+        "variants(id, color, status, fuera_de_combo, exotico, inventory(qty_on_hand))",
     )
     .order("created_at", { ascending: false });
 
@@ -62,6 +63,7 @@ export default async function AdminProducts({
         foto: p.product_images.find((i) => i.color === color)?.url ?? null,
         tallas: suyas.length,
         enCombo: !!p.combo_group && suyas.some((v) => !v.fuera_de_combo),
+        exotico: suyas.some((v) => v.exotico),
         promo: promoDe(promos, color),
       };
     });
@@ -88,6 +90,7 @@ export default async function AdminProducts({
     if (f === "borradores") return p.status !== "active";
     if (f === "combo") return p.enCombo > 0;
     if (f === "promo") return p.conPromo > 0;
+    if (f === "exoticos") return p.colores.some((c) => c.exotico);
     return true;
   });
 
@@ -163,11 +166,12 @@ export default async function AdminProducts({
                 <Link
                   key={c.color}
                   href={`/admin/products/${p.id}/edit`}
-                  title={`${c.color} · ${c.tallas} tallas${c.enCombo ? " · en combo" : ""}${c.promo ? ` · -${c.promo}%` : ""}`}
+                  title={`${c.color} · ${c.tallas} tallas · piel ${c.exotico ? "exótica" : "clásica"}${c.enCombo ? " · en combo" : ""}${c.promo ? ` · -${c.promo}%` : ""}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border py-0.5 pl-0.5 pr-2.5 text-xs capitalize text-muted transition-colors hover:border-text hover:text-text"
                 >
                   <Foto url={c.foto} alt={`${p.name} ${c.color}`} className="h-8 w-8 rounded-full" />
                   {c.color}
+                  {c.exotico && <span className="rounded-full bg-text px-1.5 text-[9px] font-semibold uppercase leading-4 tracking-wide text-bg">exótico</span>}
                 </Link>
               ))}
               {p.colores.length === 0 && <span className="text-xs text-muted">Sin variantes</span>}

@@ -17,6 +17,7 @@ export type VariantInput = {
   price_cents: number | null;
   qty_on_hand: number;
   fuera_de_combo: boolean; // este color no entra al combo (0064)
+  exotico: boolean;        // piel con grabado exotico: decide la tarifa del combo (0066)
   activo: boolean;         // apagar una talla sin borrarla
 };
 
@@ -88,6 +89,7 @@ async function writeVariants(
       color: v.color,
       price_cents: v.price_cents,
       fuera_de_combo: v.fuera_de_combo,
+      exotico: v.exotico,
       status: (v.activo ? "active" : "inactive") as "active" | "inactive",
     };
 

@@ -216,9 +216,9 @@ function FilaPar({ par, dentro, pending, onToggle, onColor, onExotico }: {
                     aria-pressed={c.exotico}
                     onClick={() => onExotico(c.color, !c.exotico)}
                     title={c.exotico ? "Piel exótica — clic para marcarla clásica" : "Piel clásica — clic para marcarla exótica"}
-                    className={`border-l border-border px-1.5 text-[10px] font-bold transition-colors disabled:opacity-50 ${c.exotico ? "bg-text text-bg" : "text-muted"}`}
+                    className={`border-l border-border px-1.5 text-[10px] font-semibold transition-colors disabled:opacity-50 ${c.exotico ? "bg-text text-bg" : "text-muted"}`}
                   >
-                    E
+                    {c.exotico ? "exótico" : "clásico"}
                   </button>
                 )}
               </span>

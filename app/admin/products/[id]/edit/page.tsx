@@ -20,7 +20,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
       .select(
         "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, featured, attributes, combo_group, " +
           "product_images(url, color, position), " +
-          "variants(id, size_value, size_system, width, color, sku, price_cents, status, fuera_de_combo, inventory(qty_on_hand))",
+          "variants(id, size_value, size_system, width, color, sku, price_cents, status, fuera_de_combo, exotico, inventory(qty_on_hand))",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -39,7 +39,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     product_images: { url: string; color: string | null; position: number }[];
     variants: {
       id: string; size_value: string; size_system: "MX" | "US" | "EU" | "UK"; width: "narrow" | "medium" | "wide";
-      color: string; sku: string; price_cents: number | null; status: string; fuera_de_combo: boolean;
+      color: string; sku: string; price_cents: number | null; status: string; fuera_de_combo: boolean; exotico: boolean;
       inventory: { qty_on_hand: number } | null;
     }[];
   };
@@ -81,6 +81,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
         price_cents: v.price_cents,
         qty_on_hand: v.inventory?.qty_on_hand ?? 0,
         fuera_de_combo: v.fuera_de_combo,
+        exotico: v.exotico,
         activo: v.status === "active",
       })),
   };

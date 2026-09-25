@@ -34,7 +34,7 @@ type SpecRow = { key: string; value: string };
 
 const blankVariant = (color = "", size_value = ""): VariantRow => ({
   size_value, size_system: "MX", width: "medium", color, sku: "", price: "", qty_on_hand: 0,
-  fuera_de_combo: false, activo: true,
+  fuera_de_combo: false, exotico: false, activo: true,
 });
 
 export function ProductEditor({
@@ -116,6 +116,11 @@ export function ProductEditor({
     setSucio(true);
     setVariants((vs) => vs.map((v, i) => (idx.includes(i) ? { ...v, price } : v)));
   }
+  // La piel tambien es por color: un exotico sube la tarifa del combo.
+  function setPielColor(idx: number[], exotico: boolean) {
+    setSucio(true);
+    setVariants((vs) => vs.map((v, i) => (idx.includes(i) ? { ...v, exotico } : v)));
+  }
   function setComboColor(idx: number[], dentro: boolean) {
     setSucio(true);
     setVariants((vs) => vs.map((v, i) => (idx.includes(i) ? { ...v, fuera_de_combo: !dentro } : v)));
@@ -187,6 +192,7 @@ export function ProductEditor({
           price_cents: toCents(v.price),
           qty_on_hand: Number(v.qty_on_hand) || 0,
           fuera_de_combo: v.fuera_de_combo,
+          exotico: v.exotico,
           activo: v.activo,
         })),
     };
@@ -275,6 +281,7 @@ export function ProductEditor({
               const fotos = fotosDe(color);
               const stock = idx.reduce((s, i) => s + (Number(variants[i].qty_on_hand) || 0), 0);
               const dentroCombo = comboGroup ? idx.some((i) => !variants[i].fuera_de_combo) : false;
+              const exotico = idx.some((i) => variants[i].exotico);
               const pct = promoDelColor(color);
               const precioColor = precioDeColor(idx);
               const cents = toCents(precioColor) ?? baseCents;
@@ -290,6 +297,7 @@ export function ProductEditor({
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium capitalize">{color || "sin color"}</span>
+                          {exotico && <span className="rounded-full bg-text px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bg">exótico</span>}
                           {pct && <Pill tone="accent">-{pct}%</Pill>}
                           {fotos.length === 0 && <Pill tone="warn">sin fotos</Pill>}
                         </span>
@@ -313,6 +321,23 @@ export function ProductEditor({
                           className={`${IN} nums w-full min-w-0 xl:w-52`}
                         />
                       </label>
+
+                      {/* Piel del color: clasica o exotica (cocodrilo, piton, lizard,
+                          mantarraya). Decide la tarifa del combo. */}
+                      <div role="radiogroup" aria-label={`Piel de ${color}`} className="flex shrink-0 overflow-hidden rounded-lg border border-border text-xs">
+                        {([[false, "Clásica"], [true, "Exótica"]] as const).map(([valor, label]) => (
+                          <button
+                            key={label}
+                            type="button"
+                            role="radio"
+                            aria-checked={exotico === valor}
+                            onClick={() => setPielColor(idx, valor)}
+                            className={`px-2.5 py-1.5 transition-colors ${exotico === valor ? "bg-text font-semibold text-bg" : "text-muted hover:text-text"}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
 
                       {comboGroup && (
                         <label className="flex shrink-0 items-center gap-2 border-l border-border pl-3 text-xs">
