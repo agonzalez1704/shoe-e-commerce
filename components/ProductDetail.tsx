@@ -6,7 +6,7 @@ import { useQueryState, parseAsString } from "nuqs";
 import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Lightning, Sparkle, Tag } from "@phosphor-icons/react";
 import { activeBrand } from "@/lib/brand";
 import { formatCents } from "@/lib/money";
-import { comboOf, precioConPromo, precioPar } from "@/lib/pricing";
+import { comboOf, precioConPromo, precioPar, tarifaUnica } from "@/lib/pricing";
 import { PdpInfo } from "@/components/PdpInfo";
 import { SpecHighlights } from "@/components/SpecHighlights";
 import { ZoomImage } from "@/components/ZoomImage";
@@ -163,8 +163,8 @@ export function ProductDetail({
             <Tag size={16} weight="fill" className="text-accent" /> Llévate 2 {ITEMS}
           </p>
           <p className="mt-1 text-[13px] text-muted">
-            Este par + un clásico <strong className="nums text-text">{mxn(precioPar(combo, esExotico ? 1 : 0))}</strong>
-            {combo.mixtoCents != null && <> · + un exótico <strong className="nums text-text">{mxn(precioPar(combo, esExotico ? 2 : 1))}</strong></>}
+            Este par + {tarifaUnica(combo) ? "otro par" : "un clásico"} <strong className="nums text-text">{mxn(precioPar(combo, esExotico ? 1 : 0))}</strong>
+            {!tarifaUnica(combo) && <> · + un exótico <strong className="nums text-text">{mxn(precioPar(combo, esExotico ? 2 : 1))}</strong></>}
           </p>
         </div>
         {esExotico && <span className="shrink-0 rounded-full bg-text px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bg">exótico</span>}

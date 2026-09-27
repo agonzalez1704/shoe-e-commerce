@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Truck } from "@phosphor-icons/react/dist/ssr";
 import { listProducts, type ProductCard } from "@/lib/catalog";
-import { comboOf, precioPar } from "@/lib/pricing";
+import { comboOf, precioPar, tarifaUnica } from "@/lib/pricing";
 import { formatCents } from "@/lib/money";
 
 export const metadata = {
@@ -31,7 +31,9 @@ export default async function ComboEntrada() {
   const clasicos = cards.filter((c) => !c.exotico);
   const exoticos = cards.filter((c) => c.exotico);
   const par = (a: ProductCard | undefined, b: ProductCard | undefined) => [a, b].filter((x): x is ProductCard => !!x);
-  const tarifas = [
+  const tarifas = tarifaUnica(combo) ? [
+    { nombre: "Cualquier combinación", desc: "Clásicos o exóticos, del mismo modelo o distinto", precio: combo.priceCents, fotos: par(clasicos[0], exoticos[0] ?? clasicos[1]) },
+  ] : [
     { nombre: "Clásico", desc: "Dos pares de piel lisa, brogue o perforada", precio: precioPar(combo, 0), fotos: par(clasicos[0], clasicos[1]) },
     ...(combo.mixtoCents != null && exoticos.length
       ? [{ nombre: "Mixto", desc: "Un clásico y un par con grabado exótico", precio: precioPar(combo, 1), fotos: par(clasicos[2] ?? clasicos[0], exoticos[0]) }]
@@ -50,7 +52,7 @@ export default async function ComboEntrada() {
       </p>
       <h1 className="mt-3 text-[34px] font-bold leading-[1.05] tracking-tight">Arma tu combo<br />de 2 pares</h1>
       <p className="mt-2.5 text-[15px] leading-relaxed text-muted">
-        Elige dos, del mismo modelo o distinto. El precio depende de la piel que combines.
+        Elige dos, del mismo modelo o distinto. {tarifaUnica(combo) ? `${mxn(combo.priceCents)} con cualquier piel.` : "El precio depende de la piel que combines."}
         {ahorroMax > 0 && <> Ahorras hasta <strong className="nums text-text">{mxn(ahorroMax)}</strong>.</>}
       </p>
 

@@ -48,6 +48,11 @@ export function precioPar(combo: ComboConfig, nExoticos: number): number {
   return combo.exoticoCents ?? combo.priceCents;
 }
 
+/** Un solo precio para cualquier par, sin importar la piel. */
+export function tarifaUnica(combo: ComboConfig): boolean {
+  return precioPar(combo, 1) === combo.priceCents && precioPar(combo, 2) === combo.priceCents;
+}
+
 /** Desde cuanto queda un combo que incluya este par: con un clasico. */
 export function comboDesde(combo: ComboConfig, exotico: boolean): number {
   return precioPar(combo, exotico ? 1 : 0);
@@ -122,6 +127,7 @@ export function _demo() {
   // sin tarifas: todo cae al base (combo plano de antes)
   const plano: ComboConfig = { minQty: 2, priceCents: 199900, mixtoCents: null, exoticoCents: null };
   a(poolDiscountCents([u(125900), u(139900, true)], plano) === 125900 + 139900 - 199900, "sin tarifas");
+  a(tarifaUnica(plano) && !tarifaUnica(c), "tarifa unica");
   const n = poolNudge([u(129900)], c, 125900);
   a(n?.needed === 1 && n.savingsCents === 129900 + 125900 - 199900, "nudge one away");
   a(poolNudge([u(129900), u(125900)], c, 125900) === null, "no nudge when complete");

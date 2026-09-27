@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { comboOf, precioPar } from "@/lib/pricing";
+import { comboOf, precioPar, tarifaUnica } from "@/lib/pricing";
 import { formatCents } from "@/lib/money";
 import type { ProductCard } from "@/lib/catalog";
 
@@ -31,11 +31,14 @@ export function ComboBand({ picks }: { picks: ProductCard[] }) {
   if (!combo) return null;
   const cl = picks.filter((p) => !p.exotico);
   const ex = picks.filter((p) => p.exotico);
-  const tarifas = [
+  const unica = tarifaUnica(combo);
+  const tarifas = (unica ? [
+    { nombre: "Cualquier combinación", desc: "Clásicos o exóticos, del mismo modelo o distinto", precio: combo.priceCents, fotos: [cl[0], ex[0], cl[1]] },
+  ] : [
     { nombre: "Clásico", desc: "Dos pares de piel lisa, brogue o perforada", precio: precioPar(combo, 0), fotos: [cl[0], cl[1]] },
     ...(combo.mixtoCents != null && ex.length ? [{ nombre: "Mixto", desc: "Un clásico y un exótico", precio: precioPar(combo, 1), fotos: [cl[2] ?? cl[0], ex[0]] }] : []),
     ...(combo.exoticoCents != null && ex.length > 1 ? [{ nombre: "Exótico", desc: "Dos pares con grabado exótico", precio: precioPar(combo, 2), fotos: [ex[1], ex[2] ?? ex[0]] }] : []),
-  ].map((t) => ({ ...t, fotos: t.fotos.filter((f): f is ProductCard => !!f) }));
+  ]).map((t) => ({ ...t, fotos: t.fotos.filter((f): f is ProductCard => !!f) }));
   const maxSuelto = Math.max(...picks.map((p) => p.base_price_cents));
   const ahorroMax = Math.max(0, 2 * maxSuelto - precioPar(combo, ex.length > 1 ? 2 : 0));
 
@@ -52,9 +55,9 @@ export function ComboBand({ picks }: { picks: ProductCard[] }) {
           )}
         </div>
 
-        <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
+        <div className={`mt-5 grid gap-2.5 ${unica ? "" : "sm:grid-cols-3"}`}>
           {tarifas.map((t) => (
-            <Link key={t.nombre} href="/combo" className="flex items-center gap-3 rounded-2xl border border-border p-3 transition-colors hover:border-text sm:flex-col sm:items-center sm:text-center">
+            <Link key={t.nombre} href="/combo" className={`flex items-center gap-3 rounded-2xl border border-border p-3 transition-colors hover:border-text ${unica ? "" : "sm:flex-col sm:items-center sm:text-center"}`}>
               <div className="flex shrink-0">
                 {t.fotos.map((f, i) => (
                   <span key={f.key} className={`relative h-12 w-12 overflow-hidden rounded-xl border-2 border-surface bg-elevated sm:h-16 sm:w-16 ${i > 0 ? "-ml-3.5" : ""}`}>

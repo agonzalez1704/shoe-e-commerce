@@ -9,7 +9,7 @@ import { useQueryState, parseAsString } from "nuqs";
 import { Check, X } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { addToCart } from "@/app/cart/actions";
-import { precioConPromo, precioPar, type ComboConfig } from "@/lib/pricing";
+import { precioConPromo, precioPar, tarifaUnica, type ComboConfig } from "@/lib/pricing";
 import { trackMeta } from "@/components/MetaPixel";
 import { metaContentId } from "@/lib/meta-content";
 import { notifyCartChanged } from "@/components/CartBadge";
@@ -75,7 +75,7 @@ export function CompraPdp({
 
   const precioPartner = (s: ProductCard) => precioConPromo(s.base_price_cents, s.promoPercent);
   const conClasico = combo ? precioPar(combo, esExotico ? 1 : 0) : null;
-  const conExotico = combo && combo.mixtoCents != null ? precioPar(combo, esExotico ? 2 : 1) : null;
+  const conExotico = combo && !tarifaUnica(combo) ? precioPar(combo, esExotico ? 2 : 1) : null;
   const ahorroMax = combo
     ? Math.max(0, ...sugeridos.map((s) => precioCents + precioPartner(s) - precioPar(combo, (esExotico ? 1 : 0) + (s.exotico ? 1 : 0))))
     : 0;
@@ -223,7 +223,7 @@ export function CompraPdp({
           </div>
           <div className="mt-2.5 space-y-2">
             {[
-              { label: "+ otro clásico", precio: conClasico, sug: clasicoSug },
+              { label: conExotico == null ? "+ otro par" : "+ otro clásico", precio: conClasico, sug: clasicoSug },
               ...(conExotico != null ? [{ label: "+ un exótico", precio: conExotico, sug: exoticoSug }] : []),
             ].map((f) => (
               <div key={f.label} className="flex items-center gap-2.5">
@@ -353,7 +353,7 @@ export function CompraPdp({
               Por <span className="nums text-accent">{redondo(Math.max(0, conClasico! - precioCents))} más</span> llévate otro par
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              Combo {esExotico ? "mixto" : "clásico"} 2 × {redondo(conClasico!)}
+              Combo {conExotico == null ? "de" : esExotico ? "mixto" : "clásico"} 2 × {redondo(conClasico!)}
               {conExotico != null && <> · con un exótico, {redondo(Math.max(0, conExotico - precioCents))} más</>}
             </p>
             <div className="mt-3 grid grid-cols-3 gap-2">

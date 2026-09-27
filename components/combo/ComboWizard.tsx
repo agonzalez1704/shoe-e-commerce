@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, CaretLeft, X } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { precioConPromo, precioPar, type ComboConfig } from "@/lib/pricing";
+import { precioConPromo, precioPar, tarifaUnica, type ComboConfig } from "@/lib/pricing";
 import type { ProductCard } from "@/lib/catalog";
 import { agregarCombo } from "@/app/combo/actions";
 
@@ -121,7 +121,9 @@ export function ComboWizard({
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold">Par 1 · {c1.name} <span className="capitalize">{c1.color}</span> · {par1.talla}</p>
               <p className="text-xs text-muted">
-                {c1.exotico ? "Exótico" : "Clásico"}. Con un clásico pagas {mxn(precioPar(combo, nEx(c1, null)))}; con un exótico, {mxn(precioPar(combo, nEx(c1, null) + 1))}.
+                {tarifaUnica(combo)
+                  ? <>Con cualquier par el combo queda en {mxn(combo.priceCents)}.</>
+                  : <>{c1.exotico ? "Exótico" : "Clásico"}. Con un clásico pagas {mxn(precioPar(combo, nEx(c1, null)))}; con un exótico, {mxn(precioPar(combo, nEx(c1, null) + 1))}.</>}
               </p>
             </div>
             <button onClick={() => setHoja(c1.key)} className="text-xs font-semibold underline">Cambiar</button>
@@ -132,7 +134,9 @@ export function ComboWizard({
       {paso !== 3 && (
         <>
           <div className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 pt-3">
-            {([["todos", "Todos"], ["clasico", `Clásicos · ${mxn(precioPar(combo, paso === 1 ? 0 : nEx(c1, null)))}`], ["exotico", `Exóticos · ${mxn(precioPar(combo, paso === 1 ? 1 : nEx(c1, null) + 1))}`]] as const).map(([id, label]) => (
+            {((tarifaUnica(combo)
+              ? [["todos", "Todos"], ["clasico", "Clásicos"], ["exotico", "Exóticos"]] as const
+              : [["todos", "Todos"], ["clasico", `Clásicos · ${mxn(precioPar(combo, paso === 1 ? 0 : nEx(c1, null)))}`], ["exotico", `Exóticos · ${mxn(precioPar(combo, paso === 1 ? 1 : nEx(c1, null) + 1))}`]] as const)).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setFiltro(id)}
@@ -322,8 +326,9 @@ function Resumen({ c1, c2, par1, par2, combo, precioDe, yaEnCarrito, onCambiar }
   const total = precioPar(combo, nEx);
   const suelto = precioDe(c1) + precioDe(c2);
   const ahorro = Math.max(0, suelto - total);
-  const tarifa = nEx === 0 ? "Combo clásico" : nEx === 1 ? "Combo mixto" : "Combo exótico";
-  const detalle = nEx === 0 ? "Dos clásicos" : nEx === 1 ? "Un clásico + un exótico" : "Dos exóticos";
+  const unica = tarifaUnica(combo);
+  const tarifa = unica ? "Combo de 2 pares" : nEx === 0 ? "Combo clásico" : nEx === 1 ? "Combo mixto" : "Combo exótico";
+  const detalle = unica ? "Mismo precio con cualquier piel" : nEx === 0 ? "Dos clásicos" : nEx === 1 ? "Un clásico + un exótico" : "Dos exóticos";
 
   const ir = (destino: "checkout" | "cart") =>
     start(async () => {
@@ -373,7 +378,7 @@ function Resumen({ c1, c2, par1, par2, combo, precioDe, yaEnCarrito, onCambiar }
           {ahorro > 0 && <div className="flex justify-between font-semibold text-emerald-600"><span>Descuento del combo</span><span className="nums">−{mxn(ahorro)}</span></div>}
           <div className="flex justify-between"><span className="text-muted">Envío a todo México</span><span className="font-semibold text-emerald-600">Gratis</span></div>
         </div>
-        {combo.mixtoCents != null && nEx === 1 && (
+        {!unica && nEx === 1 && (
           <p className="mt-2.5 rounded-xl bg-accent-soft px-3 py-2 text-xs leading-relaxed text-accent">
             Si cambias el exótico por un clásico, el combo baja a <strong className="nums">{mxn(precioPar(combo, 0))}</strong>. Si cambias el clásico por otro exótico, sube a <strong className="nums">{mxn(precioPar(combo, 2))}</strong>.
           </p>
