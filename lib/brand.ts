@@ -247,16 +247,29 @@ const BRANDS: Record<string, BrandConfig> = {
       // y ya aprobadas, no material inventado para llenar el carrusel.
       slides: [
         {
-          // Poster del Thunder con "Nueva coleccion" horneado: sin texto DOM y el
-          // boton abajo para no taparlo. En movil va la version vertical (2:3);
-          // el hero es 4:5, asi que `focal` la recorta arriba y abajo sin perder
-          // el logo ni la suela.
-          image: "/blade-hero-thunder.webp",
-          imageMobile: "/blade-hero-thunder-movil.webp",
+          // Poster "Thunder coleccion" con logo y eslogan horneados: sin texto DOM
+          // y el boton abajo para no taparlo. En movil va la version vertical
+          // (2:3); el hero es 4:5, asi que `focal` la recorta arriba y abajo sin
+          // perder el logo ni la suela.
+          image: "/blade-hero-thunder-coleccion.webp",
+          imageMobile: "/blade-hero-thunder-coleccion-movil.webp",
           focal: "50% 30%",
           eyebrow: "",
           titleTop: "",
-          badge: { label: "Nuevo", detail: "Thunder", href: "/products/thunder?color=shedron" },
+          badge: { label: "Nuevo", detail: "Thunder", href: "/products/thunder?color=shedron%2Fhueso%20cuello%20de%20toro" },
+          ctaLabel: "Arma tu combo",
+          ctaHref: "/combo",
+          ctaAbajo: true,
+        },
+        {
+          // Poster del combo ("ultimos dias, 2 pares por $1,999") con todo el
+          // mensaje horneado. En movil el recorte 4:5 deja fuera la fila de
+          // iconos de abajo y conserva el logo y los dos pares.
+          image: "/blade-hero-combo.webp",
+          imageMobile: "/blade-hero-combo-movil.webp",
+          focal: "50% 8%",
+          eyebrow: "",
+          titleTop: "",
           ctaLabel: "Arma tu combo",
           ctaHref: "/combo",
           ctaAbajo: true,
