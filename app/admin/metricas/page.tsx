@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Eye, Users, CursorClick } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { requirePagePermiso } from "@/lib/permisos-guard";
+import { carritoAgregados } from "@/lib/analytics";
 
 // Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
 // shell prerenderizado no aporta aqui.
@@ -33,7 +34,7 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
 
   const supabase = await createClient();
   const desde = new Date(Date.now() - days * 864e5).toISOString();
-  const [{ data }, { data: vendidos }, { data: vistasPdp }, { data: slugs }] = await Promise.all([
+  const [{ data }, { data: vendidos }, { data: vistasPdp }, { data: slugs }, alCarrito] = await Promise.all([
     supabase.rpc("analytics_summary", { p_days: days }),
     // lineas de pedidos cobrados del rango — de aqui salen todos los cortes de producto
     supabase
@@ -50,6 +51,8 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
       .gte("created_at", desde)
       .limit(20000),
     supabase.from("products").select("name, slug"),
+    // veces que se agrego cada modelo/color al carrito (cart_adds, 0068)
+    carritoAgregados(desde),
   ]);
   const s = (data ?? {}) as Partial<Summary>;
 
@@ -90,6 +93,13 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
     .filter((x) => x.vistas >= 5)
     .map((x) => ({ ...x, tasa: x.pares / x.vistas }))
     .sort((a, b) => b.tasa - a.tasa);
+  // agregados al carrito: por modelo y por modelo+color
+  const carritoPorModelo = new Map<string, number>();
+  for (const f of alCarrito) carritoPorModelo.set(f.modelo, (carritoPorModelo.get(f.modelo) ?? 0) + f.agregados);
+  const topCarrito = [...carritoPorModelo.entries()].sort((a, b) => b[1] - a[1]);
+  const topCarritoColor = alCarrito.slice(0, 10).map((f) => ({ label: `${f.modelo} · ${f.color}`, n: f.agregados }));
+  const agregadosTotal = alCarrito.reduce((t, f) => t + f.agregados, 0);
+
   const mxn0 = (c: number) => `$${Math.round(c / 100).toLocaleString("es-MX")}`;
 
   const maxDaily = Math.max(1, ...(s.daily ?? []).map((x) => x.n));
@@ -158,23 +168,28 @@ export default async function MetricasPage({ searchParams }: { searchParams: Pro
           rows={topVendidos.map(([nombre, e]) => ({ label: nombre, n: e.pares }))} />
         <RankCard title="Ingresos por modelo" subtitle="Lo cobrado, en pesos"
           rows={topIngresos.map(([nombre, e]) => ({ label: `${nombre} · ${mxn0(e.ingresos)}`, n: Math.round(e.ingresos / 100) }))} />
+        <RankCard title="Agregados al carrito" subtitle={`Veces que se agregó cada modelo · ${agregadosTotal.toLocaleString("es-MX")} en total`}
+          rows={topCarrito.map(([nombre, n]) => ({ label: nombre, n }))} />
+        <RankCard title="Al carrito por color" subtitle="Modelo y color más agregados"
+          rows={topCarritoColor} />
         <RankCard title="Tallas más pedidas" rows={topTallas.map(([t, n]) => ({ label: t, n }))} />
         <RankCard title="Colores más pedidos" rows={topColores.map(([c, n]) => ({ label: c, n }))} />
       </div>
       <section className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="text-sm font-semibold">Conversión por modelo</h2>
-        <p className="text-xs text-muted">Vistas de su página → pares vendidos (rango elegido, modelos con 5+ vistas)</p>
+        <p className="text-xs text-muted">Vistas de su página → agregados al carrito → pares vendidos (rango elegido, modelos con 5+ vistas)</p>
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[420px] text-sm">
+          <table className="w-full min-w-[480px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted">
-              <tr><th className="pb-2">Modelo</th><th className="pb-2 text-right">Vistas</th><th className="pb-2 text-right">Pares</th><th className="pb-2 text-right">Conversión</th></tr>
+              <tr><th className="pb-2">Modelo</th><th className="pb-2 text-right">Vistas</th><th className="pb-2 text-right">Al carrito</th><th className="pb-2 text-right">Pares</th><th className="pb-2 text-right">Conversión</th></tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {conversion.length === 0 && <tr><td colSpan={4} className="py-4 text-muted">Sin datos suficientes en este rango.</td></tr>}
+              {conversion.length === 0 && <tr><td colSpan={5} className="py-4 text-muted">Sin datos suficientes en este rango.</td></tr>}
               {conversion.map((x) => (
                 <tr key={x.nombre}>
                   <td className="py-2">{x.nombre}</td>
                   <td className="nums py-2 text-right text-muted">{x.vistas.toLocaleString("es-MX")}</td>
+                  <td className="nums py-2 text-right text-muted">{(carritoPorModelo.get(x.nombre) ?? 0).toLocaleString("es-MX")}</td>
                   <td className="nums py-2 text-right">{x.pares}</td>
                   <td className="nums py-2 text-right font-medium">{(x.tasa * 100).toFixed(1)}%</td>
                 </tr>

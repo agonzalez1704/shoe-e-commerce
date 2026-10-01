@@ -95,7 +95,7 @@ export function CompraPdp({
       setError(null);
       notifyCartChanged(1);
       try {
-        await addToCart(v.id, 1);
+        await addToCart(v.id, 1, "ficha");
       } catch {
         // sin esto un fallo del servidor tumbaba toda la ficha
         notifyCartChanged();

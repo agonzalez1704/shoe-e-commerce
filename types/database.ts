@@ -271,6 +271,36 @@ export type Database = {
           },
         ]
       }
+      cart_adds: {
+        Row: {
+          cart_id: string | null
+          created_at: string
+          id: number
+          origen: string | null
+          product_id: string
+          quantity: number
+          variant_id: string
+        }
+        Insert: {
+          cart_id?: string | null
+          created_at?: string
+          id?: never
+          origen?: string | null
+          product_id: string
+          quantity: number
+          variant_id: string
+        }
+        Update: {
+          cart_id?: string | null
+          created_at?: string
+          id?: never
+          origen?: string | null
+          product_id?: string
+          quantity?: number
+          variant_id?: string
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           cart_id: string
@@ -1966,6 +1996,20 @@ export type Database = {
           eventos: number
           paso: string
           sesiones: number
+        }[]
+      }
+      carrito_agregados: {
+        Args: { p_desde: string }
+        Returns: {
+          agregados: number
+          carritos: number
+          color: string
+          modelo: string
+          pares: number
+          primero: string
+          product_id: string
+          slug: string
+          ultimo: string
         }[]
       }
       checkout_funnel: {

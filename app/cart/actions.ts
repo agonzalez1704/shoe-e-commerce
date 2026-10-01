@@ -73,7 +73,11 @@ async function availableQty(db: SupabaseClient, variantId: string): Promise<numb
   return data ? data.qty_available : null;
 }
 
-export async function addToCart(variantId: string, qty = 1) {
+// Por donde entro el par: lo guarda cart_adds para las metricas de producto.
+const ORIGENES = ["ficha", "tarjeta", "combo"] as const;
+export type OrigenCarrito = (typeof ORIGENES)[number];
+
+export async function addToCart(variantId: string, qty = 1, origen?: OrigenCarrito) {
   const { db, cartId } = await resolveCart(true);
   if (!cartId) throw new Error("could not create cart");
 
@@ -95,7 +99,25 @@ export async function addToCart(variantId: string, qty = 1) {
   } else {
     await db.from("cart_items").insert({ cart_id: cartId, variant_id: variantId, quantity: target });
   }
+  await registraAgregado(cartId, variantId, target - (existing?.quantity ?? 0), origen);
   revalidatePath("/cart");
+}
+
+// Best-effort: una metrica que falla no puede tumbar el carrito.
+async function registraAgregado(cartId: string, variantId: string, qty: number, origen?: string) {
+  if (qty <= 0) return;
+  try {
+    const admin = createAdminClient();
+    const { data: v } = await admin.from("variants").select("product_id").eq("id", variantId).maybeSingle();
+    if (!v) return;
+    await admin.from("cart_adds").insert({
+      cart_id: cartId,
+      variant_id: variantId,
+      product_id: v.product_id,
+      quantity: qty,
+      origen: ORIGENES.find((o) => o === origen) ?? null,
+    });
+  } catch {}
 }
 
 export async function updateCartItem(variantId: string, qty: number) {

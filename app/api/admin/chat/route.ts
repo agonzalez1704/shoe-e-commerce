@@ -4,7 +4,7 @@ import { requirePermiso } from "@/lib/permisos-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ventasResumen, masVendidos, buscarPedido, estadoPedido, verificarPago,
-  estadoInventario, embudoCheckout, fiadosPendientes, type Periodo,
+  estadoInventario, embudoCheckout, fiadosPendientes, agregadosAlCarrito, type Periodo,
 } from "@/lib/analytics";
 import { dashboardSpecSchema, operacionSchema, aplicarOperaciones } from "@/lib/dashboards";
 
@@ -92,6 +92,11 @@ Cuando pidan un DASHBOARD o reporte completo usa crearDashboard: compones el spe
         description: "Resumen del inventario y variantes agotadas.",
         inputSchema: z.object({}),
         execute: async () => estadoInventario(),
+      }),
+      agregadosAlCarrito: tool({
+        description: "Cuantas veces se agrego cada modelo al carrito (y en que colores) en el periodo. Filtra por modelo opcional (ej. 'thunder'). 'todo' = desde siempre. Sirve para medir el interes en modelos nuevos aunque aun no se vendan.",
+        inputSchema: z.object({ periodo: z.enum(["hoy", "7d", "30d", "todo"]), modelo: z.string().optional() }),
+        execute: async ({ periodo: p, modelo }) => agregadosAlCarrito(p, modelo),
       }),
       embudoCheckout: tool({
         description: "Embudo del periodo: visitas, carritos, checkouts iniciados y pagados.",

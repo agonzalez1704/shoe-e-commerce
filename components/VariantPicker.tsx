@@ -96,7 +96,7 @@ export function VariantPicker({
       return;
     }
     startTransition(async () => {
-      await addToCart(selected.id, 1);
+      await addToCart(selected.id, 1, "ficha");
       // avisa a la barra de bienvenida; ella decide si hay algo que mostrar
       window.dispatchEvent(new Event(EVENTO_AGREGADO));
       trackMeta("AddToCart", {

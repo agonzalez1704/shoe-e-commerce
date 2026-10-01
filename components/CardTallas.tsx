@@ -57,7 +57,7 @@ export function CardTallas({
       return;
     }
     startTransition(async () => {
-      await addToCart(elegida.variantId, 1);
+      await addToCart(elegida.variantId, 1, "tarjeta");
       // El contador del encabezado se mueve aquí, no al recargar: es la señal
       // de que el producto llegó a algún lado.
       notifyCartChanged(1);

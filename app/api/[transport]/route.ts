@@ -11,6 +11,7 @@ import {
   estadoPedido,
   verificarPago,
   embudoCheckout,
+  agregadosAlCarrito,
   reenviarInstruccionesPago,
 } from "@/lib/analytics";
 import { activeBrand } from "@/lib/brand";
@@ -87,6 +88,14 @@ const handler = createMcpHandler(
         "dirección de envío y datos de contacto del cliente.",
       { pedido: z.string().describe("Número de pedido") },
       async ({ pedido }) => json(await estadoPedido(pedido)),
+    );
+
+    server.tool(
+      "agregados_al_carrito",
+      "Cuántas veces se agregó cada modelo al carrito (y en qué colores) en el periodo. Mide el interés en " +
+        "modelos nuevos aunque aún no se vendan. Filtro opcional por modelo; 'todo' = desde siempre.",
+      { periodo: z.enum(["hoy", "7d", "30d", "todo"]), modelo: z.string().optional().describe("Ej. thunder") },
+      async ({ periodo, modelo }) => json(await agregadosAlCarrito(periodo, modelo)),
     );
 
     server.tool(

@@ -10,7 +10,7 @@ export async function agregarCombo(
   destino: "checkout" | "cart" = "checkout",
 ): Promise<{ ok: false; error: string } | never> {
   try {
-    for (const id of variantIds) await addToCart(id, 1);
+    for (const id of variantIds) await addToCart(id, 1, "combo");
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo agregar el combo" };
   }

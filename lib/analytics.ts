@@ -439,6 +439,43 @@ export async function verificarPago(orderNumber: string) {
   };
 }
 
+// ---- agregados_al_carrito ----
+// Cuantas veces se agrego cada modelo (y color) al carrito. Sale de cart_adds
+// (0068): antes del 2026-10-01 es historico reconstruido —carritos vivos mas
+// lineas de pedidos—, desde ahi cada agregado real.
+export type FilaCarrito = {
+  product_id: string; modelo: string; slug: string; color: string;
+  agregados: number; pares: number; carritos: number; primero: string; ultimo: string;
+};
+
+export async function carritoAgregados(desdeISO: string): Promise<FilaCarrito[]> {
+  const { data } = await createAdminClient().rpc("carrito_agregados", { p_desde: desdeISO });
+  return ((data ?? []) as FilaCarrito[]).map((f) => ({
+    ...f, agregados: Number(f.agregados), pares: Number(f.pares), carritos: Number(f.carritos),
+  }));
+}
+
+export async function agregadosAlCarrito(periodo: Periodo | "todo", modelo?: string) {
+  const desde = periodo === "todo" ? "2000-01-01T00:00:00Z" : sinceISO(periodo);
+  const q = modelo?.trim().toLowerCase();
+  const filas = (await carritoAgregados(desde)).filter(
+    (f) => !q || f.modelo.toLowerCase().includes(q) || f.slug.includes(q),
+  );
+  const porModelo = new Map<string, { modelo: string; agregados: number; pares: number; colores: { color: string; agregados: number }[] }>();
+  for (const f of filas) {
+    const m = porModelo.get(f.modelo) ?? { modelo: f.modelo, agregados: 0, pares: 0, colores: [] };
+    m.agregados += f.agregados; m.pares += f.pares;
+    m.colores.push({ color: f.color, agregados: f.agregados });
+    porModelo.set(f.modelo, m);
+  }
+  return {
+    periodo,
+    nota: "Antes del 1 de octubre de 2026 es una reconstruccion (carritos vivos + lineas de pedidos); lo que alguien agrego y luego quito no esta. Desde esa fecha se cuenta cada agregado.",
+    total_agregados: filas.reduce((s, f) => s + f.agregados, 0),
+    modelos: [...porModelo.values()].sort((a, b) => b.agregados - a.agregados),
+  };
+}
+
 // ---- embudo_checkout ----
 // The disabled-button bug cost ~70% of checkouts and left no trace: those buyers
 // never create an order, so nothing else in this file can see them.
