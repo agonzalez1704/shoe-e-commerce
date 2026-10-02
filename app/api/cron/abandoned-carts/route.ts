@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAbandonedCartEmail, sendAbandonedCart2Email } from "@/lib/email";
 import { SITE_URL } from "@/lib/site";
+import { randomInt } from "node:crypto";
 
 const HOURS_AFTER = 4;
 const HOURS_SEGUNDO = 44; // ~48h después del abandono (corre cada hora)
@@ -89,6 +90,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Precio del combo vigente (una sola tarifa hoy): lo usa el segundo correo.
+  const { data: conCombo } = await admin
+    .from("products").select("combo_price_cents").eq("status", "active").not("combo_price_cents", "is", null).limit(1);
+  const comboCents = conCombo?.[0]?.combo_price_cents ?? null;
+
   let primeros = 0, segundos = 0;
   for (const [cartId, c] of [...carts].slice(0, BATCH)) {
     if (yaCompraron.has(cartId)) continue;
@@ -97,10 +103,29 @@ export async function GET(req: NextRequest) {
       await admin.from("carts").update({ abandoned_email_sent_at: new Date().toISOString() }).eq("id", cartId);
       primeros++;
     } else if (c.primerToque < cutoff2) {
-      await sendAbandonedCart2Email({ to: c.email, name: c.name ?? undefined, lines: c.lines, cartUrl: `${SITE_URL}/cart` });
+      const codigo = await codigoDelCarrito(admin);
+      if (!codigo) continue; // sin código no hay correo; el siguiente cron lo reintenta
+      const pares = c.lines.reduce((n, l) => n + l.quantity, 0);
+      const unidadCents = c.lines[0] ? Math.round(c.lines[0].lineTotalCents / c.lines[0].quantity) : 0;
+      await sendAbandonedCart2Email({ to: c.email, name: c.name ?? undefined, lines: c.lines, codigo, pares, comboCents, unidadCents });
       await admin.from("carts").update({ abandoned_email2_sent_at: new Date().toISOString() }).eq("id", cartId);
       segundos++;
     }
   }
   return NextResponse.json({ primeros, segundos });
+}
+
+// Código propio del carrito: 5% que se suma al combo, un uso, 72 horas. Sin
+// letras que se confunden (0/O, 1/I/L) porque la gente lo copia a mano.
+const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+async function codigoDelCarrito(admin: ReturnType<typeof createAdminClient>): Promise<string | null> {
+  for (let intento = 0; intento < 3; intento++) {
+    const code = "VUELVE-" + Array.from({ length: 6 }, () => ALFABETO[randomInt(ALFABETO.length)]).join("");
+    const { error } = await admin.from("discount_codes").insert({
+      code, type: "percent", value: 5, max_uses: 1, min_subtotal_cents: 0, active: true, suma_combo: true,
+      expires_at: new Date(Date.now() + 72 * 3600_000).toISOString(),
+    });
+    if (!error) return code;
+  }
+  return null;
 }

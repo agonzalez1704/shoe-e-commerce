@@ -223,7 +223,7 @@ export async function sendAbandonedCartEmail(a: { to: string; name?: string; lin
     a.to,
     "Dejaste algo en tu carrito",
     shell(`Tu ${ITEM} te está esperando`,
-      `<p>Hola${a.name ? ` ${a.name}` : ""}, guardamos lo que agregaste. Termina tu compra antes de que se agote.</p>
+      `<p>Hola${a.name ? ` ${a.name}` : ""}, guardamos lo que agregaste.${activeBrand.copy?.deliveryLine ? ` ${activeBrand.copy.deliveryLine}` : ""}</p>
        ${summary(a.lines)}
        <p style="margin-top:18px">${button(a.cartUrl, "Terminar mi compra")}</p>`),
   );
@@ -242,18 +242,43 @@ export async function sendComboInviteEmail(a: { to: string; orderNumber: string;
   );
 }
 
-// Segundo y ultimo recordatorio de carrito (~48h): trae el empujon del 10%.
-// El codigo vive en discount_codes como REGRESA10, sin tope de usos.
-export async function sendAbandonedCart2Email(a: { to: string; name?: string; lines: EmailLine[]; cartUrl: string }) {
+// Segundo y ultimo recordatorio de carrito (~48h). Trae un codigo propio del
+// carrito (5%, un uso, 72h) que se SUMA al combo (suma_combo, 0069): un 10%
+// que compitiera con el combo no le quitaba nada a 7 de cada 10 carritos.
+// Con un solo par, el gancho es el segundo par, no el descuento.
+export async function sendAbandonedCart2Email(a: {
+  to: string; name?: string; lines: EmailLine[]; codigo: string;
+  pares: number; comboCents: number | null; unidadCents: number;
+}) {
+  const con5 = (c: number) => c - Math.floor((c * 5) / 100);
+  const url = `${SITE_URL}/checkout?codigo=${encodeURIComponent(a.codigo)}`;
+  const codigo = `<strong style="letter-spacing:1px">${a.codigo}</strong>`;
+  const hola = `Hola${a.name ? ` ${a.name}` : ""}`;
+  let asunto: string, titulo: string, cuerpo: string;
+  if (a.comboCents && a.pares === 1) {
+    asunto = `Tu segundo par por ${mxn(a.comboCents - a.unidadCents)}`;
+    titulo = "Llévate otro par";
+    cuerpo = `<p>${hola}, tu par sigue apartado. Agrega otro y llévate los 2 por ${mxn(a.comboCents)};
+      con tu código ${codigo} quedan en <strong>${mxn(con5(a.comboCents))}</strong>.</p>
+      <p>¿Solo uno? El código también te da 5%: ${mxn(con5(a.unidadCents))}.</p>`;
+  } else if (a.comboCents && a.pares === 2) {
+    asunto = `Tu combo baja a ${mxn(con5(a.comboCents))}`;
+    titulo = "5% extra en tu combo";
+    cuerpo = `<p>${hola}, tu combo de 2 pares sigue apartado. Con tu código ${codigo} baja de
+      ${mxn(a.comboCents)} a <strong>${mxn(con5(a.comboCents))}</strong>.</p>`;
+  } else {
+    asunto = "5% extra para terminar tu compra";
+    titulo = "5% extra para ti";
+    cuerpo = `<p>${hola}, tu ${ITEM} sigue apartado. Con tu código ${codigo} te llevas 5% extra sobre tu total.</p>`;
+  }
   await send(
     a.to,
-    "10% para estrenar — tu carrito sigue aquí",
-    shell(`Un empujón: 10% de descuento`,
-      `<p>Hola${a.name ? ` ${a.name}` : ""}, tu ${ITEM} sigue apartado. Usa el código
-        <strong style="letter-spacing:1px">REGRESA10</strong> al pagar y llévate 10% de descuento.</p>
+    asunto,
+    shell(titulo,
+      `${cuerpo}
        ${summary(a.lines)}
-       <p style="margin-top:18px">${button(a.cartUrl, "Usar mi 10%")}</p>
-       <p style="margin-top:14px;font-size:12px;color:#888">Si ya compraste, ignora este correo — no volveremos a recordártelo.</p>`),
+       <p style="margin-top:18px">${button(url, "Usar mi 5%")}</p>
+       <p style="margin-top:14px;font-size:12px;color:#888">El código es solo tuyo, de un uso, y vence en 72 horas. Si ya compraste, ignora este correo: no volveremos a recordártelo.</p>`),
   );
 }
 

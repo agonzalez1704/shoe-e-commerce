@@ -200,11 +200,11 @@ export type CheckoutDefaults = Partial<
 >;
 
 export function CheckoutForm({
-  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false, mpEnabled = false,
+  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false, mpEnabled = false, codigo,
 }: {
   cartId: string; lines: CartLine[]; subtotalCents: number;
   comboDiscountCents: number; totalCents: number; conektaPublicKey: string;
-  defaults?: CheckoutDefaults; googleAuth?: boolean; mpEnabled?: boolean;
+  defaults?: CheckoutDefaults; googleAuth?: boolean; mpEnabled?: boolean; codigo?: string;
 }) {
   const methods = mpEnabled ? [...METHODS, MP_METHOD] : METHODS;
   const [method, setMethod] = useState<Method>("card");
@@ -366,7 +366,7 @@ export function CheckoutForm({
     setCodeMsg(null);
     setError(null); // a previous attempt's failure isn't about this code
     try {
-      const r = await previewDiscount(code, subtotalCents);
+      const r = await previewDiscount(code, subtotalCents, comboDiscountCents);
       if (r.ok) {
         setCodeDiscount(r.discountCents);
         setCodeMsg(`Código aplicado: −${mxn(r.discountCents)}`);
@@ -378,6 +378,18 @@ export function CheckoutForm({
       setCheckingCode(false);
     }
   }
+
+  // Código que llega en la liga (?codigo=): abre el campo, lo escribe y lo aplica.
+  const codigoAplicado = useRef(false);
+  useEffect(() => {
+    if (!codigo || codigoAplicado.current) return;
+    if (!showCode) { setShowCode(true); return; }
+    const el = formRef.current?.elements.namedItem("discount") as HTMLInputElement | null;
+    if (!el) return;
+    codigoAplicado.current = true;
+    el.value = codigo;
+    void applyCode();
+  }, [codigo, showCode]);
 
   // combo discount is already baked into totalCents by the cart
   const effectiveTotal = Math.max(0, totalCents - codeDiscount);

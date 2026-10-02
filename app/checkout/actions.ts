@@ -69,7 +69,7 @@ export type DiscountPreview = { ok: true; discountCents: number } | { ok: false;
 // Show the buyer what a code is worth before they pay. Display only —
 // create_order recomputes it authoritatively — so this must mirror the SQL
 // exactly, including its integer division.
-export async function previewDiscount(code: string, subtotalCents: number): Promise<DiscountPreview> {
+export async function previewDiscount(code: string, subtotalCents: number, comboCents = 0): Promise<DiscountPreview> {
   const c = code.trim().toUpperCase();
   if (!c) return { ok: false, error: "Escribe un código." };
 
@@ -82,7 +82,9 @@ export async function previewDiscount(code: string, subtotalCents: number): Prom
   const admin = createAdminClient(); // discount_codes is admin-only under RLS
   const { data: d } = await admin
     .from("discount_codes")
-    .select("type, value, min_subtotal_cents, max_uses, used_count, starts_at, expires_at, active")
+    // "*" y no la lista: una base sin la migración 0069 (sin suma_combo) seguiría
+    // validando códigos en vez de fallar la consulta entera.
+    .select("*")
     .eq("code", c)
     .maybeSingle();
 
@@ -96,10 +98,16 @@ export async function previewDiscount(code: string, subtotalCents: number): Prom
     subtotalCents >= d.min_subtotal_cents;
   if (!usable) return { ok: false, error: "El código no es válido o ya venció." };
 
-  const discountCents =
+  // Lo que el código quita ADEMÁS del combo, igual que create_order (0069): uno
+  // marcado suma_combo se aplica sobre el precio ya con combo; los demás
+  // compiten con el combo y gana el mayor, así que pueden no quitar nada.
+  const base = d.suma_combo ? subtotalCents - comboCents : subtotalCents;
+  const delCodigo =
     d.type === "percent"
-      ? Math.floor((subtotalCents * d.value) / 100) // matches Postgres integer division
-      : Math.min(d.value, subtotalCents);
+      ? Math.floor((base * d.value) / 100) // matches Postgres integer division
+      : Math.min(d.value, base);
+  const discountCents = d.suma_combo ? delCodigo : Math.max(0, delCodigo - comboCents);
+  if (discountCents === 0) return { ok: false, error: "Tu combo ya tiene un descuento mayor; este código no lo mejora." };
   return { ok: true, discountCents };
 }
 

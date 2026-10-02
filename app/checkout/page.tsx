@@ -42,7 +42,10 @@ async function checkoutDefaults(): Promise<CheckoutDefaults> {
   return defaults;
 }
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ codigo?: string }> }) {
+  // ?codigo= llega del correo de carrito abandonado y se aplica solo.
+  const crudo = ((await searchParams).codigo ?? "").trim().toUpperCase();
+  const codigo = /^[A-Z0-9-]{3,30}$/.test(crudo) ? crudo : undefined;
   const cart = await getCart();
   if (!cart.cartId || cart.lines.length === 0) redirect("/cart");
 
@@ -60,6 +63,7 @@ export default async function CheckoutPage() {
         defaults={defaults}
         googleAuth={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"}
         mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
+        codigo={codigo}
       />
       {/* Sólo en el checkout: es donde el embudo pierde gente sin dejar rastro.
           No se pinta si la marca no tiene número de WhatsApp configurado. */}

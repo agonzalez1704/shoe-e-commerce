@@ -582,6 +582,7 @@ export type Database = {
           max_uses: number | null
           min_subtotal_cents: number
           starts_at: string | null
+          suma_combo: boolean
           type: Database["public"]["Enums"]["discount_type"]
           used_count: number
           value: number
@@ -595,6 +596,7 @@ export type Database = {
           max_uses?: number | null
           min_subtotal_cents?: number
           starts_at?: string | null
+          suma_combo?: boolean
           type: Database["public"]["Enums"]["discount_type"]
           used_count?: number
           value: number
@@ -608,6 +610,7 @@ export type Database = {
           max_uses?: number | null
           min_subtotal_cents?: number
           starts_at?: string | null
+          suma_combo?: boolean
           type?: Database["public"]["Enums"]["discount_type"]
           used_count?: number
           value?: number
