@@ -23,7 +23,13 @@ export async function GET(req: NextRequest) {
   const cutoff1 = new Date(Date.now() - HOURS_AFTER * 3600_000).toISOString();
   const cutoff2 = new Date(Date.now() - HOURS_SEGUNDO * 3600_000).toISOString();
 
-  // Todo carrito con items, correo conocido y algún toque pendiente.
+  // Todo carrito con items, correo conocido y algún toque pendiente. El filtro
+  // de correo va en la consulta y no en el bucle: había ~2,100 líneas de
+  // carritos de invitados sin correo y el límite de 800 se llenaba con ellas,
+  // así que los ~100 alcanzables casi nunca entraban y no salía ningún correo.
+  // Solo la última semana: un primer recordatorio de un carrito de hace un mes
+  // lee como spam.
+  const semana = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
   const { data: items, error } = await admin
     .from("cart_items")
     .select(
@@ -31,7 +37,9 @@ export async function GET(req: NextRequest) {
         "variant:variants(price_cents, product:products(name, base_price_cents))",
     )
     .lt("cart.updated_at", cutoff1)
+    .gt("cart.updated_at", semana)
     .is("cart.abandoned_email2_sent_at", null)
+    .or("contact_email.not.is.null,customer_id.not.is.null", { referencedTable: "cart" })
     .limit(800);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

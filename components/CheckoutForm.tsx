@@ -181,6 +181,10 @@ export function CheckoutForm({
   // visit, on the way out. sendBeacon survives unload; a fetch would not.
   const lastFieldRef = useRef<string>("ninguno");
   const doneRef = useRef(false);
+  // checkValidity() también dispara `invalid` en cada campo vacío. revalidate
+  // lo llama en cada tecla, así que sin esta marca "invalid:name" salía en 412
+  // de 456 sesiones solo por abrir el formulario, no por intentar pagar.
+  const validandoRef = useRef(false);
   useEffect(() => {
     trackCheckout("start");
     const remember = (e: Event) => {
@@ -203,7 +207,7 @@ export function CheckoutForm({
     const onInvalid = (e: Event) => {
       const t = e.target as HTMLInputElement | null;
       const now = Date.now();
-      if (!t?.name || now - reportedAt < 400) return;
+      if (validandoRef.current || !t?.name || now - reportedAt < 400) return;
       reportedAt = now;
       trackCheckout(`invalid:${t.name}`);
     };
@@ -227,7 +231,14 @@ export function CheckoutForm({
   // instead of mirroring them all into state.
   const formRef = useRef<HTMLFormElement>(null);
   const [formValid, setFormValid] = useState(false);
-  const revalidate = () => setFormValid(!!formRef.current?.checkValidity());
+  const revalidate = () => {
+    validandoRef.current = true;
+    try {
+      setFormValid(!!formRef.current?.checkValidity());
+    } finally {
+      validandoRef.current = false;
+    }
+  };
   // fields appear/disappear with the payment method and the invoice toggle
   useEffect(revalidate, [method, needsInvoice, showCode, card]);
 
