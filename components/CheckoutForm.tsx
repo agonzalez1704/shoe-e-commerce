@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Cards, { type Focused } from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
-import { CheckCircle, Lock, ShieldCheck, Truck, Tag } from "@phosphor-icons/react";
+import { ArrowRight, CheckCircle, Lock, ShieldCheck, Truck, Tag, WhatsappLogo } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
@@ -53,9 +53,11 @@ const SAVE_FIELDS = ["name", "email", "phone", "line1", "neighborhood", "city", 
 // fijo, así que toda tienda mostraba el botón aunque su cuenta de Conekta no lo
 // tuviera habilitado: el comprador lo elegía y el cobro fallaba al final. Es la
 // misma señal que ya decide si la PDP anuncia "6 pagos de $X".
+// Efectivo en tiendas salió del checkout (2026-10): de 26 pedidos en 35 días se
+// pagaron 3, y los otros 23 apartaban inventario 3 días para nada. El camino de
+// código sigue para los pedidos que ya existen.
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
-  { id: "oxxo", label: "Paga en establecimientos", hint: "+20,000 tiendas" },
   ...(activeBrand.copy?.installments
     ? [{ id: "aplazo" as Method, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }]
     : []),
@@ -98,14 +100,16 @@ export function MethodMark({ id }: { id: Method }) {
 
 // floating-label field — label rides up on focus/fill; no separate label clutter
 function Field({
-  name, label, type = "text", required = true, autoComplete, inputMode, maxLength, className = "", onInput, onBlur, defaultValue, list,
+  name, label, type = "text", required = true, autoComplete, inputMode, maxLength, className = "", onInput, onBlur, defaultValue, list, hint,
 }: {
   name: string; label: string; type?: string; required?: boolean; autoComplete?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]; maxLength?: number; className?: string;
   onInput?: React.FormEventHandler<HTMLInputElement>; onBlur?: React.FocusEventHandler<HTMLInputElement>; defaultValue?: string; list?: string;
+  hint?: string;
 }) {
   return (
-    <div className={`relative ${className}`}>
+    <div className={className}>
+    <div className="relative">
       <input
         id={name} name={name} type={type} required={required} placeholder=" " defaultValue={defaultValue}
         autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} onInput={onInput} onBlur={onBlur} list={list}
@@ -117,6 +121,8 @@ function Field({
       >
         {label}
       </label>
+    </div>
+    {hint && <p className="mt-1 px-1 text-xs text-muted">{hint}</p>}
     </div>
   );
 }
@@ -132,6 +138,63 @@ function StepHeader({ n, title, hint }: { n: number; title: string; hint?: strin
 }
 
 const CARD = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
+
+const PASOS = ["Contacto", "Envío", "Pago"] as const;
+
+// Barra de avance; un paso ya hecho se puede reabrir tocándolo.
+function Progreso({ paso, irA }: { paso: 1 | 2 | 3; irA: (n: 1 | 2 | 3) => void }) {
+  return (
+    <ol className="grid grid-cols-3 gap-2">
+      {PASOS.map((t, i) => {
+        const n = (i + 1) as 1 | 2 | 3;
+        const hecho = n < paso;
+        return (
+          <li key={t}>
+            <button type="button" disabled={!hecho} onClick={() => irA(n)} aria-current={n === paso ? "step" : undefined}
+              className="flex w-full flex-col gap-1.5 text-left disabled:cursor-default">
+              <span className={`h-1 w-full rounded-full ${n <= paso ? "bg-accent" : "bg-border"}`} />
+              <span className={`text-xs ${n === paso ? "font-semibold text-text" : "text-muted"}`}>{n} {t}{hecho ? " ✓" : ""}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// Un paso completado, en una línea y editable.
+function Resumido({ titulo, texto, onEditar }: { titulo: string; texto: string; onEditar: () => void }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-5 py-3.5">
+      <CheckCircle size={20} weight="fill" className="shrink-0 text-accent" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{titulo}</p>
+        <p className="truncate text-xs text-muted">{texto}</p>
+      </div>
+      <button type="button" onClick={onEditar} className="text-sm font-medium text-accent">Editar</button>
+    </div>
+  );
+}
+
+// Botón para pasar de paso, con la salida a WhatsApp debajo.
+function Continuar({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  const wa = activeBrand.legal.whatsapp;
+  return (
+    <div className="mt-5 space-y-3">
+      <button type="button" onClick={onClick}
+        className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-semibold text-accent-contrast transition-transform active:scale-[0.99]">
+        {children} <ArrowRight size={16} weight="bold" />
+      </button>
+      {wa && (
+        <a href={`https://wa.me/${wa}?text=${encodeURIComponent("Hola, quiero hacer un pedido")}`} target="_blank" rel="noreferrer"
+          onClick={() => trackCheckout("whatsapp")}
+          className="flex items-center justify-center gap-1.5 text-sm text-muted">
+          <WhatsappLogo size={16} /> ¿Dudas? <span className="font-medium text-text underline">Pídelo por WhatsApp</span>
+        </a>
+      )}
+    </div>
+  );
+}
 
 export type CheckoutDefaults = Partial<
   Record<"name" | "email" | "phone" | "line1" | "neighborhood" | "city" | "region" | "postal", string>
@@ -153,19 +216,28 @@ export function CheckoutForm({
   // Pagar en tienda desconcierta a quien no lo conoce ("¿y ahora qué hago?"):
   // al elegirlo, un modal explica los 4 pasos antes de que decida.
   const [modalEfectivo, setModalEfectivo] = useState(false);
+  // Tres pasos dentro del mismo <form>. Los campos de los pasos ocultos siguen
+  // montados —el autollenado por CP, Places y los datos guardados los buscan por
+  // id— y solo se esconden. Con los 12 campos juntos, 137 de 456 sesiones se
+  // iban sin escribir nada.
+  const [paso, setPaso] = useState<1 | 2 | 3>(1);
+  const [recap, setRecap] = useState({ contacto: "", envio: "" });
+  const [verResumen, setVerResumen] = useState(false);
 
   // Prefill contact/shipping from the last "saved" checkout on this device, but
   // only for fields the server didn't already fill (logged-in defaults win).
   useEffect(() => {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return;
-    let saved: Record<string, string>;
-    try { saved = JSON.parse(raw); } catch { return; }
+    let saved: Record<string, string> = {};
+    try { saved = raw ? JSON.parse(raw) : {}; } catch {}
     for (const f of SAVE_FIELDS) {
       const el = document.getElementById(f) as HTMLInputElement | null;
       if (el && !el.value && saved[f]) el.value = saved[f];
     }
     revalidate(); // prefilled values may already satisfy the form
+    // Quien ya compró aquí trae contacto y dirección completos: directo a pagar,
+    // con ambos resumidos y editables.
+    if (!primerInvalido(1) && !primerInvalido(2)) { resume(); setPaso(3); }
   }, []);
   const [loading, setLoading] = useState(false);
   // Synchronous double-submit guard: `loading` disables the button, but the
@@ -241,6 +313,40 @@ export function CheckoutForm({
   };
   // fields appear/disappear with the payment method and the invoice toggle
   useEffect(revalidate, [method, needsInvoice, showCode, card]);
+
+  const valor = (n: string) => (formRef.current?.elements.namedItem(n) as HTMLInputElement | null)?.value.trim() ?? "";
+  function primerInvalido(n: 1 | 2): HTMLInputElement | null {
+    const sec = formRef.current?.querySelector(`[data-paso="${n}"]`);
+    if (!sec) return null;
+    validandoRef.current = true; // revisar no es intentar: no se mide
+    try {
+      return [...sec.querySelectorAll<HTMLInputElement>("input")].find((el) => !el.checkValidity()) ?? null;
+    } finally {
+      validandoRef.current = false;
+    }
+  }
+  function resume() {
+    setRecap({
+      contacto: [valor("name"), valor("phone"), valor("email")].filter(Boolean).join(" · "),
+      envio: [
+        [valor("line1"), valor("neighborhood")].filter(Boolean).join(", "),
+        [valor("city"), valor("region"), valor("postal")].filter(Boolean).join(", "),
+        ocurre ? "recoger en sucursal" : "",
+      ].filter(Boolean).join(" · "),
+    });
+  }
+  function irA(n: 1 | 2 | 3) {
+    resume();
+    setPaso(n);
+    trackCheckout(`paso:${n}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function avanza() {
+    if (paso === 3) return;
+    const bad = primerInvalido(paso);
+    if (bad) { bad.reportValidity(); return; } // este `invalid` sí cuenta: intentó avanzar
+    irA(paso === 1 ? 2 : 3);
+  }
 
   // Meta: the buyer reached checkout with a real cart
   useEffect(() => {
@@ -320,6 +426,13 @@ export function CheckoutForm({
     e.preventDefault();
     if (submittingRef.current) return; // a submit is already in flight
     const form = e.currentTarget;
+    // Enter en un paso intermedio avanza; no intenta cobrar.
+    if (paso !== 3) { avanza(); return; }
+    // Un paso anterior pudo quedar incompleto al editarlo: se abre y se señala.
+    for (const n of [1, 2] as const) {
+      const bad = primerInvalido(n);
+      if (bad) { setPaso(n); requestAnimationFrame(() => bad.reportValidity()); return; }
+    }
 
     // Point at the offending field instead of just refusing to continue: buyers
     // filled everything they could see (typing the colonia inside the street
@@ -435,11 +548,29 @@ export function CheckoutForm({
         </span>
       </div>
 
-      <form ref={formRef} onSubmit={onSubmit} onInput={revalidate} onChange={revalidate} className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-5">
-          {/* 1 — contact + shipping */}
-          <section className={CARD}>
-            <StepHeader n={1} title="Contacto y envío" />
+      <form ref={formRef} onSubmit={onSubmit} onInput={revalidate} onChange={revalidate}
+        // Enter en los pasos 1 y 2 avanza: el botón de pagar está oculto ahí y el
+        // navegador no envía un formulario cuyo botón por defecto no se pinta.
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && paso < 3 && (e.target as HTMLElement).tagName === "INPUT") { e.preventDefault(); avanza(); }
+        }}
+        className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="min-w-0 space-y-5">
+          {/* En celular el resumen vive abajo: arriba solo el total, a la vista en todo paso. */}
+          <button type="button" onClick={() => setVerResumen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm lg:hidden">
+            <span className="text-muted">{lines.reduce((n, l) => n + l.quantity, 0)} {lines.reduce((n, l) => n + l.quantity, 0) === 1 ? "par" : "pares"}</span>
+            <span className="flex items-center gap-2">
+              <span className="nums font-semibold">{mxn(effectiveTotal)}</span>
+              <span className="font-medium text-accent">{verResumen ? "Ocultar" : "Ver resumen"}</span>
+            </span>
+          </button>
+          <Progreso paso={paso} irA={irA} />
+
+          {/* 1 — contacto */}
+          <section data-paso="1" className={`${CARD} ${paso === 1 ? "" : "hidden"}`}>
+            <h2 className="text-xl font-semibold tracking-tight">¿A quién se lo enviamos?</h2>
+            <p className="mb-4 mt-1 text-sm text-muted">Tres datos y seguimos con la dirección.</p>
             {googleAuth && (
               <div className="mb-4">
                 <GoogleSignInButton next="/checkout" label="Autocompletar con Google" />
@@ -448,49 +579,62 @@ export function CheckoutForm({
                 </div>
               </div>
             )}
+            <div className="space-y-3">
+              <Field name="name" label="Nombre completo" autoComplete="name" defaultValue={defaults.name} />
+              <Field name="phone" label="WhatsApp" type="tel" autoComplete="tel" inputMode="tel" defaultValue={defaults.phone}
+                hint="Por aquí te avisamos del envío." />
+              <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" defaultValue={defaults.email}
+                hint="Para tu recibo y tu factura."
+                onBlur={(e) => { void guardaCorreoCarrito(e.currentTarget.value); }} />
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {[["Envío gratis", "a todo México"], ["Cambio de talla", "sin costo"], ["Pago seguro", "cifrado"]].map(([t, d]) => (
+                <div key={t} className="rounded-xl border border-border px-2.5 py-2">
+                  <p className="text-xs font-semibold">{t}</p>
+                  <p className="text-[11px] text-muted">{d}</p>
+                </div>
+              ))}
+            </div>
+            <Continuar onClick={avanza}>Continuar al envío</Continuar>
+          </section>
+          {paso > 1 && <Resumido titulo="Contacto" texto={recap.contacto} onEditar={() => irA(1)} />}
+
+          {/* 2 — envío */}
+          <section data-paso="2" className={`${CARD} ${paso === 2 ? "" : "hidden"}`}>
+            <h2 className="mb-4 text-xl font-semibold tracking-tight">¿A dónde lo enviamos?</h2>
+            {/* Ocurre: el paquete llega a la sucursal de la paquetería y el
+                comprador pasa por él. Se sigue pidiendo la dirección completa
+                porque Skydropx exige calle y colonia para cotizar, y porque el
+                código postal es el que decide qué sucursales quedan cerca. */}
+            <div role="group" aria-label="Tipo de entrega" className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-border bg-elevated p-1">
+              {([[false, "A domicilio"], [true, "Recoger en sucursal"]] as const).map(([v, t]) => (
+                <button key={t} type="button" aria-pressed={ocurre === v} onClick={() => setOcurre(v)}
+                  className={`h-11 rounded-lg text-sm font-semibold transition-colors ${ocurre === v ? "bg-text text-bg" : "text-muted"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            {ocurre && (
+              <p className="-mt-2 mb-4 text-xs text-muted">
+                Lo enviamos a la sucursal de paquetería más cercana a tu código postal y pasas por él. Te confirmamos la dirección exacta antes de enviarlo.
+              </p>
+            )}
             <PlacesAutocomplete />
             <CpAutollenado />
             <div className="space-y-3">
-              <Field name="name" label="Nombre completo" autoComplete="name" defaultValue={defaults.name} />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field name="email" label="Correo electrónico" type="email" autoComplete="email" inputMode="email" defaultValue={defaults.email}
-                  onBlur={(e) => { void guardaCorreoCarrito(e.currentTarget.value); }} />
-                <Field name="phone" label="Teléfono" type="tel" autoComplete="tel" inputMode="tel" defaultValue={defaults.phone} />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field name="line1" label="Calle y número" autoComplete="address-line1" defaultValue={defaults.line1} />
-                <Field name="neighborhood" label="Colonia" autoComplete="address-line2" defaultValue={defaults.neighborhood} list="colonias-cp" />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field name="city" label="Ciudad / Municipio" autoComplete="address-level2" className="sm:col-span-1" defaultValue={defaults.city} />
+              <Field name="postal" label="Código postal" autoComplete="postal-code" inputMode="numeric" maxLength={5} defaultValue={defaults.postal}
+                hint="Llena tu estado y te sugiere la colonia." />
+              <div className="grid grid-cols-2 gap-3">
                 <Field name="region" label="Estado" autoComplete="address-level1" defaultValue={defaults.region} />
-                <Field name="postal" label="C.P." autoComplete="postal-code" inputMode="numeric" maxLength={5} defaultValue={defaults.postal} />
+                <Field name="city" label="Ciudad / Municipio" autoComplete="address-level2" defaultValue={defaults.city} />
               </div>
+              <Field name="neighborhood" label="Colonia" autoComplete="address-line2" defaultValue={defaults.neighborhood} list="colonias-cp" />
+              <Field name="line1" label="Calle y número" autoComplete="address-line1" defaultValue={defaults.line1} />
               {activeBrand.copy?.deliveryLine && (
                 <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted">
                   <Truck size={14} /> {activeBrand.copy.deliveryLine}
                 </p>
               )}
-
-              {/* Ocurre: el paquete llega a la sucursal de la paquetería y el
-                  comprador pasa por él. Se sigue pidiendo la dirección completa
-                  porque Skydropx exige calle y colonia para cotizar, y porque el
-                  código postal es el que decide qué sucursales quedan cerca. */}
-              <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border p-3 transition-colors hover:border-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
-                <input
-                  type="checkbox"
-                  checked={ocurre}
-                  onChange={(e) => setOcurre(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                />
-                <span className="text-sm">
-                  <span className="font-medium text-text">Recogerlo en sucursal de paquetería</span>
-                  <span className="mt-0.5 block text-xs text-muted">
-                    En lugar de a tu domicilio, lo enviamos a la sucursal más cercana a tu código postal y pasas por él.
-                    Te confirmamos la dirección exacta antes de enviarlo.
-                  </span>
-                </span>
-              </label>
               <label className="flex cursor-pointer items-center gap-2 pt-1 text-sm text-muted">
                 <input
                   type="checkbox"
@@ -501,11 +645,13 @@ export function CheckoutForm({
                 Guardar mis datos para la próxima compra
               </label>
             </div>
+            <Continuar onClick={avanza}>Continuar al pago</Continuar>
           </section>
+          {paso > 2 && <Resumido titulo="Envío" texto={recap.envio} onEditar={() => irA(2)} />}
 
-          {/* 2 — payment method */}
-          <section className={CARD}>
-            <StepHeader n={2} title="Pago" />
+          {/* 3 — pago */}
+          <section data-paso="3" className={`${CARD} ${paso === 3 ? "" : "hidden"}`}>
+            <h2 className="mb-4 text-xl font-semibold tracking-tight">¿Cómo quieres pagar?</h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {methods.map(({ id, label, hint }) => (
                 <button
@@ -629,8 +775,8 @@ export function CheckoutForm({
             )}
           </section>
 
-          {/* 3 — invoice (optional) */}
-          <section className={CARD}>
+          {/* factura (opcional), con el pago */}
+          <section className={`${CARD} ${paso === 3 ? "" : "hidden"}`}>
             <label className="flex cursor-pointer items-center gap-2.5 text-sm">
               <input
                 type="checkbox" checked={needsInvoice}
@@ -653,7 +799,7 @@ export function CheckoutForm({
         </div>
 
         {/* summary */}
-        <aside className="space-y-4 rounded-2xl border border-border bg-surface p-5 lg:sticky lg:top-24">
+        <aside className={`space-y-4 rounded-2xl border border-border bg-surface p-5 lg:sticky lg:top-24 ${paso === 3 || verResumen ? "" : "hidden lg:block"}`}>
           <h2 className="text-sm font-semibold">Tu pedido <span className="text-muted">· {lines.length} {lines.length === 1 ? "artículo" : "artículos"}</span></h2>
 
           <ul className="space-y-3">
@@ -729,14 +875,17 @@ export function CheckoutForm({
 
           {/* Stays clickable on purpose: pressing it walks the buyer to the field
               that is still missing (see onSubmit) instead of dead-ending them. */}
+          {paso < 3 && (
+            <p className="text-center text-xs text-muted">Completa tus datos para pagar.</p>
+          )}
           <button
             disabled={loading}
             data-pay-cta
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            className={`${paso === 3 ? "flex" : "hidden"} w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {loading ? "Procesando…" : <><Lock size={15} weight="fill" /> {cta}</>}
           </button>
-          {!loading && !formValid && (
+          {paso === 3 && !loading && !formValid && (
             <p className="mt-2 text-center text-xs text-muted">Faltan datos por completar — toca el botón y te llevamos al campo.</p>
           )}
 
@@ -744,14 +893,8 @@ export function CheckoutForm({
             <VisaMark />
             <MastercardMark />
             <AmexMark />
-            <LogoChip src="/pay/farmacias-ahorro.svg" alt="Farmacias del Ahorro" h={12} />
-            <LogoChip src="/pay/bbva.svg" alt="BBVA" h={12} />
-            <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={14} />
+            {activeBrand.copy?.installments && <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={14} />}
           </div>
-          <p className="text-center text-[11px] leading-relaxed text-muted">
-            Paga en efectivo en Farmacias del Ahorro, BBVA, Walmart, Bodega Aurrerá, Circle K, Soriana
-            y +20,000 tiendas. <span className="font-medium">No disponible en OXXO.</span>
-          </p>
           <p className="flex items-center justify-center gap-1 text-[11px] text-muted">
             <ShieldCheck size={13} weight="fill" /> Compra protegida · procesado por Conekta
           </p>
