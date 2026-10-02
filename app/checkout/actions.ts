@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { createMpPreference } from "@/lib/mercadopago";
-import { sendVoucherEmail } from "@/lib/email";
 import { markOrderPaid } from "@/lib/order-fulfillment";
 import { cookies, headers } from "next/headers";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -167,6 +166,10 @@ function buyerMessage(raw: string): string {
 }
 
 async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) => void): Promise<CheckoutResult> {
+  // Efectivo en tiendas salió de la tienda (2026-10): 3 de 26 pedidos se pagaban.
+  if (input.method === "oxxo" || input.method === "spei") {
+    throw new Error("Ese método de pago ya no está disponible. Elige tarjeta, Mercado Pago o Aplazo.");
+  }
   // abuse guard: 10 checkout attempts / minute / IP (layered with the pending-order cap)
   const ip = await clientIp();
   if (!(await rateLimit("checkout", ip, 10, 60))) {
@@ -316,10 +319,6 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
 
   const charge = co.charges.data[0];
   const pm = charge.payment_method;
-  const reference = pm.reference;                 // OXXO
-  const voucherUrl = pm.barcode_url;              // OXXO barcode image
-  const clabe = pm.receiving_account_number;      // SPEI
-  const bank = pm.receiving_account_bank;         // SPEI
   // redirect to provider — card 3DS challenge OR Aplazo approval
   // card 3DS uses next_action; Aplazo (BNPL) hands its approval URL back on the
   // payment method instead, so check both or the buyer never reaches Aplazo.
@@ -331,9 +330,6 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     p_provider_charge_id: co.id,
     p_method: input.method,
     p_amount_cents: totalCents,
-    p_reference: reference ?? undefined,
-    p_clabe: clabe ?? undefined,
-    p_voucher_url: voucherUrl ?? undefined,
     p_expires_at: pm.expires_at ? new Date(pm.expires_at * 1000).toISOString() : undefined,
   });
 
@@ -364,37 +360,8 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     cardPaid = r.ok;
   }
 
-  // 8. notify the buyer (non-fatal). Skip card emails until payment confirms (webhook handles it).
-  const emailLines = (items ?? []).map((i) => ({
-    name: `${i.product_name} (${i.variant_label})`,
-    quantity: i.quantity,
-    lineTotalCents: i.unit_price_cents * i.quantity,
-  }));
-  const breakdown = {
-    subtotalCents: created.subtotal_cents,
-    discountCents: created.discount_cents,
-    shippingCents: shipping,
-    taxCents: Math.round((totalCents * 16) / 116), // IVA-inclusive of the final total
-  };
-
-  if (input.method === "oxxo" || input.method === "spei") {
-    await sendVoucherEmail({
-      to: input.email,
-      orderNumber: created.order_number,
-      totalCents,
-      method: input.method,
-      reference: reference ?? undefined,
-      clabe: clabe ?? undefined,
-      bank: bank ?? undefined,
-      voucherUrl: voucherUrl ?? undefined,
-      expiresAt: created.expires_at,
-      lines: emailLines,
-      breakdown,
-    });
-  }
-
-  // ping the admin phone: a cash/SPEI order is only a lead until it's paid, a
-  // card one is already money in
+  // ping the admin phone: an unpaid order (Aplazo, 3DS) is only a lead until
+  // it's paid, a card one is already money in
   // (la tarjeta cobrada ya avisa "Pago recibido" desde markOrderPaid)
   if (!cardPaid) {
     await notifyAdmins({
@@ -411,8 +378,6 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     totalCents,
     expiresAt: created.expires_at,
     redirectUrl, // card 3DS / Aplazo — client redirects here if present
-    oxxo: input.method === "oxxo" ? { reference: reference ?? "", voucherUrl } : undefined,
-    spei: input.method === "spei" ? { clabe: clabe ?? "", bank } : undefined,
     card: input.method === "card" ? { paid: cardPaid } : undefined,
   };
 }

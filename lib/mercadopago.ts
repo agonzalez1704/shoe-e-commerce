@@ -86,7 +86,11 @@ export async function createMpPreference(a: PreferenceArgs): Promise<MpPreferenc
       auto_return: "approved",
       notification_url: a.notificationUrl,
       statement_descriptor: DESCRIPTOR,
-      ...(a.maxInstallments ? { payment_methods: { installments: a.maxInstallments } } : {}),
+      // Sin efectivo (OXXO y demás "ticket"/"atm"): igual que en nuestro checkout.
+      payment_methods: {
+        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
+        ...(a.maxInstallments ? { installments: a.maxInstallments } : {}),
+      },
     }),
   });
 }

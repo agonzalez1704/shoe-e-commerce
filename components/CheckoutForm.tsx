@@ -18,7 +18,6 @@ import { trackMeta } from "@/components/MetaPixel";
 import { guardaCorreoCarrito } from "@/app/cart/actions";
 import { trackCheckout } from "@/components/AnalyticsBeacon";
 import { metaContentId } from "@/lib/meta-content";
-import { CASH_CHAINS } from "@/lib/payment-method";
 import {
   AlertDialog, AlertDialogPopup, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogClose,
@@ -213,9 +212,6 @@ export function CheckoutForm({
   const [save, setSave] = useState(true);
   const [ocurre, setOcurre] = useState(false);
   const [showCode, setShowCode] = useState(false);
-  // Pagar en tienda desconcierta a quien no lo conoce ("¿y ahora qué hago?"):
-  // al elegirlo, un modal explica los 4 pasos antes de que decida.
-  const [modalEfectivo, setModalEfectivo] = useState(false);
   // Tres pasos dentro del mismo <form>. Los campos de los pasos ocultos siguen
   // montados —el autollenado por CP, Places y los datos guardados los buscan por
   // id— y solo se esconden. Con los 12 campos juntos, 137 de 456 sesiones se
@@ -656,7 +652,7 @@ export function CheckoutForm({
               {methods.map(({ id, label, hint }) => (
                 <button
                   type="button" key={id}
-                  onClick={() => { setMethod(id); if (id === "oxxo" && method !== "oxxo") setModalEfectivo(true); }}
+                  onClick={() => setMethod(id)}
                   aria-pressed={method === id}
                   className={`relative flex flex-col items-start gap-1.5 rounded-xl border p-3 pt-7 text-left transition-all ${
                     method === id
@@ -679,32 +675,6 @@ export function CheckoutForm({
               ))}
             </div>
 
-            <AlertDialog open={modalEfectivo} onOpenChange={setModalEfectivo}>
-              <AlertDialogPopup>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Así funciona pagar en tiendas</AlertDialogTitle>
-                  <AlertDialogDescription>Sin tarjeta y sin apps — solo efectivo en la caja.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <ol className="space-y-3 px-6 pb-2 text-sm">
-                  {[
-                    ["1", "Al confirmar tu pedido te generamos una ficha de pago con código de barras (también te llega por correo)."],
-                    ["2", "Llévala a Farmacias del Ahorro, 7-Eleven, Walmart, BBVA o cualquiera de las +20,000 tiendas afiliadas."],
-                    ["3", "Muestra el código en caja y paga en efectivo. Tienes 3 días."],
-                    ["4", "Detectamos tu pago automáticamente y preparamos el envío de tus zapatos — te avisamos por correo."],
-                  ].map(([n, t]) => (
-                    <li key={n} className="flex gap-3">
-                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-xs font-bold text-accent-contrast">{n}</span>
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ol>
-                <AlertDialogFooter>
-                  <AlertDialogClose className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-contrast transition-transform active:scale-[0.98]">
-                    Entendido, pagaré en tienda
-                  </AlertDialogClose>
-                </AlertDialogFooter>
-              </AlertDialogPopup>
-            </AlertDialog>
 
             {method === "card" && (
               <div className="mt-5 grid gap-5 md:grid-cols-[290px_1fr] md:items-center">
@@ -748,20 +718,6 @@ export function CheckoutForm({
                   </p>
                 </div>
               </div>
-            )}
-            {method === "oxxo" && (
-              <div className="mt-4 space-y-2.5 rounded-xl bg-accent-soft px-4 py-3">
-                <p className="text-xs text-muted">
-                  Generamos un voucher con código de barras. Págalo en efectivo dentro de 3 días en:
-                </p>
-                <StoreLogos h={16} />
-                <p className="text-[11px] text-muted">y +20,000 tiendas. No disponible en OXXO.</p>
-              </div>
-            )}
-            {method === "spei" && (
-              <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
-                Generamos una CLABE para transferencia. El pedido se confirma al recibir el pago.
-              </p>
             )}
             {method === "aplazo" && (
               <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
@@ -904,24 +860,6 @@ export function CheckoutForm({
   );
 }
 
-// Expandable "where can I pay" list — mirrors the chains on the Conekta voucher
-// page so the buyer can confirm a store near them without leaving the site.
-function CashChains() {
-  return (
-    <details className="rounded-xl border border-border bg-elevated/60 px-3.5 py-2.5 text-sm [&_summary]:cursor-pointer">
-      <summary className="font-medium text-text">¿Dónde puedo pagar? Ver todas las tiendas</summary>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {CASH_CHAINS.map((c) => (
-          <span key={c} className="rounded-md bg-surface px-2 py-1 text-[11px] text-muted ring-1 ring-border">
-            {c}
-          </span>
-        ))}
-      </div>
-      <p className="mt-2 text-[11px] text-muted">y +20,000 tiendas. <span className="font-medium text-text">No disponible en OXXO.</span></p>
-    </details>
-  );
-}
-
 function Confirmation({ result }: { result: CheckoutResult }) {
   return (
     <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-border bg-surface p-6">
@@ -935,42 +873,6 @@ function Confirmation({ result }: { result: CheckoutResult }) {
         <p className="text-sm text-muted">
           {result.card?.paid ? "Pago confirmado. ¡Gracias!" : "Pago en proceso, recibirás un correo en breve."}
         </p>
-      )}
-
-      {result.method === "oxxo" && result.oxxo && (
-        <div className="space-y-3">
-          <p className="text-sm text-muted">
-            Paga en efectivo mostrando este código de barras (o dictando la referencia) en la caja de una tienda afiliada.
-            <span className="font-medium text-text"> No es válido en OXXO.</span>
-          </p>
-          <div className="rounded-xl bg-white p-4 text-center">
-            {result.oxxo.voucherUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={result.oxxo.voucherUrl} alt="Código de barras para pago en efectivo" className="mx-auto max-h-44 w-auto" />
-            )}
-            <p className="mt-2 font-mono text-sm tracking-wider text-zinc-900">{result.oxxo.reference}</p>
-          </div>
-          <p className="nums text-sm">Monto a pagar: <span className="font-medium">{mxn(result.totalCents)}</span></p>
-          <CashChains />
-          {result.expiresAt && (
-            <p className="text-xs text-muted">Vence {new Date(result.expiresAt).toLocaleString("es-MX")}</p>
-          )}
-          {result.oxxo.voucherUrl && (
-            <a href={result.oxxo.voucherUrl} target="_blank" rel="noreferrer" className="inline-block text-sm text-accent underline">
-              Abrir comprobante para imprimir
-            </a>
-          )}
-        </div>
-      )}
-
-      {result.method === "spei" && result.spei && (
-        <div className="space-y-2">
-          <p className="text-sm text-muted">Transfiere el total a esta CLABE{result.spei.bank ? ` (${result.spei.bank})` : ""}:</p>
-          <p className="nums rounded-lg bg-elevated p-3 text-lg">{result.spei.clabe}</p>
-          {result.expiresAt && (
-            <p className="text-xs text-muted">Vence {new Date(result.expiresAt).toLocaleString("es-MX")}</p>
-          )}
-        </div>
       )}
 
       <p className="text-xs text-muted">Te confirmaremos por correo cuando se reciba el pago.</p>

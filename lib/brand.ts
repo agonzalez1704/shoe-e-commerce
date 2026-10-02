@@ -345,7 +345,7 @@ const BRANDS: Record<string, BrandConfig> = {
       benefits: [
         { icon: "package", title: "Piel genuina", sub: "Hecho a mano en León" },
         { icon: "truck", title: "Envío gratis", sub: "Entrega en 4–7 días hábiles" },
-        { icon: "card", title: "Paga como quieras", sub: "Tarjeta, efectivo o Aplazo" },
+        { icon: "card", title: "Paga como quieras", sub: "Tarjeta, Mercado Pago o Aplazo" },
         { icon: "pin", title: "Todo México", sub: "Con factura disponible" },
       ],
       howItWorks: {
@@ -415,7 +415,7 @@ const BRANDS: Record<string, BrandConfig> = {
       exchangeLine: "Si tu talla no queda como esperabas, el primer cambio es sin costo.",
       relatedNote: "Otros modelos hechos a mano, mismo envío gratis.",
       seoLine: "Calzado de piel hecho a mano en México, envío gratis.",
-      paymentNote: "Pagos con tarjeta, efectivo y Aplazo. Facturación disponible.",
+      paymentNote: "Pagos con tarjeta, Mercado Pago y Aplazo. Facturación disponible.",
       installments: { provider: "Aplazo", payments: 6 },
     },
     // 53111601 calzado · 53111600 la clase de calzado en el catálogo del SAT
@@ -431,7 +431,7 @@ const BRANDS: Record<string, BrandConfig> = {
     },
     tagline: "Filo en cada paso.",
     description:
-      "Calzado de piel hecho a mano en León, Guanajuato. Diseño afilado, todas las tallas y anchos, envío gratis a todo el país. Pago con tarjeta, efectivo o Aplazo.",
+      "Calzado de piel hecho a mano en León, Guanajuato. Diseño afilado, todas las tallas y anchos, envío gratis a todo el país. Pago con tarjeta, Mercado Pago o Aplazo.",
     emailFrom: "Blade <pedidos@calzadoblade.com>",
     announcement: "2 PARES POR $1,999 · tú eliges la pareja · Envío gratis a todo México",
     announcementHref: "/combo",

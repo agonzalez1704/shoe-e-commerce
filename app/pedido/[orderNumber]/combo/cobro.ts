@@ -3,7 +3,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { markOrderPaid } from "@/lib/order-fulfillment";
-import { sendVoucherEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/site";
 import { pedidoAutorizado } from "./actions";
 
@@ -36,6 +35,7 @@ export async function pagarComplemento(
       .maybeSingle();
     if (!hijo) return { ok: false, error: "No hay un complemento pendiente de pago." };
     if (method === "card" && !cardTokenId) return { ok: false, error: "Falta el token de la tarjeta." };
+    if (method === "oxxo") return { ok: false, error: "El pago en efectivo ya no está disponible. Elige tarjeta o Aplazo." };
 
     const ship = (hijo.shipping_address ?? {}) as Record<string, string>;
     const { data: items } = await admin
@@ -82,20 +82,6 @@ export async function pagarComplemento(
     if (method === "card" && co.payment_status === "paid" && !redirectUrl) {
       await markOrderPaid({ orderId: hijo.id, chargeId: co.id, amountCents: hijo.total_cents, method: "card" });
       return { ok: true, paid: true };
-    }
-
-    if (method === "oxxo") {
-      await sendVoucherEmail({
-        to: hijo.email,
-        orderNumber: hijo.order_number,
-        totalCents: hijo.total_cents,
-        method,
-        reference: pm.reference ?? undefined,
-        voucherUrl: pm.barcode_url ?? undefined,
-        expiresAt: hijo.expires_at,
-        lines: (items ?? []).map((i) => ({ name: `${i.product_name} (${i.variant_label})`, quantity: i.quantity, lineTotalCents: i.unit_price_cents * i.quantity })),
-        breakdown: { subtotalCents: hijo.total_cents, discountCents: 0, shippingCents: 0, taxCents: Math.round((hijo.total_cents * 16) / 116) },
-      });
     }
 
     return {

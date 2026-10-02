@@ -50,7 +50,6 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
 
   const metodos: { id: Metodo; label: string; hint: string }[] = [
     { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
-    { id: "oxxo", label: "Paga en establecimientos", hint: "+20,000 tiendas" },
     ...(activeBrand.copy?.installments ? [{ id: "aplazo" as Metodo, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }] : []),
     ...(mpEnabled ? [{ id: "mercadopago" as Metodo, label: "Mercado Pago", hint: "Tarjeta o saldo" }] : []),
   ];
@@ -196,13 +195,6 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
                 Tus datos van directo a Conekta, nunca a nuestro servidor.
               </p>
             </div>
-          </div>
-        )}
-        {metodo === "oxxo" && (
-          <div className="mt-4 space-y-2.5 rounded-xl bg-accent-soft px-4 py-3">
-            <p className="text-xs text-muted">Generamos un voucher con código de barras. Págalo en efectivo dentro de 3 días en:</p>
-            <StoreLogos h={16} />
-            <p className="text-[11px] text-muted">y +20,000 tiendas. <span className="font-medium text-text">No disponible en OXXO.</span> Detectamos tu pago automáticamente.</p>
           </div>
         )}
         {metodo === "aplazo" && (

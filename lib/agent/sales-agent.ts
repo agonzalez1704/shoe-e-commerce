@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buscarProducto } from "@/lib/analytics";
 import { SITE_URL } from "@/lib/site";
 import { activeBrand } from "@/lib/brand";
-import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 import type { Turn } from "@/lib/agent/memoria";
 
 const MODEL = process.env.OPENROUTER_AGENT_MODEL ?? "anthropic/claude-sonnet-4.6";
@@ -22,12 +21,9 @@ const REGLAS = [
     `${activeBrand.name} vende SOBRE PEDIDO: si un producto trae "disponible": true o "stock": "sobre pedido", ` +
       `SIEMPRE se puede comprar aunque el stock sea 0. NUNCA digas que está agotado. ${activeBrand.copy.madeToOrderLine}`,
   `Para comprar, comparte el "link" del producto (o ${SITE_URL}/products).`,
-  // La lista de tiendas sale de payment-method.ts, que es la que de verdad
-  // describe la red del voucher. La advertencia de OXXO se queda: el método
-  // interno se llama "oxxo" y no se paga en OXXO.
+  // Sin efectivo desde 2026-10: ni voucher en tiendas ni OXXO.
   activeBrand.copy?.paymentNote &&
-    `${activeBrand.copy.paymentNote} El pago en efectivo es un voucher que se paga en ${CASH_CHAINS_SHORT} ` +
-      "y más de 20,000 tiendas; NO se acepta OXXO.",
+    `${activeBrand.copy.paymentNote} NO aceptamos pago en efectivo, OXXO ni depósito en tiendas.`,
   "Estado de un pedido: pide el número de pedido tal como viene en su correo de confirmación, y el correo; luego usa estado_pedido.",
   "Si el cliente pide un reclamo, cambio/devolución, factura, o algo que no puedas resolver, usa pasar_a_asesor con el motivo y avísale que un asesor lo atenderá.",
 ].filter(Boolean);

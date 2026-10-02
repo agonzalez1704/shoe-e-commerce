@@ -33,8 +33,8 @@ export default function TerminosPage() {
       <h2>2. Precios y pagos</h2>
       <ul>
         <li>Todos los precios están en pesos mexicanos (MXN) e incluyen IVA.</li>
-        <li>Aceptamos tarjeta de crédito/débito, pago en efectivo en tiendas (7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmacias del Ahorro, Soriana y más) y Aplazo, procesados por Conekta.</li>
-        <li>El pedido se confirma únicamente cuando el pago se acredita. Los pagos en efectivo tienen una fecha límite; si vencen, el pedido se cancela automáticamente.</li>
+        <li>Aceptamos tarjeta de crédito/débito y Aplazo, procesados por Conekta, y Mercado Pago. No aceptamos pago en efectivo.</li>
+        <li>El pedido se confirma únicamente cuando el pago se acredita. Un pago que no se completa a tiempo cancela el pedido automáticamente.</li>
       </ul>
 
       <h2>3. Combos y promociones</h2>
