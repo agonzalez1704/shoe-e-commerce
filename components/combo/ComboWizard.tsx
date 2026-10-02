@@ -160,7 +160,7 @@ export function ComboWizard({
                   <p className="mt-2 text-sm font-semibold leading-tight">{c.name}</p>
                   <p className="text-xs capitalize text-muted">{c.color}</p>
                   {paso === 1 ? (
-                    <p className="mt-1 text-xs text-muted">Combo desde <strong className="nums text-text">{mxn(precioTarjeta(c))}</strong></p>
+                    <p className="mt-1 text-xs text-muted">Combo {tarifaUnica(combo) ? "de 2" : "desde"} <strong className="nums text-text">{mxn(precioTarjeta(c))}</strong></p>
                   ) : (
                     <span className={`nums mt-1 inline-block rounded-lg px-2 py-0.5 text-xs font-semibold ${nEx(c1, c) === 0 ? "bg-emerald-50 text-emerald-800" : "bg-accent-soft text-accent"}`}>
                       Combo {mxn(precioTarjeta(c))}
@@ -190,7 +190,7 @@ export function ComboWizard({
               <p className="text-xs text-muted">{paso === 1 ? "Toca un par para elegir talla" : "Falta el segundo par"}</p>
             </div>
             <div className="text-right">
-              <p className="text-[11px] text-muted">desde</p>
+              <p className="text-[11px] text-muted">{tarifaUnica(combo) ? "los 2" : "desde"}</p>
               <p className="nums text-lg font-bold">{mxn(precioPar(combo, paso === 1 ? 0 : nEx(c1, null)))}</p>
             </div>
           </div>

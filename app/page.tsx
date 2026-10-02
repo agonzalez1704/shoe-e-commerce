@@ -16,7 +16,7 @@ import { listProducts, listBestSellers, listFeatured, type ProductCard } from "@
 import { ProductGrid } from "@/components/ProductGrid";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { ComboFlotante } from "@/components/ComboFlotante";
-import { comboOf, precioPar } from "@/lib/pricing";
+import { comboOf, precioPar, tarifaUnica } from "@/lib/pricing";
 import { formatCents } from "@/lib/money";
 import { activeBrand, type HomeFeature } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
@@ -83,6 +83,7 @@ export default async function Home() {
       {comboCfg && (
         <ComboFlotante
           precioDesde={formatCents(precioPar(comboCfg, 0), "MXN", "es-MX")}
+          unica={tarifaUnica(comboCfg)}
           fotos={combos.map((c) => c.image).filter((u): u is string => !!u).slice(0, 2)}
         />
       )}

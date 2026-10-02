@@ -198,7 +198,7 @@ export function CompraPdp({
           >
             <span className="text-base font-bold">Arma tu combo con este par</span>
             <span className="text-xs opacity-90">
-              2 pares desde {redondo(conClasico!)}{ahorroMax > 0 && ` · ahorra hasta ${redondo(ahorroMax)}`}
+              2 pares {conExotico == null ? "por" : "desde"} {redondo(conClasico!)}{ahorroMax > 0 && ` · ahorra hasta ${redondo(ahorroMax)}`}
             </span>
           </button>
         )}
@@ -277,7 +277,7 @@ export function CompraPdp({
               >
                 <span className="text-[14.5px] font-bold">Arma tu combo</span>
                 <span className="nums text-[11.5px] opacity-90">
-                  {elegida && sized ? `con este ${talla(elegida)} · ` : "2 pares "}desde {redondo(conClasico!)}
+                  {elegida && sized ? `con este ${talla(elegida)} · ` : "2 pares "}{conExotico == null ? "por" : "desde"} {redondo(conClasico!)}
                 </span>
               </button>
             </>

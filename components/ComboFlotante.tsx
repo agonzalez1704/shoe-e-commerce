@@ -10,7 +10,7 @@ import { CART_CHANGED } from "@/components/CartBadge";
 // Barra flotante de la portada: acompaña el scroll para que el combo quede a un
 // toque aunque el cliente baje hasta el final. Se esconde arriba del todo (ahi
 // ya esta el hero) y cuando hay algo en el carrito (ahi manda PieCarrito).
-export function ComboFlotante({ precioDesde, fotos }: { precioDesde: string; fotos: string[] }) {
+export function ComboFlotante({ precioDesde, fotos, unica = false }: { precioDesde: string; fotos: string[]; unica?: boolean }) {
   const [visible, setVisible] = useState(false);
   const [carrito, setCarrito] = useState(0);
   // Portal al body: dentro de la pagina un ancestro con transform (el reveal)
@@ -49,7 +49,7 @@ export function ComboFlotante({ precioDesde, fotos }: { precioDesde: string; fot
       </div>
       <div className="flex-1 leading-tight">
         <p className="text-[13.5px] font-semibold">Arma tu combo</p>
-        <p className="text-[11.5px] opacity-70">2 pares desde {precioDesde}</p>
+        <p className="text-[11.5px] opacity-70">2 pares {unica ? "por" : "desde"} {precioDesde}</p>
       </div>
       <Link href="/combo" className="rounded-full bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-accent-contrast">Empezar</Link>
     </div>,
