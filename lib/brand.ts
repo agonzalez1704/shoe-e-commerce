@@ -665,7 +665,7 @@ const BRANDS: Record<string, BrandConfig> = {
       itemSingular: "producto",
       itemPlural: "productos",
       seoLine: "Envíos a todo México.",
-      paymentNote: "Pagos con tarjeta, efectivo y transferencia.",
+      paymentNote: "Pagos con tarjeta y Mercado Pago.",
       // deliveryLine / madeToOrderLine / exchangeLine: sin tiempos ni política
       // de cambio confirmados. Omitirlos deja el carrito y el checkout sin
       // promesa, que es lo correcto mientras no exista una.
