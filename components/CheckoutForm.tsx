@@ -275,9 +275,12 @@ export function CheckoutForm({
     const onInvalid = (e: Event) => {
       const t = e.target as HTMLInputElement | null;
       const now = Date.now();
-      if (validandoRef.current || !t?.name || now - reportedAt < 400) return;
+      // Los campos de tarjeta no llevan name (no viajan en el form): se nombran
+      // por su autocomplete (cc-number, cc-exp…).
+      const campo = t?.name || t?.getAttribute("autocomplete");
+      if (validandoRef.current || !campo || now - reportedAt < 400) return;
       reportedAt = now;
-      trackCheckout(`invalid:${t.name}`);
+      trackCheckout(`invalid:${campo}`);
     };
     document.addEventListener("invalid", onInvalid, true);
     document.addEventListener("focusin", remember);
@@ -434,8 +437,12 @@ export function CheckoutForm({
     e.preventDefault();
     if (submittingRef.current) return; // a submit is already in flight
     const form = e.currentTarget;
+    // noValidate: el navegador ya no frena el envío antes de este código. Con
+    // la validación nativa, un campo inválido en un paso oculto bloqueaba el
+    // clic en "Pagar" en silencio (no puede enfocarlo) y nadie se enteraba.
     // Enter en un paso intermedio avanza; no intenta cobrar.
     if (paso !== 3) { avanza(); return; }
+    trackCheckout("intento_pago");
     // Un paso anterior pudo quedar incompleto al editarlo: se abre y se señala.
     for (const n of [1, 2] as const) {
       const bad = primerInvalido(n);
@@ -556,7 +563,7 @@ export function CheckoutForm({
         </span>
       </div>
 
-      <form ref={formRef} onSubmit={onSubmit} onInput={revalidate} onChange={revalidate}
+      <form ref={formRef} onSubmit={onSubmit} onInput={revalidate} onChange={revalidate} noValidate
         // Enter en los pasos 1 y 2 avanza: el botón de pagar está oculto ahí y el
         // navegador no envía un formulario cuyo botón por defecto no se pinta.
         onKeyDown={(e) => {
