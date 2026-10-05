@@ -522,6 +522,13 @@ export function CheckoutForm({
         window.location.href = res.redirectUrl;
         return;
       }
+      // Pagado (o recibido): directo a la página del pedido. Antes se quedaba
+      // aquí con una confirmación que casi nadie veía: al vaciarse el carrito,
+      // el checkout se recargaba y mandaba al comprador al carrito vacío.
+      if (res.pedidoUrl) {
+        window.location.href = res.pedidoUrl;
+        return;
+      }
       setResult(res);
       // la confirmacion reemplaza al formulario ARRIBA; sin esto el scroll se
       // queda donde estaba el boton de pagar y el comprador ve pantalla vacia

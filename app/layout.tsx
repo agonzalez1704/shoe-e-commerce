@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
-import { UserCircle, FacebookLogo, InstagramLogo, TiktokLogo } from "@phosphor-icons/react/dist/ssr";
+import { FacebookLogo, InstagramLogo, TiktokLogo } from "@phosphor-icons/react/dist/ssr";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { CartBadge } from "@/components/CartBadge";
 import { MetaPixel, MetaPixelPageViews } from "@/components/MetaPixel";
@@ -12,6 +12,7 @@ import { StorefrontOnly } from "@/components/StorefrontOnly";
 import { Logo } from "@/components/Logo";
 import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { BarraPedido, CuentaIcono } from "@/components/PedidoReciente";
 import { BienvenidaSesion } from "@/components/BienvenidaSesion";
 import { listCategories } from "@/lib/catalog";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
@@ -100,6 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </Suspense>
           <StorefrontOnly>
           <BienvenidaSesion />
+          <BarraPedido />
           <Link href={activeBrand.announcementHref ?? "/products"} className="block bg-text text-bg transition-opacity hover:opacity-90">
             <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs font-medium">
               {activeBrand.announcement ?? "Envíos a todo México"}
@@ -115,13 +117,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             actions={
               <>
                 <ThemeToggle />
-                <Link
-                  href="/cuenta"
-                  aria-label="Cuenta"
-                  className="grid h-10 w-10 place-items-center rounded-full text-muted transition-colors hover:text-text"
-                >
-                  <UserCircle size={20} weight="regular" />
-                </Link>
+                <CuentaIcono />
                 <Link
                   href="/cart"
                   aria-label="Carrito"

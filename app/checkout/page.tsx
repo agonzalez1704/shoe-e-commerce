@@ -1,3 +1,4 @@
+import { pedidoReciente } from "@/lib/pedido-reciente";
 import { redirect } from "next/navigation";
 import { getCart } from "@/app/cart/actions";
 import { CheckoutForm, type CheckoutDefaults } from "@/components/CheckoutForm";
@@ -47,7 +48,12 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   const crudo = ((await searchParams).codigo ?? "").trim().toUpperCase();
   const codigo = /^[A-Z0-9-]{3,30}$/.test(crudo) ? crudo : undefined;
   const cart = await getCart();
-  if (!cart.cartId || cart.lines.length === 0) redirect("/cart");
+  if (!cart.cartId || cart.lines.length === 0) {
+    // Carrito vacío justo después de pagar (al pagar se recarga esta página):
+    // al pedido, no al carrito vacío.
+    const p = await pedidoReciente();
+    redirect(p && p.creadoHace < 30 * 60_000 ? `${p.url}&nuevo=1` : "/cart");
+  }
 
   const defaults = await checkoutDefaults();
 

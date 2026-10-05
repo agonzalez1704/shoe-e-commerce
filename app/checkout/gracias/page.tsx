@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { leePedidoReciente, urlPedido } from "@/lib/pedido-reciente";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { WarningCircle } from "@phosphor-icons/react/dist/ssr";
@@ -113,6 +115,11 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
       </div>
     );
   }
+
+  // El comprador vuelve del proveedor (Mercado Pago, Aplazo, 3D Secure) en el
+  // mismo navegador donde pagó: si este es su pedido reciente, a su página.
+  const reciente = o ? await leePedidoReciente() : null;
+  if (reciente && reciente.numero === o!.toUpperCase()) redirect(urlPedido(reciente.numero, reciente.token, true));
 
   const paid = state === "paid";
   // Came back from the provider without paying (e.g. MercadoPago's "Volver a la

@@ -1,5 +1,6 @@
 "use client";
 
+import { AvisoPedidoCarrito } from "@/components/PedidoReciente";
 import Link from "next/link";
 import Image from "next/image";
 import { useTransition } from "react";
@@ -37,7 +38,8 @@ export function CartView({ initial }: { initial: CartSummary }) {
 
   if (initial.lines.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-2xl border border-border py-20 text-center">
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-border px-4 py-20 text-center">
+        <AvisoPedidoCarrito />
         <ShoppingBag size={32} className="text-muted" />
         <p className="text-muted">Tu carrito está vacío.</p>
         <Link

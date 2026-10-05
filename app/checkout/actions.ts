@@ -11,6 +11,7 @@ import { cookies, headers } from "next/headers";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 import { notifyAdmins } from "@/lib/push";
+import { guardaPedidoReciente, urlPedido } from "@/lib/pedido-reciente";
 import { methodLabel } from "@/lib/payment-method";
 import { formatCents } from "@/lib/money";
 
@@ -62,6 +63,7 @@ export type CheckoutResult = {
   spei?: { clabe: string; bank?: string };
   card?: { paid: boolean };
   redirectUrl?: string; // card 3DS or Aplazo BNPL approval
+  pedidoUrl?: string;   // la página del pedido, a donde va el comprador al terminar
 };
 
 export type DiscountPreview = { ok: true; discountCents: number } | { ok: false; error: string };
@@ -208,6 +210,13 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
 
   const orderId = created.order_id;
   onOrderCreated(orderId); // from here on, a failure must roll the cart back
+
+  // El pedido queda recordado en este navegador (cookie con su token): la barra
+  // de estado, el menú de cuenta y la página del pedido salen de ahí. Sin eso,
+  // quien compra sin cuenta pagaba y no tenía dónde volver a ver su pedido.
+  const { data: conToken } = await admin.from("orders").select("review_token").eq("id", orderId).single();
+  const pedidoUrl = conToken?.review_token ? urlPedido(created.order_number, conToken.review_token, true) : undefined;
+  if (conToken?.review_token) await guardaPedidoReciente(created.order_number, conToken.review_token);
   // El pedido reservó stock: las rejas cacheadas deben dejar de anunciar esa
   // disponibilidad. Con cacheLife("minutes") la ventana era corta; esto la
   // cierra al instante.
@@ -304,6 +313,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
       totalCents,
       expiresAt: null,
       redirectUrl: pref.init_point || pref.sandbox_init_point,
+      pedidoUrl,
     };
   }
 
@@ -387,6 +397,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     expiresAt: created.expires_at,
     redirectUrl, // card 3DS / Aplazo — client redirects here if present
     card: input.method === "card" ? { paid: cardPaid } : undefined,
+    pedidoUrl,
   };
 }
 

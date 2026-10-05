@@ -10,6 +10,7 @@ import { pasoCliente, carrierName, trackingUrlFor, fechaEntrega, ventanaEntrega,
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const ITEMS_ORDERED = `${activeBrand.copy?.itemPlural ?? "Productos"} pedidos`.replace(/^./, (c) => c.toUpperCase());
 const ITEM = activeBrand.copy?.itemSingular ?? "pedido";
+const PLURAL = activeBrand.copy?.itemPlural ?? "productos";
 const SOBRE_PEDIDO = !!activeBrand.copy?.madeToOrderLine;
 const INPUT = "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-text";
 
@@ -71,7 +72,7 @@ export function TrackOrder({ defaultOrder = "", inicial = null }: { defaultOrder
   );
 }
 
-function Estado({ orden: r }: { orden: TrackedOrder }) {
+export function Estado({ orden: r }: { orden: TrackedOrder }) {
   const terminal = r.status === "cancelled" || r.status === "refunded";
   const paso = pasoCliente(r.status, r.stage, !!r.trackingNumber);
   const rastreoUrl = trackingUrlFor(r.carrier, r.trackingNumber, r.trackingUrl);
@@ -85,10 +86,11 @@ function Estado({ orden: r }: { orden: TrackedOrder }) {
   const atrasado = !!ventana && Date.now() > ventana.hasta.getTime();
   const diaFabrica = r.paidAt ? diasDesde(r.paidAt) : 0;
 
+  const varios = r.items.reduce((n, i) => n + i.quantity, 0) > 1;
   const titular = terminal
     ? `Pedido ${r.status === "cancelled" ? "cancelado" : "reembolsado"}`
     : paso === 0 ? "Falta tu pago"
-    : paso === 1 ? (SOBRE_PEDIDO ? `Tu ${ITEM} se está fabricando` : "Estamos preparando tu pedido")
+    : paso === 1 ? (SOBRE_PEDIDO ? (varios ? `Tus ${PLURAL} se están fabricando` : `Tu ${ITEM} se está fabricando`) : "Estamos preparando tu pedido")
     : paso === 2 ? "Tu pedido ya tiene guía"
     : paso === 3 ? "Tu pedido va en camino"
     : "Tu pedido fue entregado";
