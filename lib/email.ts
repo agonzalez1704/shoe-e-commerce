@@ -93,8 +93,11 @@ type Base = { to: string; orderNumber: string; totalCents: number; lines?: Email
 
 // Link directo al estado del pedido: el token del pedido evita teclear numero y
 // correo. Ningun correo enlazaba al rastreo y los clientes preguntaban por WhatsApp.
+// Con token va a la pagina del pedido (/pedido); sin el, al formulario de rastreo.
 export const linkSeguimiento = (orderNumber: string, token?: string | null) =>
-  `${SITE_URL}/rastrear?o=${encodeURIComponent(orderNumber)}${token ? `&t=${token}` : ""}`;
+  token
+    ? `${SITE_URL}/pedido/${encodeURIComponent(orderNumber)}?t=${token}`
+    : `${SITE_URL}/rastrear?o=${encodeURIComponent(orderNumber)}`;
 
 const botonSeguimiento = (url?: string) =>
   url ? `<p style="margin-top:18px">${button(url, "Ver el estado de mi pedido")}</p>` : "";
