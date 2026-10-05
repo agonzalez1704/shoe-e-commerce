@@ -101,7 +101,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </Suspense>
           <StorefrontOnly>
           <BienvenidaSesion />
-          <BarraPedido />
+          {/* usePathname (para no pintarse en el propio pedido): con Cache
+              Components necesita su Suspense o rompe el prerender. */}
+          <Suspense fallback={null}>
+            <BarraPedido />
+          </Suspense>
           <Link href={activeBrand.announcementHref ?? "/products"} className="block bg-text text-bg transition-opacity hover:opacity-90">
             <p className="mx-auto max-w-6xl px-4 py-2 text-center text-xs font-medium">
               {activeBrand.announcement ?? "Envíos a todo México"}
