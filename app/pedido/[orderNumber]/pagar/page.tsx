@@ -22,8 +22,14 @@ const CHAINS = "7-Eleven, Walmart, Bodega Aurrerá, Circle K, Sam's Club, Farmac
 // Resume an unfinished payment. Cash/SPEI just need their voucher shown again;
 // Aplazo hands off to the provider, whose approval URL expires and gets
 // reissued — so ask Conekta for the current one instead of storing it.
-export default async function PagarPedido({ params }: { params: Promise<{ orderNumber: string }> }) {
+export default async function PagarPedido({
+  params, searchParams,
+}: {
+  params: Promise<{ orderNumber: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
   const { orderNumber } = await params;
+  const { t } = await searchParams;
 
   // ownership first: RLS only returns the order to the customer who owns it.
   // Guests have no customer_id, so fall back to the cart session token stamped
@@ -46,6 +52,16 @@ export default async function PagarPedido({ params }: { params: Promise<{ orderN
         .maybeSingle();
       order = guestOrder;
     }
+  }
+  // la liga del pedido (?t=) abre desde cualquier dispositivo, sin sesion ni cookie
+  if (!order && t && /^[0-9a-f-]{36}$/i.test(t)) {
+    const { data } = await createAdminClient()
+      .from("orders")
+      .select("id, status, total_cents, payment_method")
+      .eq("order_number", orderNumber)
+      .eq("review_token", t)
+      .maybeSingle();
+    order = data;
   }
   if (!order) redirect("/cuenta");
   if (order.status !== "pending") redirect(`/rastrear?o=${encodeURIComponent(orderNumber)}`);

@@ -10,11 +10,14 @@ import { CheckCircle, ShieldCheck } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 import { MethodMark, StoreLogos, type Method } from "@/components/CheckoutForm";
-import { pagarComplemento, type ResultadoCobro } from "@/app/pedido/[orderNumber]/combo/cobro";
-import { cambiarPar } from "@/app/pedido/[orderNumber]/combo/actions";
+import type { ResultadoCobro } from "@/app/pedido/[orderNumber]/combo/cobro";
+import type { ConektaMethod } from "@/lib/conekta";
 
-// Paso 2 del combo exprés, con el MISMO lenguaje visual del checkout: chips de
-// método con logos, preview de tarjeta y la nota de seguridad de Conekta.
+// Cobro de un pedido pendiente con el MISMO lenguaje visual del checkout: chips
+// de método con logos, preview de tarjeta y la nota de seguridad de Conekta.
+// Lo usan el combo exprés (con el par elegido y "Cambiar par") y la página del
+// pedido cuando el primer pago falló (con "Cancelar pedido"). `cobrar` y
+// `cambiar` llegan como server actions ya ligadas al pedido.
 
 type Metodo = Extract<Method, "card" | "oxxo" | "aplazo" | "mercadopago">;
 
@@ -23,10 +26,12 @@ const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-s
 
 export type ParElegido = { nombre: string; label: string; imagen: string | null };
 
-export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, totalCents, elegido, conektaPublicKey, mpEnabled, fichaGenerada }: {
-  parentOrderNumber: string;
-  token: string | null;
+export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto = "Cambiar par", childOrderNumber, mpHref, totalCents, elegido, conektaPublicKey, mpEnabled, fichaGenerada }: {
+  cobrar: (method: ConektaMethod, cardTokenId?: string) => Promise<ResultadoCobro>;
+  cambiar?: () => Promise<{ ok: false; error: string } | undefined | void>;
+  cambiarTexto?: string;
   childOrderNumber: string;
+  mpHref: string;
   totalCents: number;
   elegido: ParElegido | null;
   conektaPublicKey: string;
@@ -69,13 +74,13 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
   }
 
   const pagar = () => {
-    if (metodo === "mercadopago") { window.location.href = `/pedido/${childOrderNumber}/pagar`; return; }
+    if (metodo === "mercadopago") { window.location.href = mpHref; return; }
     startTransition(async () => {
       setErr(null);
       try {
         let tokenTarjeta: string | undefined;
         if (metodo === "card") tokenTarjeta = await tokenizaTarjeta();
-        const r: ResultadoCobro = await pagarComplemento(parentOrderNumber, token, metodo, tokenTarjeta);
+        const r = await cobrar(metodo, tokenTarjeta);
         if (!r.ok) { setErr(r.error); return; }
         if (!r.paid && r.redirectUrl) { window.location.href = r.redirectUrl; return; }
         setListo({ paid: r.paid, voucher: r.paid ? undefined : r.voucher });
@@ -90,7 +95,7 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
   const cambiar = () =>
     startTransition(async () => {
       setErr(null);
-      const r = await cambiarPar(parentOrderNumber, token);
+      const r = await cambiarAccion?.();
       if (r && !r.ok) setErr(r.error);
     });
 
@@ -100,7 +105,7 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
         <div className="flex items-center gap-2 text-accent">
           <CheckCircle size={24} weight="fill" />
           <p className="text-lg font-semibold text-text">
-            {listo.paid ? "¡Combo completo! Pago confirmado." : "Ficha generada"}
+            {listo.paid ? (elegido ? "¡Combo completo! Pago confirmado." : "¡Pago confirmado!") : "Ficha generada"}
           </p>
         </div>
         {elegido && <p className="text-sm text-muted">{elegido.nombre} · <span className="capitalize">{elegido.label}</span></p>}
@@ -127,7 +132,7 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
     <div className="mt-6 space-y-5">
       <Script src="https://cdn.conekta.io/js/latest/conekta.js" strategy="afterInteractive" />
 
-      {/* El par que apartó, con la puerta para arrepentirse antes de pagar. */}
+      {/* Lo que va a pagar, con la puerta para arrepentirse antes de pagar. */}
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4">
         {elegido?.imagen && (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-elevated">
@@ -135,17 +140,17 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{elegido?.nombre ?? "Tu par del combo"}</p>
+          <p className="truncate font-medium">{elegido?.nombre ?? "Total a pagar"}</p>
           {elegido && <p className="truncate text-xs capitalize text-muted">{elegido.label}</p>}
           <p className="nums mt-0.5 text-sm font-semibold text-accent">{mxn(totalCents)} <span className="text-xs font-normal text-muted">· pedido {childOrderNumber}</span></p>
         </div>
-        {!fichaGenerada && (
+        {!fichaGenerada && cambiarAccion && (
           <button
             disabled={isPending}
             onClick={cambiar}
             className="shrink-0 text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline disabled:opacity-50"
           >
-            Cambiar par
+            {cambiarTexto}
           </button>
         )}
       </div>
@@ -198,10 +203,10 @@ export function PagoComplemento({ parentOrderNumber, token, childOrderNumber, to
           </div>
         )}
         {metodo === "aplazo" && (
-          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Aplazo para aprobar; al volver, tu par queda confirmado.</p>
+          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Aplazo para aprobar; al volver, tu pedido queda confirmado.</p>
         )}
         {metodo === "mercadopago" && (
-          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Mercado Pago — tarjeta o saldo, en una sola exhibición. Al volver, tu par queda confirmado.</p>
+          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Mercado Pago — tarjeta o saldo, en una sola exhibición. Al volver, tu pedido queda confirmado.</p>
         )}
 
         {err && <p role="alert" className="mt-4 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">{err}</p>}

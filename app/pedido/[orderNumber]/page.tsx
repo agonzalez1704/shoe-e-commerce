@@ -5,6 +5,8 @@ import { CheckCircle, Clock } from "@phosphor-icons/react/dist/ssr";
 import { Estado } from "@/components/TrackOrder";
 import { ordenPorToken } from "@/app/rastrear/actions";
 import { leePedidoReciente } from "@/lib/pedido-reciente";
+import { PagoComplemento } from "@/components/PagoComplemento";
+import { pagarPedido, cancelarPedido } from "./combo/cobro";
 
 export const instant = false; // dinámica de punta a punta (pedido por token)
 
@@ -29,6 +31,8 @@ export default async function PedidoPage({
   if (!orden) redirect(`/rastrear?o=${encodeURIComponent(numero)}`);
 
   const pagado = orden.status === "paid" || orden.status === "fulfilled";
+  // Pago fallido o abandonado: aqui mismo puede pagar con otro metodo o cancelar.
+  const pendiente = orden.status === "pending";
   const recienComprado = nuevo === "1" && orden.status !== "cancelled";
 
   return (
@@ -51,7 +55,32 @@ export default async function PedidoPage({
           </span>
         </div>
       )}
-      {!recienComprado && <h1 className="mb-2 text-2xl font-semibold tracking-tight">Tu pedido</h1>}
+      {!recienComprado && (
+        <h1 className="mb-2 text-2xl font-semibold tracking-tight">{pendiente ? "Completa tu pago" : "Tu pedido"}</h1>
+      )}
+      {/* Recien regresado del proveedor el pago puede estar confirmandose
+          (webhook en camino): plegado para no invitar a pagar dos veces. */}
+      {pendiente && token && (
+        <details open={!recienComprado} className="mb-8 [&_summary]:cursor-pointer">
+          <summary className="text-sm font-medium text-accent">¿No pasó tu pago? Paga con otro método</summary>
+          <p className="mt-2 text-sm text-muted">
+            Intenta con otra tarjeta o con otro método. Si prefieres no seguir, cancela el pedido y tus pares vuelven
+            al carrito.
+          </p>
+          <PagoComplemento
+            cobrar={pagarPedido.bind(null, numero, token)}
+            cambiar={cancelarPedido.bind(null, numero, token)}
+            cambiarTexto="Cancelar pedido"
+            childOrderNumber={numero}
+            mpHref={`/pedido/${numero}/pagar?t=${token}`}
+            totalCents={orden.totalCents}
+            elegido={null}
+            conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
+            mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
+            fichaGenerada={false}
+          />
+        </details>
+      )}
       <Estado orden={orden} />
       <p className="mt-8 text-center">
         <Link href="/products" className="text-sm font-medium text-accent">Seguir viendo la tienda</Link>

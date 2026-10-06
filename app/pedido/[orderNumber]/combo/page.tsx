@@ -4,7 +4,8 @@ import { formatCents } from "@/lib/money";
 import { comboOf, precioPar, type ComboConfig } from "@/lib/pricing";
 import { ComboExpress, type ParElegible } from "@/components/ComboExpress";
 import { PagoComplemento } from "@/components/PagoComplemento";
-import { pedidoAutorizado } from "./actions";
+import { pedidoAutorizado, cambiarPar } from "./actions";
+import { pagarComplemento } from "./cobro";
 
 // Checkout exprés para completar el combo de un pedido ya pagado: elige el
 // segundo par y paga solo la diferencia. Ruta bloqueante: token/sesión.
@@ -71,9 +72,10 @@ export default async function ComboExpresPage({
         {hijo.status === "pending" ? (
           // Par apartado sin pagar: los MISMOS metodos del checkout, aqui mismo.
           <PagoComplemento
-            parentOrderNumber={order.order_number}
-            token={t ?? null}
+            cobrar={pagarComplemento.bind(null, order.order_number, t ?? null)}
+            cambiar={cambiarPar.bind(null, order.order_number, t ?? null)}
             childOrderNumber={hijo.order_number}
+            mpHref={`/pedido/${hijo.order_number}/pagar`}
             totalCents={hijo.total_cents}
             elegido={elegido}
             conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}

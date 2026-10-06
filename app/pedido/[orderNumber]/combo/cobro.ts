@@ -4,17 +4,25 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { markOrderPaid } from "@/lib/order-fulfillment";
 import { SITE_URL } from "@/lib/site";
+import { redirect } from "next/navigation";
+import { restoreCartFromOrder } from "@/app/cart/actions";
 import { pedidoAutorizado } from "./actions";
 
-// Cobra el pedido complemento con los MISMOS metodos del checkout: tarjeta,
-// efectivo en establecimientos y Aplazo van por Conekta (esta funcion);
-// Mercado Pago sigue en /pagar. Es un camino paralelo al del checkout — el
-// flujo normal de carrito no se toca.
+// Cobra cualquier pedido pendiente con los MISMOS metodos del checkout:
+// tarjeta y Aplazo van por Conekta (esta funcion); Mercado Pago sigue en
+// /pagar. Lo usan el complemento del combo y el pedido normal cuando el primer
+// intento fallo (antes no habia como cambiar de metodo ni cancelar).
 
 export type ResultadoCobro =
   | { ok: true; paid: true }
   | { ok: true; paid: false; redirectUrl?: string; voucher?: { reference: string | null; barcodeUrl: string | null; expiresAt: string | null } }
   | { ok: false; error: string };
+
+type Pendiente = {
+  id: string; order_number: string; email: string; total_cents: number;
+  shipping_address: unknown; expires_at: string | null;
+};
+const COLUMNAS = "id, order_number, status, email, total_cents, shipping_address, expires_at";
 
 export async function pagarComplemento(
   parentOrderNumber: string,
@@ -22,18 +30,44 @@ export async function pagarComplemento(
   method: ConektaMethod,
   cardTokenId?: string,
 ): Promise<ResultadoCobro> {
-  try {
-    const padre = await pedidoAutorizado(parentOrderNumber, token);
-    if (!padre) return { ok: false, error: "No pudimos verificar tu pedido." };
+  const padre = await pedidoAutorizado(parentOrderNumber, token);
+  if (!padre) return { ok: false, error: "No pudimos verificar tu pedido." };
+  const { data: hijo } = await createAdminClient()
+    .from("orders")
+    .select(COLUMNAS)
+    .eq("combo_parent_order_id", padre.id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!hijo) return { ok: false, error: "No hay un complemento pendiente de pago." };
+  return cobrar(hijo, method, cardTokenId);
+}
 
+export async function pagarPedido(
+  orderNumber: string,
+  token: string | null,
+  method: ConektaMethod,
+  cardTokenId?: string,
+): Promise<ResultadoCobro> {
+  const pedido = await pedidoAutorizado(orderNumber, token);
+  if (!pedido) return { ok: false, error: "No pudimos verificar tu pedido." };
+  const { data } = await createAdminClient().from("orders").select(COLUMNAS).eq("id", pedido.id).maybeSingle();
+  if (!data || data.status !== "pending") return { ok: false, error: "Este pedido ya no está pendiente de pago." };
+  return cobrar(data, method, cardTokenId);
+}
+
+// Cancela el pedido pendiente (libera el stock) y regresa sus pares al
+// carrito de este navegador para que pueda volver a comprar.
+export async function cancelarPedido(orderNumber: string, token: string | null): Promise<{ ok: false; error: string }> {
+  const pedido = await pedidoAutorizado(orderNumber, token);
+  if (!pedido) return { ok: false, error: "No pudimos verificar tu pedido." };
+  if (pedido.status !== "pending") return { ok: false, error: "Este pedido ya no se puede cancelar desde aquí; escríbenos por WhatsApp." };
+  await restoreCartFromOrder(pedido.id);
+  redirect("/cart");
+}
+
+async function cobrar(hijo: Pendiente, method: ConektaMethod, cardTokenId?: string): Promise<ResultadoCobro> {
+  try {
     const admin = createAdminClient();
-    const { data: hijo } = await admin
-      .from("orders")
-      .select("id, order_number, status, email, total_cents, shipping_address, expires_at")
-      .eq("combo_parent_order_id", padre.id)
-      .eq("status", "pending")
-      .maybeSingle();
-    if (!hijo) return { ok: false, error: "No hay un complemento pendiente de pago." };
     if (method === "card" && !cardTokenId) return { ok: false, error: "Falta el token de la tarjeta." };
     if (method === "oxxo") return { ok: false, error: "El pago en efectivo ya no está disponible. Elige tarjeta o Aplazo." };
 
