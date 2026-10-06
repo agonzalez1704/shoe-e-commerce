@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { crearCodigoUnico } from "@/lib/codigos";
+import { sendReviewCouponEmail } from "@/lib/email";
+import { CUPON_RESENA } from "@/lib/reviews";
 
 // Entrada sin el link del correo: numero de pedido + correo de la compra (solo
 // el numero, que es consecutivo, dejaria reseñar pedidos ajenos). Solo pedidos
@@ -41,12 +44,12 @@ export async function submitReview(input: {
   rating: number;
   body: string;
   fit: "" | "runs_small" | "true_to_size" | "runs_large";
-}): Promise<{ ok: true } | { error: string }> {
+}): Promise<{ ok: true; cupon: { codigo: string; porcentaje: number; dias: number } | null } | { error: string }> {
   const admin = createAdminClient();
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, customer_id, status, delivered_at")
+    .select("id, customer_id, status, delivered_at, email, order_number, cupon_resena")
     .eq("review_token", input.token)
     .maybeSingle();
   if (!order) return { error: "Enlace inválido." };
@@ -81,5 +84,30 @@ export async function submitReview(input: {
 
   const slug = match.variants?.products?.slug;
   if (slug) revalidatePath(`/products/${slug}`);
-  return { ok: true };
+  const codigo = await cuponDeResena(admin, order);
+  return { ok: true, cupon: codigo ? { codigo, ...CUPON_RESENA } : null };
+}
+
+// Agradecimiento por reseñar, cualquiera que sea la calificacion: un cupon por
+// pedido. El update condicional evita dos cupones si llegan dos reseñas a la vez.
+async function cuponDeResena(
+  admin: ReturnType<typeof createAdminClient>,
+  order: { id: string; email: string; order_number: string; cupon_resena: string | null },
+): Promise<string | null> {
+  if (order.cupon_resena) return order.cupon_resena;
+  const code = await crearCodigoUnico(admin, "GRACIAS", CUPON_RESENA.porcentaje, CUPON_RESENA.dias * 24);
+  if (!code) return null;
+  const { data: tomado } = await admin
+    .from("orders")
+    .update({ cupon_resena: code })
+    .eq("id", order.id)
+    .is("cupon_resena", null)
+    .select("id");
+  if (!tomado?.length) {
+    await admin.from("discount_codes").update({ active: false }).eq("code", code);
+    const { data } = await admin.from("orders").select("cupon_resena").eq("id", order.id).single();
+    return data?.cupon_resena ?? null;
+  }
+  await sendReviewCouponEmail({ to: order.email, orderNumber: order.order_number, codigo: code });
+  return code;
 }

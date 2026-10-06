@@ -935,6 +935,7 @@ export type Database = {
           carrier: string | null
           combo_parent_order_id: string | null
           created_at: string
+          cupon_resena: string | null
           currency: string
           customer_id: string | null
           delivered_at: string | null
@@ -976,6 +977,7 @@ export type Database = {
           carrier?: string | null
           combo_parent_order_id?: string | null
           created_at?: string
+          cupon_resena?: string | null
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
@@ -1017,6 +1019,7 @@ export type Database = {
           carrier?: string | null
           combo_parent_order_id?: string | null
           created_at?: string
+          cupon_resena?: string | null
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null

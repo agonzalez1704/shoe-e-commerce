@@ -12,13 +12,23 @@ export function ReviewForm({ token, productId, productName }: { token: string; p
   const [fit, setFit] = useState<Fit>("");
   const [body, setBody] = useState("");
   const [done, setDone] = useState(false);
+  const [cupon, setCupon] = useState<{ codigo: string; porcentaje: number; dias: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   if (done) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-elevated p-4 text-sm">
-        <CheckCircle size={20} weight="fill" className="text-accent" /> ¡Gracias por tu reseña de {productName}!
+      <div className="rounded-xl border border-border bg-elevated p-4 text-sm">
+        <p className="flex items-center gap-2">
+          <CheckCircle size={20} weight="fill" className="text-accent" /> ¡Gracias por tu reseña de {productName}!
+        </p>
+        {cupon && (
+          <p className="mt-3 text-muted">
+            Tu {cupon.porcentaje}% para el siguiente par (se suma al combo):{" "}
+            <strong className="select-all tracking-wider text-text">{cupon.codigo}</strong>. Un uso, válido {cupon.dias} días; también
+            te lo mandamos por correo.
+          </p>
+        )}
       </div>
     );
   }
@@ -77,7 +87,10 @@ export function ReviewForm({ token, productId, productName }: { token: string; p
             setError(null);
             const res = await submitReview({ token, productId, rating, body, fit });
             if ("error" in res) setError(res.error);
-            else setDone(true);
+            else {
+              setCupon(res.cupon);
+              setDone(true);
+            }
           })
         }
         className="mt-4 rounded-full bg-accent px-6 py-2.5 text-sm font-medium text-accent-contrast disabled:bg-border disabled:text-muted"

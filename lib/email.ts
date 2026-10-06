@@ -3,6 +3,7 @@ import "server-only";
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
+import { CUPON_RESENA } from "@/lib/reviews";
 import { carrierName } from "@/lib/fulfillment";
 import { CASH_CHAINS_SHORT } from "@/lib/payment-method";
 
@@ -194,6 +195,20 @@ export async function sendReviewEmail(a: { to: string; orderNumber: string; revi
     shell(`Cuéntanos qué te parecieron`,
       `<p>Esperamos que estés disfrutando tu pedido <strong>${a.orderNumber}</strong>. Tu opinión ayuda a otros compradores y solo toma un minuto.</p>
        <p style="margin-top:18px">${button(a.reviewUrl, "Dejar una reseña")}</p>`),
+  );
+}
+
+// gracias por reseñar — cupon de un uso para la siguiente compra
+export async function sendReviewCouponEmail(a: { to: string; orderNumber: string; codigo: string }) {
+  await send(
+    a.to,
+    `Gracias por tu reseña — tu ${CUPON_RESENA.porcentaje}% para el siguiente par`,
+    shell("Gracias por tu opinión",
+      `<p>Recibimos tu reseña del pedido <strong>${a.orderNumber}</strong>. Como agradecimiento, este código te da
+       <strong>${CUPON_RESENA.porcentaje}% en tu siguiente compra</strong>, y se suma al combo de 2 pares:</p>
+       <p style="font-size:20px;margin:16px 0"><strong style="letter-spacing:1px">${a.codigo}</strong></p>
+       <p style="color:#71717a">Un solo uso, válido ${CUPON_RESENA.dias} días.</p>
+       <p style="margin-top:18px">${button(`${SITE_URL}/checkout?codigo=${encodeURIComponent(a.codigo)}`, "Usar mi código")}</p>`),
   );
 }
 
