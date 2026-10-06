@@ -13,7 +13,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, order_number, status")
+    .select("id, order_number, status, delivered_at")
     .eq("review_token", token)
     .maybeSingle();
   if (!order) notFound();
@@ -36,15 +36,15 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
     }
   }
 
-  const paid = order.status === "paid" || order.status === "fulfilled";
+  const entregado = !!order.delivered_at && (order.status === "paid" || order.status === "fulfilled");
 
   return (
     <div className="mx-auto max-w-lg py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Reseña tu compra</h1>
       <p className="nums mt-1 text-sm text-muted">Pedido {order.order_number}</p>
 
-      {!paid ? (
-        <p className="mt-6 text-sm text-muted">Podrás dejar tu reseña cuando se confirme el pago de tu pedido.</p>
+      {!entregado ? (
+        <p className="mt-6 text-sm text-muted">Podrás dejar tu reseña en cuanto tu pedido se entregue.</p>
       ) : products.length === 0 ? (
         <p className="mt-6 text-sm text-muted">No encontramos productos para reseñar.</p>
       ) : (

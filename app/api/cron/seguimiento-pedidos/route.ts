@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   // ---- 2. sincronizacion con la paqueteria
   const { data: conGuia } = await admin
     .from("orders")
-    .select("id, email, order_number, status, fulfillment_stage, carrier, tracking_number, shipped_at, review_token, total_cents")
+    .select("id, email, order_number, status, fulfillment_stage, carrier, tracking_number, shipped_at, created_at, review_token, total_cents")
     .in("status", ["paid", "fulfilled"])
     .not("tracking_number", "is", null)
     .is("delivered_at", null)
@@ -84,7 +84,8 @@ export async function GET(req: NextRequest) {
         .update({ fulfillment_stage: "delivered", delivered_at: ahora, shipped_at: o.shipped_at ?? ahora, ...cerrado })
         .eq("id", o.id);
       // Una entrega de hace semanas se registra sin correo: avisar tarde confunde.
-      if (!o.shipped_at || diasDesde(o.shipped_at) <= 14) {
+      // Sin fecha de envio (nunca se marco) cuenta desde la compra.
+      if (diasDesde(o.shipped_at ?? o.created_at) <= 14) {
         await sendDeliveredEmail({ to: o.email, orderNumber: o.order_number });
         entregados++;
       } else {

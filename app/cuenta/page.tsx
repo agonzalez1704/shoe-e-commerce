@@ -29,7 +29,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const [{ data: customer }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("full_name, email").eq("id", user.id).maybeSingle(),
-    supabase.from("orders").select("order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, combo_parent_order_id, order_items_combo:order_items(quantity, variants(fuera_de_combo, products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("order_number, status, fulfillment_stage, delivered_at, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, combo_parent_order_id, order_items_combo:order_items(quantity, variants(fuera_de_combo, products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity)").eq("customer_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -104,12 +104,12 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                           </Link>
                         );
                       })()}
-                      {(o.fulfillment_stage === "delivered" || o.fulfillment_stage === "shipped") && o.review_token && (
+                      {o.delivered_at && o.review_token && (
                         <Link
                           href={`/resena/${o.review_token}`}
                           className="rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-semibold text-accent"
                         >
-                          {o.fulfillment_stage === "delivered" ? "Deja tu reseña" : "¿Ya llegó? Reséñalo"}
+                          Deja tu reseña
                         </Link>
                       )}
                       <Link

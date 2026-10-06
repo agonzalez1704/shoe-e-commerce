@@ -37,7 +37,8 @@ const COLUMNAS =
 async function buscar(orderNumber: string, filtro: { email: string } | { token: string }) {
   const admin = createAdminClient();
   let q = admin.from("orders").select(COLUMNAS).eq("order_number", orderNumber.trim().toUpperCase());
-  if ("email" in filtro) q = q.ilike("email", filtro.email.trim());
+  // ilike por mayusculas; % y _ escapados o "%" casaria con cualquier correo.
+  if ("email" in filtro) q = q.ilike("email", filtro.email.trim().replace(/[\\%_]/g, "\\$&"));
   else {
     if (!/^[0-9a-f-]{36}$/i.test(filtro.token)) return null;
     q = q.eq("review_token", filtro.token);

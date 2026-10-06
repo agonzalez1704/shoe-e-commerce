@@ -6,6 +6,9 @@ export function ProductReviews({ summary }: { summary: ReviewSummary }) {
     <section className="mt-16 border-t border-border pt-10">
       <div className="flex items-baseline gap-3">
         <h2 className="text-xl font-semibold tracking-tight">Reseñas</h2>
+        <a href="/resena" className="order-last ml-auto text-sm text-muted underline-offset-2 hover:text-text hover:underline">
+          ¿Ya te llegó? Deja tu reseña
+        </a>
         {summary.count > 0 && (
           <span className="flex items-center gap-2 text-sm text-muted">
             <Stars value={summary.average} />

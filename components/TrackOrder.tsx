@@ -248,10 +248,10 @@ export function Estado({ orden: r }: { orden: TrackedOrder }) {
         </div>
       )}
 
-      {/* Ya llegó o va en camino: quien entra a rastrear ya demostró interés. */}
-      {!terminal && r.reviewToken && (r.stage === "delivered" || r.stage === "shipped") && (
+      {/* Solo pedidos entregados pueden reseñarse (lo valida también el servidor). */}
+      {!terminal && r.reviewToken && r.deliveredAt && (
         <a href={`/resena/${r.reviewToken}`} className="block rounded-2xl bg-accent-soft p-3 text-center text-sm font-semibold text-accent">
-          {r.stage === "delivered" ? "¿Cómo te quedaron? Deja tu reseña →" : "¿Ya te llegó? Deja tu reseña →"}
+          ¿Cómo te quedaron? Deja tu reseña →
         </a>
       )}
 

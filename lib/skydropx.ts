@@ -350,13 +350,23 @@ export async function estadosDeGuias(guias: string[]): Promise<Map<string, strin
   const buscadas = new Set(guias.filter(Boolean));
   const res = new Map<string, string>();
   for (let page = 1; page <= 4 && res.size < buscadas.size; page++) {
-    const j = await api(`/shipments?page=${page}&per_page=50`);
+    const j = await api(`/shipments?page=${page}&per_page=50`).catch(() => null);
+    if (!j) break;
     const lista = (j.data ?? []) as { id: string; attributes?: { master_tracking_number?: string } }[];
     if (!lista.length) break;
     for (const envio of lista) {
       const guia = envio.attributes?.master_tracking_number;
       if (!guia || !buscadas.has(guia) || res.has(guia)) continue;
-      const d = await api(`/shipments/${envio.id}`);
+      // Skydropx limita solicitudes por sede: sin pausa, ~20 seguidas ya dan
+      // error. Al toparlo se devuelve lo avanzado; la siguiente corrida sigue.
+      await new Promise((r) => setTimeout(r, 600));
+      let d;
+      try {
+        d = await api(`/shipments/${envio.id}`);
+      } catch (e) {
+        console.error("[skydropx] estados parciales:", e);
+        return res;
+      }
       const pkg = ((d.included ?? []) as { type: string; attributes?: { tracking_status?: string } }[])
         .find((i) => i.type === "package")?.attributes;
       if (pkg?.tracking_status) res.set(guia, pkg.tracking_status);

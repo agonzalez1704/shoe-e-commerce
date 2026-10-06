@@ -1,7 +1,37 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+
+// Entrada sin el link del correo: numero de pedido + correo de la compra (solo
+// el numero, que es consecutivo, dejaria reseñar pedidos ajenos). Solo pedidos
+// entregados; el resto se queda en el formulario con el motivo.
+export type AccesoResena = { error: string; o: string; e: string } | null;
+
+export async function entrarAResena(_prev: AccesoResena, form: FormData): Promise<AccesoResena> {
+  const o = String(form.get("o") ?? "").trim().toUpperCase();
+  const e = String(form.get("e") ?? "").trim();
+  // React vacia el formulario tras la accion: se devuelven los valores para rellenarlo.
+  const falla = (error: string) => ({ error, o, e });
+  if (!(await rateLimit("resena-acceso", await clientIp(), 10, 3600))) {
+    return falla("Demasiados intentos. Intenta de nuevo en una hora.");
+  }
+  if (!o || !e) return falla("Escribe tu número de pedido y tu correo.");
+
+  const { data: order } = await createAdminClient()
+    .from("orders")
+    .select("review_token, status, delivered_at")
+    .eq("order_number", o)
+    .ilike("email", e.replace(/[\\%_]/g, "\\$&"))
+    .maybeSingle();
+  if (!order?.review_token || order.status === "cancelled" || order.status === "refunded") {
+    return falla("No encontramos un pedido con ese número y correo.");
+  }
+  if (!order.delivered_at) return falla("Podrás dejar tu reseña en cuanto tu pedido se entregue.");
+  redirect(`/resena/${order.review_token}`);
+}
 
 // Submit a verified-buyer review. Proof of purchase = the per-order review_token
 // (emailed to the buyer). Service-role: validates token -> order -> product in order.
@@ -16,12 +46,12 @@ export async function submitReview(input: {
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, customer_id, status")
+    .select("id, customer_id, status, delivered_at")
     .eq("review_token", input.token)
     .maybeSingle();
   if (!order) return { error: "Enlace inválido." };
-  if (order.status !== "paid" && order.status !== "fulfilled") {
-    return { error: "El pedido aún no está confirmado." };
+  if (!order.delivered_at || (order.status !== "paid" && order.status !== "fulfilled")) {
+    return { error: "Podrás dejar tu reseña en cuanto tu pedido se entregue." };
   }
 
   // product must belong to the order
