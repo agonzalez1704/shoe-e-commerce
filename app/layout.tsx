@@ -40,6 +40,10 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
+  // Meta lee la etiqueta en el HTML del servidor (no la ve si la inyecta JS).
+  ...(activeBrand.facebookDomainVerification
+    ? { other: { "facebook-domain-verification": activeBrand.facebookDomainVerification } }
+    : {}),
 };
 
 // Brand knowledge-panel + sitelinks search box signals
