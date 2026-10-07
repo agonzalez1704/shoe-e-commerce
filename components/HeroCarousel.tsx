@@ -66,7 +66,9 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
             role="group"
             aria-roledescription="diapositiva"
             aria-label={`${i + 1} de ${slides.length}`}
-            className="relative aspect-[4/5] min-w-full shrink-0 snap-start overflow-hidden sm:aspect-[16/9]"
+            // Tope de alto en escritorio: a 16:9 una ventana ancha (o baja) daba un
+            // hero mas alto que la pantalla y el poster se cortaba abajo.
+            className="relative aspect-[4/5] min-w-full shrink-0 snap-start overflow-hidden sm:aspect-[16/9] sm:max-h-[calc(100svh-6.5rem)]"
           >
             <Slide s={s} priority={i === 0} />
           </div>
@@ -213,6 +215,19 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
           className="object-cover object-center sm:hidden"
         />
       )}
+      {/* Poster en escritorio: entero (contain) sobre la misma imagen desenfocada.
+          Con el tope de alto, cover le cortaria el texto horneado; las franjas
+          que sobran se rellenan con el propio arte en vez de negro. */}
+      {poster && (
+        <Image
+          src={s.image}
+          alt=""
+          fill
+          sizes="10vw"
+          aria-hidden
+          className={`scale-110 object-cover blur-2xl brightness-75 ${s.imageMobile ? "hidden sm:block" : ""}`}
+        />
+      )}
       <Image
         src={s.image}
         alt=""
@@ -220,7 +235,7 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
         priority={priority}
         sizes="100vw"
         style={s.focal ? { objectPosition: s.focal } : undefined}
-        className={`object-cover object-center ${s.imageMobile ? "hidden sm:block" : ""}`}
+        className={`${poster ? "object-cover sm:object-contain" : "object-cover"} object-center ${s.imageMobile ? "hidden sm:block" : ""}`}
       />
       {/* legibility scrim: darker toward the lower-left where the copy sits.
           Un poster no lleva texto DOM (su boton es solido), asi que no se
