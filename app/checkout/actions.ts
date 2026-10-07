@@ -237,9 +237,11 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
   await admin.rpc("set_order_amounts", { p_order_id: orderId, p_shipping_cents: shipping });
   const totalCents = baseAfterDiscount + shipping;
 
-  // 3. persist fiscal data if invoice requested (RLS: user owns order)
+  // 3. persist fiscal data if invoice requested. Service role: RLS only lets
+  //    the owning customer insert, so every guest asking for a factura failed
+  //    the whole checkout (BL-001239..41). orderId comes from create_order above.
   if (input.fiscal) {
-    const { error } = await supabase.from("order_fiscal_data").insert({
+    const { error } = await admin.from("order_fiscal_data").insert({
       order_id: orderId,
       ...input.fiscal,
     });
