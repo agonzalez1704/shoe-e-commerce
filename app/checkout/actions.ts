@@ -124,41 +124,54 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult | C
   // create_order empties the cart as soon as the order exists, so a failure after
   // that point would leave the buyer with nothing to retry with.
   let createdOrderId: string | null = null;
+  let intentoCobro = false;
   try {
-    return await runCheckout(input, (id) => { createdOrderId = id; });
+    return await runCheckout(input, (id) => { createdOrderId = id; }, () => { intentoCobro = true; });
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     console.error("[checkout] failed:", raw);
-    if (createdOrderId) await rollbackOrder(createdOrderId, input.cartId);
+    if (createdOrderId) await rollbackOrder(createdOrderId, input, intentoCobro, raw);
     return { error: buyerMessage(raw) };
   }
 }
 
-// Payment never went through: release the reserved stock, cancel the order and
-// put the items back in the cart so the buyer can just try again.
-async function rollbackOrder(orderId: string, cartId: string) {
+// Payment never went through: release the reserved stock, put the items back in
+// the cart and return the discount code so the buyer can just try again.
+// - Hubo intento de cobro (Conekta lo rechazo): el pedido queda cancelado,
+//   es historia util ("Pago rechazado").
+// - Fallo antes de cobrar (proveedor que no inicia, cuenta restringida, error
+//   nuestro): el pedido se borra; un "rechazado" fantasma confundia al admin y
+//   al cliente, que nunca llego a pagar.
+async function rollbackOrder(orderId: string, input: CheckoutInput, intentoCobro: boolean, causa: string) {
   try {
     const admin = createAdminClient();
-    const { data: items } = await admin
-      .from("order_items")
-      .select("variant_id, quantity")
-      .eq("order_id", orderId);
+    const [{ data: items }, { data: o }] = await Promise.all([
+      admin.from("order_items").select("variant_id, quantity").eq("order_id", orderId),
+      admin.from("orders").select("order_number, total_cents").eq("id", orderId).maybeSingle(),
+    ]);
 
     await admin.rpc("cancel_order", { p_order_id: orderId }); // releases stock
+    if (!intentoCobro) await admin.from("orders").delete().eq("id", orderId); // cascada a items/fiscales
 
     const rows = (items ?? [])
       .filter((i): i is { variant_id: string; quantity: number } => !!i.variant_id)
-      .map((i) => ({ cart_id: cartId, variant_id: i.variant_id, quantity: i.quantity }));
+      .map((i) => ({ cart_id: input.cartId, variant_id: i.variant_id, quantity: i.quantity }));
     if (rows.length) await admin.from("cart_items").upsert(rows, { onConflict: "cart_id,variant_id" });
 
-    const { data: o } = await admin.from("orders").select("order_number, total_cents").eq("id", orderId).maybeSingle();
+    // create_order sumo un uso al codigo; sin esto un VUELVE-/GRACIAS- de un uso
+    // se perdia en el primer intento fallido.
+    const codigo = input.discountCode?.trim().toUpperCase();
+    if (codigo) {
+      const { data: dc } = await admin.from("discount_codes").select("id, used_count").eq("code", codigo).maybeSingle();
+      if (dc && dc.used_count > 0) await admin.from("discount_codes").update({ used_count: dc.used_count - 1 }).eq("id", dc.id);
+    }
+
     if (o) {
-      await notifyAdmins({
-        title: "Pago rechazado",
-        body: `${o.order_number} — ${mxn(o.total_cents)}. El carrito se devolvió al cliente.`,
-        url: "/admin/orders",
-        tag: `order-${orderId}`,
-      });
+      await notifyAdmins(
+        intentoCobro
+          ? { title: "Pago rechazado", body: `${o.order_number} — ${mxn(o.total_cents)}. El carrito se devolvió al cliente.`, url: "/admin/orders", tag: `order-${orderId}` }
+          : { title: "No se pudo iniciar el pago", body: `${methodLabel(input.method)} · ${mxn(o.total_cents)} · ${causa.slice(0, 80)}`, url: "/admin/orders", tag: `inicio-${orderId}` },
+      );
     }
   } catch (e) {
     console.error("[checkout] rollback failed:", e); // never mask the original error
@@ -176,7 +189,11 @@ function buyerMessage(raw: string): string {
   return "No pudimos procesar tu pago. Verifica tus datos o intenta con otro método.";
 }
 
-async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) => void): Promise<CheckoutResult> {
+async function runCheckout(
+  input: CheckoutInput,
+  onOrderCreated: (id: string) => void,
+  onIntentoCobro: () => void,
+): Promise<CheckoutResult> {
   // Efectivo en tiendas salió de la tienda (2026-10): 3 de 26 pedidos se pagaban.
   if (input.method === "oxxo" || input.method === "spei") {
     throw new Error("Ese método de pago ya no está disponible. Elige tarjeta, Mercado Pago o Aplazo.");
@@ -353,6 +370,7 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
     : undefined;
 
   // 5. create the Conekta order/charge
+  onIntentoCobro(); // a partir de aqui un fallo es un cobro rechazado, no un pedido fantasma
   const co = await createConektaOrder({
     amountCents: totalCents,
     method: input.method,
