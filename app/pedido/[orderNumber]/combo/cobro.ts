@@ -77,6 +77,11 @@ async function cobrar(hijo: Pendiente, method: ConektaMethod, cardTokenId?: stri
       .select("product_name, variant_label, unit_price_cents, quantity")
       .eq("order_id", hijo.id);
 
+    const suma = (items ?? []).reduce((n, i) => n + i.unit_price_cents * i.quantity, 0);
+    const descuento = suma - hijo.total_cents;
+    // El envio es gratis siempre; un total mayor que las lineas no cuadraria.
+    if (descuento < 0) return { ok: false, error: "No pudimos calcular el total de tu pedido. Escríbenos por WhatsApp." };
+
     const co = await createConektaOrder({
       amountCents: hijo.total_cents,
       method,
@@ -86,7 +91,10 @@ async function cobrar(hijo: Pendiente, method: ConektaMethod, cardTokenId?: stri
         unit_price: i.unit_price_cents,
         quantity: i.quantity,
       })),
-      discountCents: 0,
+      // Conekta cobra la suma de las lineas menos discount_lines e ignora el
+      // total: el descuento del combo/codigo viaja aparte (sin el, BL-001237 se
+      // cobro a precio de lista: $2,518 en vez de $1,999).
+      discountCents: descuento,
       cardTokenId,
       orderNumber: hijo.order_number,
       expiresAt: hijo.expires_at ? Math.floor(new Date(hijo.expires_at).getTime() / 1000) : undefined,
