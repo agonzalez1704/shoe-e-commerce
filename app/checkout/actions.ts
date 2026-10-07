@@ -297,6 +297,8 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
         phone: input.phone,
         zip: String(input.shippingAddress.postal ?? ""),
         street: String(input.shippingAddress.line1 ?? ""),
+        city: String(input.shippingAddress.city ?? ""),
+        state: String(input.shippingAddress.region ?? ""),
       },
       successUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,
       failureUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}&payment_status=failed`,

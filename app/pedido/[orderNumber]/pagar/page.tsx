@@ -98,13 +98,13 @@ export default async function PagarPedido({
       const { data: items } = await admin
         .from("order_items").select("quantity").eq("order_id", order.id);
       const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
-      const ship = (full?.shipping_address ?? null) as { name?: string; phone?: string; postal?: string; line1?: string } | null;
+      const ship = (full?.shipping_address ?? null) as { name?: string; phone?: string; postal?: string; line1?: string; city?: string; region?: string } | null;
       const pref = await createMpPreference({
         orderNumber,
         amountCents: order.total_cents,
         itemsSummary: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
         customer: { name: ship?.name ?? "", email: full?.email ?? "" },
-        ship: { phone: ship?.phone, zip: ship?.postal, street: ship?.line1 },
+        ship: { phone: ship?.phone, zip: ship?.postal, street: ship?.line1, city: ship?.city, state: ship?.region },
         // complemento de combo: sin meses — la diferencia se paga de contado
         maxInstallments: full?.combo_parent_order_id ? 1 : undefined,
         successUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}`,

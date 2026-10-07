@@ -45,7 +45,7 @@ type PreferenceArgs = {
   // Datos extra del pagador. El motor de riesgo de MP aprueba mas cuando la
   // preferencia trae telefono y direccion que cuadran con el comprador
   // (rechazos rejected_high_risk con datos minimos — caso BL-001085).
-  ship?: { phone?: string; zip?: string; street?: string };
+  ship?: { phone?: string; zip?: string; street?: string; city?: string; state?: string };
   successUrl: string;
   failureUrl: string;
   notificationUrl: string;
@@ -61,11 +61,19 @@ export type MpPreference = { id: string; init_point: string; sandbox_init_point?
 // concept — it just sums the items — so a single line is the only way to
 // guarantee the charge equals our computed total (coupon/combo already baked in).
 export async function createMpPreference(a: PreferenceArgs): Promise<MpPreference> {
+  // Desde el 1-oct-2026 MP rechaza las tarjetas con cc_rejected_high_risk (0 de 7
+  // aprobadas; antes 0 rechazos por riesgo). Lo que su guia de calidad pide y
+  // faltaba: apellido aparte, id y category_id del item y la direccion de envio.
+  const [nombre, ...resto] = a.customer.name.trim().split(/\s+/);
+  const apellido = resto.join(" ");
+  const tieneDireccion = !!(a.ship?.zip || a.ship?.street);
   return mp<MpPreference>("/checkout/preferences", {
     method: "POST",
     body: JSON.stringify({
       items: [
         {
+          id: a.orderNumber,
+          category_id: "fashion",
           title: `${activeBrand.name} · Pedido ${a.orderNumber}`,
           description: a.itemsSummary,
           quantity: 1,
@@ -74,8 +82,21 @@ export async function createMpPreference(a: PreferenceArgs): Promise<MpPreferenc
         },
       ],
       external_reference: a.orderNumber, // how the webhook maps a payment back to our order
+      ...(tieneDireccion
+        ? {
+            shipments: {
+              receiver_address: {
+                ...(a.ship?.zip ? { zip_code: a.ship.zip } : {}),
+                ...(a.ship?.street ? { street_name: a.ship.street } : {}),
+                ...(a.ship?.city ? { city_name: a.ship.city } : {}),
+                ...(a.ship?.state ? { state_name: a.ship.state } : {}),
+              },
+            },
+          }
+        : {}),
       payer: {
-        name: a.customer.name,
+        name: nombre ?? a.customer.name,
+        ...(apellido ? { surname: apellido } : {}),
         email: a.customer.email,
         ...(a.ship?.phone ? { phone: { number: a.ship.phone.replace(/\D/g, "") } } : {}),
         ...(a.ship?.zip || a.ship?.street
