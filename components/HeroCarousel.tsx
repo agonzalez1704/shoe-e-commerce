@@ -161,9 +161,10 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
         </p>
       )}
       {/* en movil la etiqueta va aqui, junto al boton: arriba choca con el logo
-          horneado de los posters verticales */}
+          horneado de los posters. En los posters (ctaAbajo) tambien en
+          escritorio: el de Bolton trae el logo arriba a la izquierda. */}
       {s.badge && (
-        <div className="sm:hidden">
+        <div className={s.ctaAbajo ? "" : "sm:hidden"}>
           <BadgeLink badge={s.badge} />
         </div>
       )}
@@ -233,7 +234,7 @@ function Slide({ s, priority }: { s: HeroSlide; priority: boolean }) {
       <div className={`absolute inset-0 flex items-end ${s.ctaAbajo ? "" : "sm:items-center"}`}>
         <div className={`mx-auto flex w-full max-w-6xl flex-col px-5 pb-16 ${s.ctaAbajo ? "sm:pb-20" : "sm:pb-0"}`}>{copy}</div>
       </div>
-      {s.badge && (
+      {s.badge && !s.ctaAbajo && (
         <div className="absolute inset-x-0 top-6 hidden sm:block">
           <div className="mx-auto max-w-6xl px-5">
             <BadgeLink badge={s.badge} />

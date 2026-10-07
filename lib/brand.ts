@@ -247,16 +247,16 @@ const BRANDS: Record<string, BrandConfig> = {
       // y ya aprobadas, no material inventado para llenar el carrusel.
       slides: [
         {
-          // Poster "Thunder coleccion" con logo y eslogan horneados: sin texto DOM
+          // Poster "Bolton coleccion" con logo y eslogan horneados: sin texto DOM
           // y el boton abajo para no taparlo. En movil va la version vertical
           // (2:3); el hero es 4:5, asi que `focal` la recorta arriba y abajo sin
           // perder el logo ni la suela.
-          image: "/blade-hero-thunder-coleccion.webp",
-          imageMobile: "/blade-hero-thunder-coleccion-movil.webp",
+          image: "/blade-hero-bolton.webp",
+          imageMobile: "/blade-hero-bolton-movil.webp",
           focal: "50% 30%",
           eyebrow: "",
           titleTop: "",
-          badge: { label: "Nuevo", detail: "Thunder", href: "/products/thunder?color=shedron%2Fhueso%20cuello%20de%20toro" },
+          badge: { label: "Nuevo", detail: "Bolton", href: "/products/bolton" },
           ctaLabel: "Arma tu combo",
           ctaHref: "/combo",
           ctaAbajo: true,
