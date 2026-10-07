@@ -39,8 +39,9 @@ type PpOrder = {
   status: string; // CREATED | APPROVED | COMPLETED | ...
   links?: { rel: string; href: string }[];
   purchase_units?: {
+    reference_id?: string;
     custom_id?: string;
-    payments?: { captures?: { id: string; status: string; amount: { value: string; currency_code: string } }[] };
+    payments?: { captures?: { id: string; status: string; custom_id?: string; amount: { value: string; currency_code: string } }[] };
   }[];
   details?: { issue: string; description?: string }[];
   message?: string;
@@ -110,7 +111,8 @@ export async function capturePaypalOrder(ppOrderId: string): Promise<CapturaPayp
       ok: true,
       captureId: captura.id,
       amountCents: Math.round(Number(captura.amount.value) * 100),
-      orderNumber: unidad?.custom_id ?? null,
+      // en la respuesta de captura el custom_id viene dentro de la captura
+      orderNumber: captura.custom_id ?? unidad?.custom_id ?? unidad?.reference_id ?? null,
     };
   }
   const issue = body.details?.[0]?.issue ?? body.status ?? String(status);

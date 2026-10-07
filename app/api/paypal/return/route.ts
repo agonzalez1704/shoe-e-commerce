@@ -24,13 +24,15 @@ export async function GET(req: NextRequest) {
     }
     return gracias("&paypal=rechazado");
   }
-  if (cap.orderNumber && cap.orderNumber !== pedido) {
+  // El pedido sale de PayPal, no de la URL: sin custom_id no se confirma nada.
+  if (!cap.orderNumber || cap.orderNumber !== pedido) {
     console.error("[paypal return] custom_id no coincide:", cap.orderNumber, "vs", pedido);
+    await notifyAdmins({ title: `PayPal cobró pero no se pudo ligar a ${pedido}`, body: `captura ${cap.captureId}`, url: "/admin/orders", tag: `pp-${pedido}` });
     return gracias("&paypal=error");
   }
 
   const res = await confirmarPagoExterno({
-    orderNumber: cap.orderNumber ?? pedido,
+    orderNumber: cap.orderNumber,
     chargeId: `pp_${cap.captureId}`,
     amountCents: cap.amountCents,
     method: "paypal",
