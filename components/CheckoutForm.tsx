@@ -23,7 +23,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogClose,
 } from "@/components/ui/alert-dialog";
 
-export type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
+export type Method = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago" | "paypal";
 
 declare global {
   interface Window {
@@ -65,6 +65,8 @@ const METHODS: { id: Method; label: string; hint: string }[] = [
 // Desde el 1-oct-2026 el antifraude de MP rechaza las tarjetas (cc_rejected_high_risk,
 // 7 de 7) mientras Conekta las cobra bien: MP queda para saldo y Mercado Crédito.
 const MP_METHOD = { id: "mercadopago" as Method, label: "Mercado Pago", hint: "Saldo o Mercado Crédito" };
+// Solo si hay credenciales de PayPal (ver checkout/page.tsx).
+const PP_METHOD = { id: "paypal" as Method, label: "PayPal", hint: "Tu cuenta PayPal" };
 
 // Real brand logo on a white chip (keeps colour brands legible in both themes).
 function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }) {
@@ -91,6 +93,7 @@ export function MethodMark({ id }: { id: Method }) {
   if (id === "spei") return <LogoChip src="/pay/spei.svg" alt="SPEI" h={14} />;
   if (id === "aplazo") return <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={16} />;
   if (id === "mercadopago") return <LogoChip src="/pay/mercadopago.svg" alt="Mercado Pago" h={30} />;
+  if (id === "paypal") return <LogoChip src="/pay/paypal.svg" alt="PayPal" h={16} />;
   return (
     <span className="flex gap-1">
       <VisaMark />
@@ -202,13 +205,13 @@ export type CheckoutDefaults = Partial<
 >;
 
 export function CheckoutForm({
-  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false, mpEnabled = false, codigo,
+  cartId, lines, subtotalCents, comboDiscountCents, totalCents, conektaPublicKey, defaults = {}, googleAuth = false, mpEnabled = false, ppEnabled = false, codigo,
 }: {
   cartId: string; lines: CartLine[]; subtotalCents: number;
   comboDiscountCents: number; totalCents: number; conektaPublicKey: string;
-  defaults?: CheckoutDefaults; googleAuth?: boolean; mpEnabled?: boolean; codigo?: string;
+  defaults?: CheckoutDefaults; googleAuth?: boolean; mpEnabled?: boolean; ppEnabled?: boolean; codigo?: string;
 }) {
-  const methods = mpEnabled ? [...METHODS, MP_METHOD] : METHODS;
+  const methods = [...METHODS, ...(ppEnabled ? [PP_METHOD] : []), ...(mpEnabled ? [MP_METHOD] : [])];
   const [method, setMethod] = useState<Method>("card");
   const [needsInvoice, setNeedsInvoice] = useState(false);
   const [save, setSave] = useState(true);
@@ -558,6 +561,7 @@ export function CheckoutForm({
   const cta =
     method === "card" ? `Pagar ${mxn(effectiveTotal)}`
     : method === "mercadopago" ? "Continuar a Mercado Pago"
+    : method === "paypal" ? "Continuar a PayPal"
     : method === "aplazo" ? "Continuar a Aplazo"
     : "Confirmar pedido";
 
@@ -750,6 +754,11 @@ export function CheckoutForm({
             {method === "aplazo" && (
               <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
                 Paga en quincenas sin tarjeta. Te llevamos a Aplazo para aprobar; al volver, tu pedido queda confirmado.
+              </p>
+            )}
+            {method === "paypal" && (
+              <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
+                Te llevamos a PayPal para pagar con tu cuenta. Al volver, tu pedido queda confirmado.
               </p>
             )}
             {method === "mercadopago" && (

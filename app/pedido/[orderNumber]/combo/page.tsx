@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCents } from "@/lib/money";
 import { comboOf, precioPar, type ComboConfig } from "@/lib/pricing";
 import { ComboExpress, type ParElegible } from "@/components/ComboExpress";
+import { paypalEnabled } from "@/lib/paypal";
 import { PagoComplemento } from "@/components/PagoComplemento";
 import { pedidoAutorizado, cambiarPar } from "./actions";
 import { pagarComplemento } from "./cobro";
@@ -75,11 +76,12 @@ export default async function ComboExpresPage({
             cobrar={pagarComplemento.bind(null, order.order_number, t ?? null)}
             cambiar={cambiarPar.bind(null, order.order_number, t ?? null)}
             childOrderNumber={hijo.order_number}
-            mpHref={`/pedido/${hijo.order_number}/pagar`}
+            pagarHref={`/pedido/${hijo.order_number}/pagar`}
             totalCents={hijo.total_cents}
             elegido={elegido}
             conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
             mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
+            ppEnabled={paypalEnabled()}
             fichaGenerada={!!pago}
           />
         ) : (

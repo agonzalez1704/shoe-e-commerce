@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { createMpPreference } from "@/lib/mercadopago";
+import { createPaypalOrder } from "@/lib/paypal";
 import { markOrderPaid } from "@/lib/order-fulfillment";
 import { cookies, headers } from "next/headers";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -38,7 +39,7 @@ export type FiscalInput = {
 };
 
 // MercadoPago is a parallel provider (Checkout Pro redirect), not a Conekta method.
-export type PaymentMethod = ConektaMethod | "mercadopago";
+export type PaymentMethod = ConektaMethod | "mercadopago" | "paypal";
 
 export type CheckoutInput = {
   cartId: string;
@@ -317,6 +318,32 @@ async function runCheckout(input: CheckoutInput, onOrderCreated: (id: string) =>
       totalCents,
       expiresAt: null,
       redirectUrl: pref.init_point || pref.sandbox_init_point,
+      pedidoUrl,
+    };
+  }
+
+  // 5b. PayPal: orden PayPal y redireccion; /api/paypal/return captura al volver.
+  //     Mismo plazo que Mercado Pago para no retener el stock para siempre.
+  if (input.method === "paypal") {
+    await admin
+      .from("orders")
+      .update({ expires_at: new Date(Date.now() + MP_EXPIRY_HOURS * 60 * 60 * 1000).toISOString() })
+      .eq("id", orderId);
+    const itemCount = (items ?? []).reduce((n, i) => n + i.quantity, 0);
+    const pp = await createPaypalOrder({
+      orderNumber: created.order_number,
+      amountCents: totalCents,
+      description: `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`,
+      email: input.email,
+      returnUrl: `${SITE_URL}/api/paypal/return?o=${created.order_number}`,
+      cancelUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}&paypal=cancelado`,
+    });
+    return {
+      orderNumber: created.order_number,
+      method: input.method,
+      totalCents,
+      expiresAt: null,
+      redirectUrl: pp.approveUrl,
       pedidoUrl,
     };
   }

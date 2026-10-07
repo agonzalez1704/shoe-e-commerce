@@ -2145,7 +2145,7 @@ export type Database = {
       discount_type: "percent" | "fixed"
       fit_feedback: "runs_small" | "true_to_size" | "runs_large"
       order_status: "pending" | "paid" | "fulfilled" | "cancelled" | "refunded"
-      payment_method: "card" | "oxxo" | "spei" | "aplazo" | "mercadopago"
+      payment_method: "card" | "oxxo" | "spei" | "aplazo" | "mercadopago" | "paypal"
       product_status: "draft" | "active" | "archived"
       return_status:
         | "requested"
@@ -2291,7 +2291,7 @@ export const Constants = {
       discount_type: ["percent", "fixed"],
       fit_feedback: ["runs_small", "true_to_size", "runs_large"],
       order_status: ["pending", "paid", "fulfilled", "cancelled", "refunded"],
-      payment_method: ["card", "oxxo", "spei", "aplazo", "mercadopago"],
+      payment_method: ["card", "oxxo", "spei", "aplazo", "mercadopago", "paypal"],
       product_status: ["draft", "active", "archived"],
       return_status: [
         "requested",

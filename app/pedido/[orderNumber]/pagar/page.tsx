@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConektaOrder } from "@/lib/conekta";
 import { createMpPreference } from "@/lib/mercadopago";
+import { createPaypalOrder } from "@/lib/paypal";
 import { formatCents } from "@/lib/money";
 import { CASH_CHAINS } from "@/lib/payment-method";
 import { SITE_URL } from "@/lib/site";
@@ -26,10 +27,10 @@ export default async function PagarPedido({
   params, searchParams,
 }: {
   params: Promise<{ orderNumber: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; m?: string }>;
 }) {
   const { orderNumber } = await params;
-  const { t } = await searchParams;
+  const { t, m } = await searchParams;
 
   // ownership first: RLS only returns the order to the customer who owns it.
   // Guests have no customer_id, so fall back to the cart session token stamped
@@ -67,6 +68,29 @@ export default async function PagarPedido({
   if (order.status !== "pending") redirect(`/rastrear?o=${encodeURIComponent(orderNumber)}`);
 
   const admin = createAdminClient();
+  // ?m= cambia de proveedor desde la pagina del pedido (p. ej. tarjeta fallida
+  // -> PayPal); sin el, /pagar seguia el metodo original del pedido.
+  if ((m === "mercadopago" || m === "paypal") && m !== order.payment_method) {
+    await admin.from("orders").update({ payment_method: m }).eq("id", order.id);
+    order = { ...order, payment_method: m };
+  }
+
+  if (order.payment_method === "paypal") {
+    let url: string | undefined;
+    try {
+      const pp = await createPaypalOrder({
+        orderNumber,
+        amountCents: order.total_cents,
+        description: "pedido",
+        returnUrl: `${SITE_URL}/api/paypal/return?o=${orderNumber}`,
+        cancelUrl: `${SITE_URL}/checkout/gracias?o=${orderNumber}&paypal=cancelado`,
+      });
+      url = pp.approveUrl;
+    } catch (e) {
+      console.error("[pagar] could not create PayPal order:", e);
+    }
+    if (url) redirect(url);
+  }
   const { data: payment } = await admin
     .from("payments")
     .select("provider_charge_id, method, reference, clabe, voucher_url, expires_at")

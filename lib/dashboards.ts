@@ -147,7 +147,7 @@ async function consultaPedidos(c: ConsultaDSL, rango: keyof typeof RANGOS, atras
     modelo: (f) => f.modelo,
     talla: (f) => f.talla,
     color: (f) => f.color || "(sin color)",
-    metodo: (f) => ({ card: "Tarjeta", oxxo: "Efectivo", spei: "SPEI", aplazo: "Aplazo", mercadopago: "Mercado Pago" }[f.orders.payment_method ?? ""] ?? f.orders.payment_method ?? "(sin método)"),
+    metodo: (f) => ({ card: "Tarjeta", oxxo: "Efectivo", spei: "SPEI", aplazo: "Aplazo", mercadopago: "Mercado Pago", paypal: "PayPal" }[f.orders.payment_method ?? ""] ?? f.orders.payment_method ?? "(sin método)"),
     estado: (f) => f.orders.fulfillment_stage,
     // atribucion propia (cookie del beacon guardada en el pedido)
     campana: (f) => f.orders.atribucion?.utm_campaign ?? "(sin campaña)",

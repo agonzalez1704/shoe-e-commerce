@@ -5,6 +5,7 @@ import { CheckCircle, Clock } from "@phosphor-icons/react/dist/ssr";
 import { Estado } from "@/components/TrackOrder";
 import { ordenPorToken } from "@/app/rastrear/actions";
 import { leePedidoReciente } from "@/lib/pedido-reciente";
+import { paypalEnabled } from "@/lib/paypal";
 import { PagoComplemento } from "@/components/PagoComplemento";
 import { pagarPedido, cancelarPedido } from "./combo/cobro";
 
@@ -72,11 +73,12 @@ export default async function PedidoPage({
             cambiar={cancelarPedido.bind(null, numero, token)}
             cambiarTexto="Cancelar pedido"
             childOrderNumber={numero}
-            mpHref={`/pedido/${numero}/pagar?t=${token}`}
+            pagarHref={`/pedido/${numero}/pagar?t=${token}`}
             totalCents={orden.totalCents}
             elegido={null}
             conektaPublicKey={process.env.NEXT_PUBLIC_CONEKTA_PUBLIC_KEY ?? ""}
             mpEnabled={!!process.env.MERCADOPAGO_ACCESS_TOKEN}
+            ppEnabled={paypalEnabled()}
             fichaGenerada={false}
           />
         </details>

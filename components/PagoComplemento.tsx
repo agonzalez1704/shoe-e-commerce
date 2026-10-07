@@ -19,19 +19,20 @@ import type { ConektaMethod } from "@/lib/conekta";
 // pedido cuando el primer pago falló (con "Cancelar pedido"). `cobrar` y
 // `cambiar` llegan como server actions ya ligadas al pedido.
 
-type Metodo = Extract<Method, "card" | "oxxo" | "aplazo" | "mercadopago">;
+type Metodo = Extract<Method, "card" | "oxxo" | "aplazo" | "mercadopago" | "paypal">;
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/10";
 
 export type ParElegido = { nombre: string; label: string; imagen: string | null };
 
-export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto = "Cambiar par", childOrderNumber, mpHref, totalCents, elegido, conektaPublicKey, mpEnabled, fichaGenerada }: {
+export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto = "Cambiar par", childOrderNumber, pagarHref, totalCents, elegido, conektaPublicKey, mpEnabled, ppEnabled = false, fichaGenerada }: {
   cobrar: (method: ConektaMethod, cardTokenId?: string) => Promise<ResultadoCobro>;
   cambiar?: () => Promise<{ ok: false; error: string } | undefined | void>;
   cambiarTexto?: string;
   childOrderNumber: string;
-  mpHref: string;
+  pagarHref: string; // /pedido/<n>/pagar(?t=…): Mercado Pago y PayPal redirigen desde ahi
+  ppEnabled?: boolean;
   totalCents: number;
   elegido: ParElegido | null;
   conektaPublicKey: string;
@@ -56,6 +57,7 @@ export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto =
   const metodos: { id: Metodo; label: string; hint: string }[] = [
     { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
     ...(activeBrand.copy?.installments ? [{ id: "aplazo" as Metodo, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }] : []),
+    ...(ppEnabled ? [{ id: "paypal" as Metodo, label: "PayPal", hint: "Tu cuenta PayPal" }] : []),
     ...(mpEnabled ? [{ id: "mercadopago" as Metodo, label: "Mercado Pago", hint: "Saldo o Mercado Crédito" }] : []),
   ];
 
@@ -74,7 +76,10 @@ export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto =
   }
 
   const pagar = () => {
-    if (metodo === "mercadopago") { window.location.href = mpHref; return; }
+    if (metodo === "mercadopago" || metodo === "paypal") {
+      window.location.href = `${pagarHref}${pagarHref.includes("?") ? "&" : "?"}m=${metodo}`;
+      return;
+    }
     startTransition(async () => {
       setErr(null);
       try {
@@ -204,6 +209,9 @@ export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto =
         )}
         {metodo === "aplazo" && (
           <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Aplazo para aprobar; al volver, tu pedido queda confirmado.</p>
+        )}
+        {metodo === "paypal" && (
+          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a PayPal para pagar con tu cuenta. Al volver, tu pedido queda confirmado.</p>
         )}
         {metodo === "mercadopago" && (
           <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Mercado Pago para pagar con tu saldo o Mercado Crédito; con tarjeta usa la opción Tarjeta. Al volver, tu pedido queda confirmado.</p>

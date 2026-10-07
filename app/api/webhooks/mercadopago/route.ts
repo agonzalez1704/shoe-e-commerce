@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getMpPayment } from "@/lib/mercadopago";
-import { markOrderPaid } from "@/lib/order-fulfillment";
+import { confirmarPagoExterno } from "@/lib/order-fulfillment";
 
 // MercadoPago -> us. Checkout Pro confirms the payment here; the buyer's redirect
 // back to /gracias happens in parallel and can't be trusted. Two-layer trust:
@@ -35,45 +34,18 @@ export async function POST(req: NextRequest) {
   const orderNumber = pay.external_reference;
   if (!orderNumber) return NextResponse.json({ ok: true });
 
-  const admin = createAdminClient();
-  const { data: order } = await admin
-    .from("orders")
-    .select("id, total_cents, status")
-    .eq("order_number", orderNumber)
-    .maybeSingle();
-  if (!order) {
-    console.error("[mercadopago webhook] no order for external_reference:", orderNumber, "payment:", paymentId);
-    return NextResponse.json({ ok: true });
-  }
-
-  // The buyer can pay after we released the order (2h expiry, or they backed out
-  // and came back). commit_order only acts on a pending order, so an approved
-  // payment would be swallowed and the buyer would never be confirmed. Revive it:
-  // every product is made-to-order, so re-reserving stock is a no-op.
-  if (order.status === "cancelled") {
-    console.error("[mercadopago webhook] reviving cancelled order for an approved payment:", orderNumber, paymentId);
-    await admin.from("orders").update({ status: "pending" }).eq("id", order.id);
-  }
-
-  // defense-in-depth: the preference fixes the amount server-side, but never
-  // commit an order against a payment whose amount doesn't match our total.
-  if (pay.transaction_amount != null && Math.round(pay.transaction_amount * 100) !== order.total_cents) {
-    console.error("[mercadopago webhook] amount mismatch:", orderNumber, "paid", pay.transaction_amount, "expected", order.total_cents / 100);
-    return NextResponse.json({ ok: true });
-  }
-
-  const chargeId = `mp_${paymentId}`;
-  const res = await markOrderPaid({
-    orderId: order.id,
-    chargeId,
-    amountCents: order.total_cents,
+  const res = await confirmarPagoExterno({
+    orderNumber,
+    chargeId: `mp_${paymentId}`,
+    amountCents: pay.transaction_amount != null ? Math.round(pay.transaction_amount * 100) : null,
     method: "mercadopago",
   });
-  if (!res.ok) return NextResponse.json({ error: res.error }, { status: 500 });
-
-  // commit_order hardcodes provider='conekta' on the payments row; relabel this
-  // one so the money table stays honest about where it came from.
-  await admin.from("payments").update({ provider: "mercadopago" }).eq("provider_charge_id", chargeId);
+  if (!res.ok) {
+    console.error("[mercadopago webhook]", res.error, "payment:", paymentId);
+    // monto o pedido que no cuadra: no reintentar; un fallo del commit si
+    if (/monto|sin pedido/.test(res.error)) return NextResponse.json({ ok: true });
+    return NextResponse.json({ error: res.error }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

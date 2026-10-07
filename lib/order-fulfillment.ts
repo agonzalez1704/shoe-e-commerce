@@ -12,7 +12,7 @@ import { ventanaEntrega } from "@/lib/fulfillment";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
-type PaidMethod = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago";
+type PaidMethod = "card" | "oxxo" | "spei" | "aplazo" | "mercadopago" | "paypal";
 
 // Commit a paid order and fire the confirm-time side effects (email, Meta CAPI,
 // admin push, CFDI). Shared by the checkout (card cleared at once) and the
@@ -102,6 +102,39 @@ export async function markOrderPaid(opts: {
 // La usa markOrderPaid y la reconciliacion del cron (reenvio de las que no
 // llegaron). event_id = numero de pedido: Meta junta los reenvios y la copia
 // del navegador en una sola compra.
+// Pago aprobado en un proveedor con redireccion (Mercado Pago, PayPal): casa el
+// pago con el pedido por su numero, valida el monto y lo confirma. Revive un
+// pedido ya vencido: el comprador pudo pagar despues de que lo liberamos, y todo
+// se fabrica sobre pedido, asi que volver a apartar no cuesta nada.
+export async function confirmarPagoExterno(a: {
+  orderNumber: string;
+  chargeId: string;
+  amountCents: number | null; // lo que el proveedor dice que cobro
+  method: "mercadopago" | "paypal";
+}): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
+  const admin = createAdminClient();
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, total_cents, status")
+    .eq("order_number", a.orderNumber)
+    .maybeSingle();
+  if (!order) return { ok: false, error: `sin pedido ${a.orderNumber}` };
+
+  if (a.amountCents != null && a.amountCents !== order.total_cents) {
+    return { ok: false, error: `monto ${a.amountCents} no coincide con ${order.total_cents} (${a.orderNumber})` };
+  }
+  if (order.status === "cancelled") {
+    console.error(`[${a.method}] reviviendo pedido cancelado con pago aprobado:`, a.orderNumber, a.chargeId);
+    await admin.from("orders").update({ status: "pending", payment_method: a.method }).eq("id", order.id);
+  }
+
+  const res = await markOrderPaid({ orderId: order.id, chargeId: a.chargeId, amountCents: order.total_cents, method: a.method });
+  if (!res.ok) return res;
+  // commit_order deja provider='conekta' en payments; se corrige al real.
+  await admin.from("payments").update({ provider: a.method }).eq("provider_charge_id", a.chargeId);
+  return { ok: true, orderId: order.id };
+}
+
 export async function reportarCompraMeta(orderId: string) {
   const admin = createAdminClient();
   const { data: o } = await admin

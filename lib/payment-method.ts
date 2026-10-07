@@ -12,6 +12,7 @@ export function methodLabel(m: string): string {
     case "spei": return "SPEI";
     case "aplazo": return "Aplazo";
     case "mercadopago": return "Mercado Pago";
+    case "paypal": return "PayPal";
     default: return m.toUpperCase();
   }
 }
