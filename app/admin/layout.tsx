@@ -18,6 +18,7 @@ export const instant = false;
 // installable admin PWA (its own manifest so the storefront is unaffected)
 export const metadata: Metadata = {
   manifest: "/admin.webmanifest",
+  icons: { apple: "/icons/app-192.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: `${SITE_NAME} Admin` },
 };
 

@@ -16,8 +16,10 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Blade Admin";
   const options = {
     body: data.body || "",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    icon: "/icons/app-192.png",
+    // Android pinta el badge como silueta en la barra de estado: tiene que ser
+    // blanco sobre transparente (el icono a color salia como un cuadro).
+    badge: "/icons/badge-96.png",
     // same tag replaces an earlier notification for the same order instead of stacking
     tag: data.tag || "blade",
     renotify: true,

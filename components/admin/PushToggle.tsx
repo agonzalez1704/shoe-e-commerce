@@ -30,6 +30,9 @@ export function PushToggle() {
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
     setStandalone(!isIOS || installed);
     if (!ok) return;
+    // Registrar al abrir (no solo al activar alertas): la app instalada queda
+    // con su service worker desde el primer arranque.
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
     navigator.serviceWorker.getRegistration().then(async (reg) => {
       const sub = await reg?.pushManager.getSubscription();
       setSubscribed(!!sub);
