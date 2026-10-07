@@ -888,9 +888,11 @@ export function CheckoutForm({
             <MastercardMark />
             <AmexMark />
             {activeBrand.copy?.installments && <LogoChip src="/pay/aplazo.png" alt="Aplazo" h={14} />}
+            {ppEnabled && <LogoChip src="/pay/paypal.svg" alt="PayPal" h={14} />}
           </div>
           <p className="flex items-center justify-center gap-1 text-[11px] text-muted">
-            <ShieldCheck size={13} weight="fill" /> Compra protegida · procesado por Conekta
+            <ShieldCheck size={13} weight="fill" /> Compra protegida · procesado por{" "}
+            {method === "paypal" ? "PayPal" : method === "mercadopago" ? "Mercado Pago" : "Conekta"}
           </p>
         </aside>
       </form>
