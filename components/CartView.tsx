@@ -3,11 +3,11 @@
 import { AvisoPedidoCarrito } from "@/components/PedidoReciente";
 import Link from "next/link";
 import Image from "next/image";
-import { useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash, ShoppingBag, ArrowsClockwise, Truck, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
-import { updateCartItem, removeFromCart, type CartSummary } from "@/app/cart/actions";
+import { updateCartItem, removeFromCart, type CartSummary, type CartLine } from "@/app/cart/actions";
 import { notifyCartChanged } from "@/components/CartBadge";
 import { activeBrand } from "@/lib/brand";
 
@@ -32,11 +32,35 @@ function MadeToOrderNotice() {
   );
 }
 
+// quantity 0 = quitar la linea
+type Cambio = { variantId: string; quantity: number };
+
+function aplicarCambio(lines: CartLine[], c: Cambio): CartLine[] {
+  if (c.quantity <= 0) return lines.filter((l) => l.variantId !== c.variantId);
+  return lines.map((l) =>
+    l.variantId === c.variantId ? { ...l, quantity: c.quantity, lineTotalCents: l.unitPriceCents * c.quantity } : l,
+  );
+}
+
 export function CartView({ initial }: { initial: CartSummary }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  // Quitar/cambiar cantidad se ve al instante; si la accion falla, React
+  // regresa a lo que diga el servidor. El descuento del combo y el total los
+  // calcula el servidor: mientras llegan se muestran atenuados.
+  const [lines, aplicar] = useOptimistic(initial.lines, aplicarCambio);
+  const subtotal = lines.reduce((n, l) => n + l.lineTotalCents, 0);
 
-  if (initial.lines.length === 0) {
+  const cambiar = (c: Cambio) =>
+    startTransition(async () => {
+      aplicar(c);
+      if (c.quantity <= 0) await removeFromCart(c.variantId);
+      else await updateCartItem(c.variantId, c.quantity);
+      notifyCartChanged();
+      router.refresh();
+    });
+
+  if (lines.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-2xl border border-border px-4 py-20 text-center">
         <AvisoPedidoCarrito />
@@ -51,9 +75,6 @@ export function CartView({ initial }: { initial: CartSummary }) {
       </div>
     );
   }
-
-  const act = (fn: () => Promise<void>) =>
-    startTransition(async () => { await fn(); notifyCartChanged(); router.refresh(); });
 
   return (
     <div className="space-y-6">
@@ -100,7 +121,7 @@ export function CartView({ initial }: { initial: CartSummary }) {
 
       <div className="grid gap-10 md:grid-cols-[1fr_360px]">
         <ul className="divide-y divide-border">
-          {initial.lines.map((l) => (
+          {lines.map((l) => (
             <li key={l.variantId} className="flex gap-4 py-6 first:pt-0 sm:gap-5">
               <Link
                 href={`/products/${l.slug}`}
@@ -134,8 +155,7 @@ export function CartView({ initial }: { initial: CartSummary }) {
                 <div className="mt-auto flex items-center gap-3 pt-4">
                   <select
                     value={l.quantity}
-                    disabled={isPending}
-                    onChange={(e) => act(() => updateCartItem(l.variantId, Number(e.target.value)))}
+                    onChange={(e) => cambiar({ variantId: l.variantId, quantity: Number(e.target.value) })}
                     className="nums rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent"
                   >
                     {Array.from({ length: Math.max(l.qtyAvailable, l.quantity) }, (_, i) => i + 1).map((n) => (
@@ -143,8 +163,7 @@ export function CartView({ initial }: { initial: CartSummary }) {
                     ))}
                   </select>
                   <button
-                    disabled={isPending}
-                    onClick={() => act(() => removeFromCart(l.variantId))}
+                    onClick={() => cambiar({ variantId: l.variantId, quantity: 0 })}
                     aria-label="Quitar"
                     className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-accent"
                   >
@@ -156,14 +175,14 @@ export function CartView({ initial }: { initial: CartSummary }) {
           ))}
         </ul>
 
-        <aside className="h-fit space-y-4 rounded-2xl border border-border bg-surface p-5 md:sticky md:top-24">
+        <aside aria-busy={isPending} className="h-fit space-y-4 rounded-2xl border border-border bg-surface p-5 md:sticky md:top-24">
           <h2 className="text-sm font-semibold">Resumen</h2>
           <div className="flex justify-between text-sm">
             <span className="text-muted">Subtotal (IVA incl.)</span>
-            <span className="nums font-medium">{mxn(initial.subtotalCents)}</span>
+            <span className="nums font-medium">{mxn(subtotal)}</span>
           </div>
           {initial.comboDiscountCents > 0 && (
-            <div className="flex justify-between text-sm">
+            <div className={`flex justify-between text-sm transition-opacity ${isPending ? "opacity-40" : ""}`}>
               <span className="flex items-center gap-1 text-accent">
                 <Tag size={14} weight="fill" /> Descuento combo
               </span>
@@ -176,7 +195,9 @@ export function CartView({ initial }: { initial: CartSummary }) {
           </div>
           <div className="flex items-baseline justify-between border-t border-border pt-3">
             <span className="font-semibold">Total</span>
-            <span className="nums text-xl font-semibold">{mxn(initial.totalCents)}</span>
+            <span className={`nums text-xl font-semibold transition-opacity ${isPending ? "animate-pulse opacity-40" : ""}`}>
+              {mxn(initial.totalCents)}
+            </span>
           </div>
 
           {COPY.deliveryLine && (
@@ -186,9 +207,11 @@ export function CartView({ initial }: { initial: CartSummary }) {
             </p>
           )}
 
+          {/* Hasta que el servidor confirme el cambio: el checkout leeria el carrito viejo. */}
           <Link
             href="/checkout"
-            className="block rounded-full bg-accent px-6 py-3.5 text-center text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99]"
+            aria-disabled={isPending}
+            className="block rounded-full aria-disabled:pointer-events-none aria-disabled:opacity-60 bg-accent px-6 py-3.5 text-center text-sm font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-transform active:scale-[0.99]"
           >
             Continuar al pago
           </Link>
