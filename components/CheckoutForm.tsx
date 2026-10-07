@@ -62,7 +62,9 @@ const METHODS: { id: Method; label: string; hint: string }[] = [
     : []),
 ];
 // Only offered when MERCADOPAGO_ACCESS_TOKEN is configured (see checkout/page.tsx).
-const MP_METHOD = { id: "mercadopago" as Method, label: "Mercado Pago", hint: "Tarjeta, saldo o meses" };
+// Desde el 1-oct-2026 el antifraude de MP rechaza las tarjetas (cc_rejected_high_risk,
+// 7 de 7) mientras Conekta las cobra bien: MP queda para saldo y Mercado Crédito.
+const MP_METHOD = { id: "mercadopago" as Method, label: "Mercado Pago", hint: "Saldo o Mercado Crédito" };
 
 // Real brand logo on a white chip (keeps colour brands legible in both themes).
 function LogoChip({ src, alt, h = 18 }: { src: string; alt: string; h?: number }) {
@@ -691,7 +693,7 @@ export function CheckoutForm({
                       pero deja de presentar cuatro caminos como si dieran igual. */}
                   {id === "card" && (
                     <span className="absolute left-3 top-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-contrast">
-                      Al instante
+                      Recomendado
                     </span>
                   )}
                   <MethodMark id={id} />
@@ -752,7 +754,8 @@ export function CheckoutForm({
             )}
             {method === "mercadopago" && (
               <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">
-                Te llevamos a Mercado Pago para pagar con tarjeta, saldo o meses sin intereses. Al volver, tu pedido queda confirmado.
+                Te llevamos a Mercado Pago para pagar con tu saldo o Mercado Crédito. Al volver, tu pedido queda confirmado.
+                ¿Vas a pagar con tarjeta? Usa la opción Tarjeta: es más rápida y se aprueba al instante.
               </p>
             )}
           </section>

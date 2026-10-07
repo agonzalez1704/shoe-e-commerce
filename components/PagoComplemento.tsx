@@ -56,7 +56,7 @@ export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto =
   const metodos: { id: Metodo; label: string; hint: string }[] = [
     { id: "card", label: "Tarjeta", hint: "Crédito o débito" },
     ...(activeBrand.copy?.installments ? [{ id: "aplazo" as Metodo, label: activeBrand.copy.installments.provider, hint: "Págalo en quincenas" }] : []),
-    ...(mpEnabled ? [{ id: "mercadopago" as Metodo, label: "Mercado Pago", hint: "Tarjeta o saldo" }] : []),
+    ...(mpEnabled ? [{ id: "mercadopago" as Metodo, label: "Mercado Pago", hint: "Saldo o Mercado Crédito" }] : []),
   ];
 
   function tokenizaTarjeta(): Promise<string> {
@@ -206,7 +206,7 @@ export function PagoComplemento({ cobrar, cambiar: cambiarAccion, cambiarTexto =
           <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Aplazo para aprobar; al volver, tu pedido queda confirmado.</p>
         )}
         {metodo === "mercadopago" && (
-          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Mercado Pago — tarjeta o saldo, en una sola exhibición. Al volver, tu pedido queda confirmado.</p>
+          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-3 text-xs text-muted">Te llevamos a Mercado Pago para pagar con tu saldo o Mercado Crédito; con tarjeta usa la opción Tarjeta. Al volver, tu pedido queda confirmado.</p>
         )}
 
         {err && <p role="alert" className="mt-4 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">{err}</p>}
