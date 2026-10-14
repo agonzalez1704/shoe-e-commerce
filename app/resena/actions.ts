@@ -49,7 +49,7 @@ export async function submitReview(input: {
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, customer_id, status, delivered_at, email, order_number, cupon_resena")
+    .select("id, customer_id, status, delivered_at, email, order_number, cupon_resena, shipping_address")
     .eq("review_token", input.token)
     .maybeSingle();
   if (!order) return { error: "Enlace inválido." };
@@ -60,9 +60,9 @@ export async function submitReview(input: {
   // product must belong to the order
   const { data: items } = await admin
     .from("order_items")
-    .select("variants(product_id, products(slug))")
+    .select("variants(product_id, color, size_value, products(slug))")
     .eq("order_id", order.id);
-  type Row = { variants: { product_id: string; products: { slug: string } | null } | null };
+  type Row = { variants: { product_id: string; color: string | null; size_value: string | number | null; products: { slug: string } | null } | null };
   const rows = (items ?? []) as unknown as Row[];
   const match = rows.find((r) => r.variants?.product_id === input.productId);
   if (!match) return { error: "Ese producto no está en tu pedido." };
@@ -77,6 +77,9 @@ export async function submitReview(input: {
       body: input.body.trim() || null,
       fit_feedback: input.fit || null,
       verified_purchase: true,
+      ...autorPublico(order.shipping_address),
+      color: match.variants?.color ?? null,
+      talla: match.variants?.size_value != null ? String(match.variants.size_value) : null,
     },
     { onConflict: "order_id,product_id" },
   );
@@ -110,4 +113,14 @@ async function cuponDeResena(
   }
   await sendReviewCouponEmail({ to: order.email, orderNumber: order.order_number, codigo: code });
   return code;
+}
+
+// Lo que se publica de quien reseña: nombre y la inicial del apellido ("Ana G.")
+// y su ciudad. Nunca el nombre completo ni la direccion.
+function autorPublico(envio: unknown): { autor: string | null; ciudad: string | null } {
+  const e = (envio ?? {}) as { name?: string; city?: string };
+  const partes = (e.name ?? "").trim().split(/\s+/).filter(Boolean);
+  const nombre = partes[0] ? partes[0][0].toUpperCase() + partes[0].slice(1).toLowerCase() : null;
+  const inicial = partes[1] ? ` ${partes[1][0].toUpperCase()}.` : "";
+  return { autor: nombre ? nombre + inicial : null, ciudad: e.city?.trim() || null };
 }

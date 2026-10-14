@@ -225,6 +225,7 @@ const BRANDS: Record<string, BrandConfig> = {
     facebookDomainVerification: "0t8qxjwqh299y48x3q6cj9a0iioi3p",
     social: {
       facebook: "https://www.facebook.com/profile.php?id=1261201307069080",
+      instagram: "https://www.instagram.com/calzado_blade_oficial/",
     },
     legal: {
       operator: "Ma. de Lourdes Cifuentes Huerta",

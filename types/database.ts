@@ -1578,6 +1578,13 @@ export type Database = {
         Row: {
           body: string | null
           created_at: string
+          autor: string | null
+          ciudad: string | null
+          color: string | null
+          talla: string | null
+          fotos: string[]
+          respuesta: string | null
+          respuesta_at: string | null
           customer_id: string | null
           fit_feedback: Database["public"]["Enums"]["fit_feedback"] | null
           id: string
@@ -1589,6 +1596,13 @@ export type Database = {
         Insert: {
           body?: string | null
           created_at?: string
+          autor?: string | null
+          ciudad?: string | null
+          color?: string | null
+          talla?: string | null
+          fotos?: string[]
+          respuesta?: string | null
+          respuesta_at?: string | null
           customer_id?: string | null
           fit_feedback?: Database["public"]["Enums"]["fit_feedback"] | null
           id?: string
@@ -1600,6 +1614,13 @@ export type Database = {
         Update: {
           body?: string | null
           created_at?: string
+          autor?: string | null
+          ciudad?: string | null
+          color?: string | null
+          talla?: string | null
+          fotos?: string[]
+          respuesta?: string | null
+          respuesta_at?: string | null
           customer_id?: string | null
           fit_feedback?: Database["public"]["Enums"]["fit_feedback"] | null
           id?: string

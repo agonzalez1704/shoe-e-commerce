@@ -5,7 +5,7 @@ import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getProduct, listProducts, listRelatedProducts, type ProductCard } from "@/lib/catalog";
 import { activeBrand } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
-import { getProductReviews } from "@/lib/reviews";
+import { getProductReviews, fitHint } from "@/lib/reviews";
 import { ProductDetail } from "@/components/ProductDetail";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ProductReviews } from "@/components/ProductReviews";
@@ -125,7 +125,7 @@ export default async function ProductPage({
         <span className="text-text">{product.name}</span>
       </nav>
 
-      <ProductDetail product={product} initialColor={color} sugeridos={sugeridos} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} />
+      <ProductDetail product={product} initialColor={color} sugeridos={sugeridos} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} sizeHint={fitHint(reviews.fit)} />
 
       {/* Editorial bands for whichever category this product belongs to. Nothing
           renders until the brand supplies the art, so a store without it just

@@ -49,9 +49,11 @@ export function ProductDetail({
   rating,
   initialColor,
   sugeridos = [],
+  sizeHint,
 }: {
   product: Product;
   rating?: { average: number; count: number };
+  sizeHint?: string; // de las reseñas ("80% dice que queda fiel…"); sin el, el texto de la marca
   initialColor?: string;
   sugeridos?: ProductCard[]; // pares del combo para la invitacion al segundo par
 }) {
@@ -211,10 +213,10 @@ export function ProductDetail({
   );
 
   const estrellas = rating && (
-    <p className="flex items-center gap-2 text-sm text-muted">
+    <a href="#resenas" className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-sm text-muted transition-colors hover:text-text">
       <Stars value={rating.average} />
-      <span className="nums">{rating.average.toFixed(1)} · {rating.count} reseñas</span>
-    </p>
+      <span className="nums"><strong className="font-semibold text-text">{rating.average.toFixed(1)}</strong> · {rating.count} {rating.count === 1 ? "reseña" : "reseñas"}</span>
+    </a>
   );
 
   const foto = (fit: "cover" | "contain") =>
@@ -284,7 +286,7 @@ export function ProductDetail({
               combo={combo}
               esExotico={esExotico}
               sugeridos={sugeridos.filter((s) => s.slug !== product.slug)}
-              sizeHint={activeBrand.pdp?.sizeHint}
+              sizeHint={sizeHint ?? activeBrand.pdp?.sizeHint}
             />
 
             {valueProps}

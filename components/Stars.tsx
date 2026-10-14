@@ -4,7 +4,7 @@ import { Star } from "@phosphor-icons/react/dist/ssr";
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   const rounded = Math.round(value);
   return (
-    <span className="inline-flex items-center gap-0.5 text-accent" aria-label={`${value.toFixed(1)} de 5`}>
+    <span className="inline-flex items-center gap-0.5 text-[#d9a53b] dark:text-[#E8B84A]" aria-label={`${value.toFixed(1)} de 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star key={n} size={size} weight={n <= rounded ? "fill" : "regular"} />
       ))}
