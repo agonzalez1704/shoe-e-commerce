@@ -27,7 +27,7 @@ export default function TerminosPage() {
       <p>
         Nuestro calzado es de piel y se elabora de forma artesanal. El tiempo estimado de entrega es de{" "}
         <strong>4 a 7 días hábiles</strong> a partir de la confirmación del pago. Las cancelaciones aplican
-        según la sección de Devoluciones.
+        según la sección de Cambios y garantía.
       </p>
 
       <h2>2. Precios y pagos</h2>
@@ -50,10 +50,10 @@ export default function TerminosPage() {
         <a href="/envios">Política de Envíos</a>.
       </p>
 
-      <h2>5. Devoluciones y cambios</h2>
+      <h2>5. Cambios y garantía</h2>
       <p>
-        Las condiciones de cambio, devolución y garantía se detallan en la{" "}
-        <a href="/devoluciones">Política de Devoluciones y Cambios</a>.
+        No aceptamos devoluciones por gusto; solo hacemos cambios por talla o por defecto de fabricación. Las condiciones se detallan en la{" "}
+        <a href="/devoluciones">Política de Cambios y Garantía</a>.
       </p>
 
       <h2>6. Facturación (CFDI)</h2>

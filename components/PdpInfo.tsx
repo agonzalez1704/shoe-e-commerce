@@ -50,7 +50,7 @@ export function PdpInfo({
   return (
     <div className="mt-8" id="size-guide">
       {bullets.length > 0 && (
-        <Section icon={Truck} title="Envío y devoluciones">
+        <Section icon={Truck} title="Envío y cambios">
           <ul className="space-y-1.5">
             {bullets.map((b) => <li key={b}>{em(b)}</li>)}
           </ul>

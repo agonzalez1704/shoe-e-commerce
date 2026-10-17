@@ -192,7 +192,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <nav className="flex flex-col gap-2">
                 <p className="font-medium text-text">Legal</p>
                 <Link href="/envios" className="text-muted transition-colors hover:text-text">Envíos</Link>
-                <Link href="/devoluciones" className="text-muted transition-colors hover:text-text">Devoluciones y cambios</Link>
+                <Link href="/devoluciones" className="text-muted transition-colors hover:text-text">Cambios y garantía</Link>
                 <Link href="/terminos" className="text-muted transition-colors hover:text-text">Términos y condiciones</Link>
                 <Link href="/privacidad" className="text-muted transition-colors hover:text-text">Aviso de privacidad</Link>
               </nav>

@@ -115,7 +115,7 @@ export type HomeConfig = {
 export type PdpConfig = {
   valueProps?: { icon: string; label: string }[];
   reassurance?: { title: string; body: string };
-  shipping?: string[];                       // "Envío y devoluciones" bullets
+  shipping?: string[];                       // "Envío y cambios" bullets
   // Two bullets that depend on the product, not the brand: a lead time only
   // applies to made-to-order items, a size-exchange promise only to sized ones.
   shippingMadeToOrder?: string;
@@ -382,7 +382,7 @@ const BRANDS: Record<string, BrandConfig> = {
       // moverse aquí, y perderlo habría restilado la PDP viva de Blade.
       shipping: [
         "Envío *gratis* a todo México.",
-        "Devoluciones dentro de los 30 días posteriores a la entrega.",
+        "Cambios solo por *talla* o *defecto de fabricación*; sin devoluciones por gusto.",
       ],
       shippingMadeToOrder: "Entrega en *4 a 7 días hábiles* a todo México.",
       shippingSized: "Primer cambio de talla *sin costo*.",

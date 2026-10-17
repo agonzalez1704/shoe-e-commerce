@@ -4,13 +4,14 @@ import { LegalPending, shippingConfigured } from "@/components/LegalGate";
 import { activeBrand, whatsappDisplay } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Devoluciones y Cambios",
-  description: `Política de devoluciones, cambios y garantía de ${activeBrand.name}.`,
+  title: "Cambios y Garantía",
+  description: `Política de cambios y garantía de ${activeBrand.name}: cambios por talla o defecto de fabricación.`,
   alternates: { canonical: "/devoluciones" },
 };
 
 // NOTE: los plazos y coberturas deben coincidir EXACTO con lo que ofreces en
-// el sitio (PDP dice: primer cambio sin costo · 30 días · garantía 6 meses).
+// el sitio (PDP dice: sin devoluciones por gusto · primer cambio de talla sin
+// costo · 30 días · garantía 6 meses).
 // Ajusta si tus condiciones reales son distintas.
 export default function DevolucionesPage() {
   // Misma razón que /envios: plazos, cambios y garantía son promesas de esta
@@ -19,7 +20,7 @@ export default function DevolucionesPage() {
   if (!shippingConfigured()) {
     return (
       <LegalPending
-        page="Devoluciones y Cambios"
+        page="Cambios y Garantía"
         heading="Falta configurar la política de devoluciones"
         body="Esta página fija plazos, cambios y garantía. La marca no los tiene definidos, así que no se publican los de otra tienda."
         field="pdp.shipping"
@@ -27,37 +28,37 @@ export default function DevolucionesPage() {
     );
   }
   return (
-    <LegalPage title="Devoluciones y Cambios" updated="16 de julio de 2026">
+    <LegalPage title="Cambios y Garantía" updated="17 de octubre de 2026">
       <p>
-        Queremos que ames tu par, así que te pedimos revisar bien
-        tu talla antes de comprar (consulta la guía de tallas en cada producto). Aun así, te damos estas opciones:
+        Cada par se fabrica sobre pedido para ti, por eso <strong>no aceptamos devoluciones por gusto</strong> o
+        cambio de opinión. Te pedimos revisar bien tu talla antes de comprar (consulta la guía de tallas en cada
+        producto). Solo hacemos cambios en estos dos casos:
       </p>
 
-      <h2>Cambios de talla</h2>
+      <h2>1. No te quedó la talla</h2>
       <ul>
+        <li>Te cambiamos el par por otra talla del mismo modelo.</li>
         <li>El <strong>primer cambio de talla es sin costo</strong> de envío.</li>
         <li>Cuentas con <strong>30 días naturales</strong> a partir de la entrega para solicitarlo.</li>
         <li>El producto debe estar sin uso, en su empaque original y con evidencia de compra.</li>
       </ul>
 
-      <h2>Devoluciones</h2>
-      <ul>
-        <li>Aceptamos devoluciones dentro de los <strong>30 días naturales</strong> posteriores a la entrega, siempre que el producto esté sin uso y en su empaque original.</li>
-        <li>El reembolso se realiza al mismo método de pago, una vez que recibimos y validamos el producto.</li>
-        <li>Los productos personalizados o en promoción especial pueden estar sujetos a condiciones distintas, que se indicarán al momento de la compra.</li>
-      </ul>
-
-      <h2>Garantía</h2>
+      <h2>2. Defecto de fabricación</h2>
       <p>
         Tu calzado tiene una <strong>garantía de 6 meses</strong> contra defectos de fabricación (costuras, suela o
-        materiales). No cubre desgaste normal por uso, mal uso ni daños por accidentes.
+        materiales). Lo reparamos o lo reponemos sin costo para ti; si no es posible, te reembolsamos. No cubre
+        desgaste normal por uso, mal uso ni daños por accidentes.
       </p>
-
-      <h2>Producto con defecto o error en el envío</h2>
       <p>
         Si recibiste un producto defectuoso o distinto al que pediste, contáctanos dentro de los 5 días posteriores
-        a la entrega y lo resolvemos sin costo para ti (cambio, reposición o reembolso).
+        a la entrega y lo resolvemos sin costo para ti.
       </p>
+
+      <h2>No aplica</h2>
+      <ul>
+        <li>Devoluciones o reembolsos porque el modelo o el color no te gustó, o porque cambiaste de opinión.</li>
+        <li>Pares usados, sin su empaque original o fuera de los plazos de arriba.</li>
+      </ul>
 
       <h2>Cómo iniciar</h2>
       <p>
