@@ -28,7 +28,7 @@ export default function DevolucionesPage() {
     );
   }
   return (
-    <LegalPage title="Cambios y Garantía" updated="17 de octubre de 2026">
+    <LegalPage title="Cambios y Garantía">
       <p>
         Cada par se fabrica sobre pedido para ti, por eso <strong>no aceptamos devoluciones por gusto</strong> o
         cambio de opinión. Te pedimos revisar bien tu talla antes de comprar (consulta la guía de tallas en cada
