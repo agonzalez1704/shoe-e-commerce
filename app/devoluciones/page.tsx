@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 // NOTE: los plazos y coberturas deben coincidir EXACTO con lo que ofreces en
 // el sitio (PDP dice: sin devoluciones por gusto · primer cambio de talla sin
-// costo · 30 días · garantía 6 meses).
+// costo · 30 días · garantía 90 días).
 // Ajusta si tus condiciones reales son distintas.
 export default function DevolucionesPage() {
   // Misma razón que /envios: plazos, cambios y garantía son promesas de esta
@@ -45,7 +45,7 @@ export default function DevolucionesPage() {
 
       <h2>2. Defecto de fabricación</h2>
       <p>
-        Tu calzado tiene una <strong>garantía de 6 meses</strong> contra defectos de fabricación (costuras, suela o
+        Tu calzado tiene una <strong>garantía de 90 días</strong> a partir de la entrega contra defectos de fabricación (costuras, suela o
         materiales). Lo reparamos o lo reponemos sin costo para ti; si no es posible, te reembolsamos. No cubre
         desgaste normal por uso, mal uso ni daños por accidentes.
       </p>

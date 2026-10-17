@@ -371,7 +371,7 @@ const BRANDS: Record<string, BrandConfig> = {
       valueProps: [
         { icon: "truck", label: "Envío gratis" },
         { icon: "exchange", label: "Primer cambio sin costo" },
-        { icon: "shield", label: "Garantía 6 meses" },
+        { icon: "shield", label: "Garantía 90 días" },
         { icon: "hammer", label: "Hecho a mano" },
       ],
       reassurance: {
