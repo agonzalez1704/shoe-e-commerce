@@ -936,6 +936,11 @@ export type Database = {
           combo_parent_order_id: string | null
           created_at: string
           cupon_resena: string | null
+          foto_enlace: string | null
+          foto_captura: string | null
+          foto_estado: string | null
+          foto_motivo: string | null
+          foto_at: string | null
           currency: string
           customer_id: string | null
           delivered_at: string | null
@@ -978,6 +983,11 @@ export type Database = {
           combo_parent_order_id?: string | null
           created_at?: string
           cupon_resena?: string | null
+          foto_enlace?: string | null
+          foto_captura?: string | null
+          foto_estado?: string | null
+          foto_motivo?: string | null
+          foto_at?: string | null
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
@@ -1020,6 +1030,11 @@ export type Database = {
           combo_parent_order_id?: string | null
           created_at?: string
           cupon_resena?: string | null
+          foto_enlace?: string | null
+          foto_captura?: string | null
+          foto_estado?: string | null
+          foto_motivo?: string | null
+          foto_at?: string | null
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null

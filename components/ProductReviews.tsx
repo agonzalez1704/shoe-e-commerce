@@ -87,8 +87,8 @@ export function ProductReviews({ summary }: { summary: ReviewSummary }) {
           <div className="min-w-0 space-y-5">
             <ReviewsList items={summary.items} />
             <p className="text-xs leading-relaxed text-muted">
-              Solo publican reseña quienes compraron y recibieron su pedido. Quienes reseñan reciben un cupón, sin
-              importar su calificación.
+              Solo publican reseña quienes compraron y recibieron su pedido. Quienes reseñan y comparten una foto reciben
+              un cupón, sin importar su calificación.
             </p>
           </div>
         )}

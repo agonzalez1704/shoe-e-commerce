@@ -67,6 +67,32 @@ export function fitHint(fit: FitResumen): string | undefined {
 }
 
 // ---- self-check ----
+// "@calzado_blade_oficial" a partir de la URL del perfil de la marca.
+export function arrobaInstagram(url?: string): string | null {
+  const m = url?.match(/instagram\.com\/([^/?#]+)/i);
+  return m ? `@${m[1]}` : null;
+}
+
+// Solo publicaciones de Instagram o Facebook: es lo que se revisa para el 10%.
+export function enlacePublicacionValido(u: string): boolean {
+  try {
+    const x = new URL(u.trim());
+    return x.protocol === "https:" && /(^|\.)(instagram\.com|facebook\.com|fb\.com|fb\.watch)$/i.test(x.hostname) && x.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
+export type FotoEstado = "pendiente" | "aprobada" | "rechazada" | null;
+
+// Qué le falta a un pedido entregado para el 10%: reseña, luego la foto
+// etiquetada, luego nuestra revisión.
+export function pasoCampana(o: { resenado: boolean; foto_estado: string | null; cupon_resena: string | null }): "resena" | "foto" | "revision" | "listo" {
+  if (o.cupon_resena || o.foto_estado === "aprobada") return "listo";
+  if (!o.resenado) return "resena";
+  return o.foto_estado === "pendiente" ? "revision" : "foto";
+}
+
 export function _demo() {
   const a = (x: boolean, m: string) => { if (!x) throw new Error(m); };
   const r = (rating: number, fit: Review["fit_feedback"], fotos: string[] = []): Review => ({
@@ -80,6 +106,13 @@ export function _demo() {
   a(fitHint(s.fit)!.startsWith("67%"), "hint");
   a(fitHint({ chica: 0, correcta: 100, grande: 0, total: 2 }) === undefined, "minimo");
   a(s.fotos.length === 1, "fotos");
+  a(arrobaInstagram("https://www.instagram.com/calzado_blade_oficial/") === "@calzado_blade_oficial", "arroba");
+  a(enlacePublicacionValido("https://www.instagram.com/p/Cx1/") && enlacePublicacionValido("https://fb.watch/abc/"), "enlace ok");
+  a(!enlacePublicacionValido("https://instagram.com.evil.io/p/1") && !enlacePublicacionValido("http://instagram.com/p/1") && !enlacePublicacionValido("https://www.instagram.com/"), "enlace malo");
+  a(pasoCampana({ resenado: false, foto_estado: null, cupon_resena: null }) === "resena", "paso resena");
+  a(pasoCampana({ resenado: true, foto_estado: "rechazada", cupon_resena: null }) === "foto", "paso foto");
+  a(pasoCampana({ resenado: true, foto_estado: "pendiente", cupon_resena: null }) === "revision", "paso revision");
+  a(pasoCampana({ resenado: true, foto_estado: "aprobada", cupon_resena: "X" }) === "listo", "paso listo");
   return "ok";
 }
 

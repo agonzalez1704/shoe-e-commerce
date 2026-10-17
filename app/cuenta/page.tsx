@@ -9,7 +9,7 @@ import { Stars } from "@/components/Stars";
 import { CopiarCodigo } from "@/components/CopiarCodigo";
 import { PASOS_CLIENTE, pasoCliente, carrierName, trackingUrlFor, fechaEntrega } from "@/lib/fulfillment";
 import { ligarPedidosDeInvitado } from "@/lib/cuenta";
-import { FIT_LABEL } from "@/lib/reviews-shared";
+import { FIT_LABEL, CUPON_RESENA, pasoCampana } from "@/lib/reviews-shared";
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 
@@ -34,7 +34,7 @@ type Garantia = { razon: string; recibido_at: string | null; cerrada_at: string 
 type ComboFila = { quantity: number; variants: { fuera_de_combo: boolean; products: { combo_group: string | null; combo_min_qty: number | null } | null } | null };
 
 const ORDER_SELECT =
-  "id, order_number, status, fulfillment_stage, delivered_at, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, cupon_resena, combo_parent_order_id, order_items_combo:order_items(quantity, variants(fuera_de_combo, products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity, variants(color, products(product_images(url, position, color))))";
+  "id, order_number, status, fulfillment_stage, delivered_at, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, cupon_resena, foto_estado, combo_parent_order_id, order_items_combo:order_items(quantity, variants(fuera_de_combo, products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity, variants(color, products(product_images(url, position, color))))";
 
 export default async function CuentaPage({ searchParams }: { searchParams: Promise<{ error?: string; msg?: string; next?: string }> }) {
   const { error, msg, next } = await searchParams;
@@ -76,7 +76,9 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
 
   const resenados = new Set((reviews ?? []).map((r) => r.order_id));
   const vivo = (s: string) => s !== "cancelled" && s !== "refunded";
-  const porResenar = orders.filter((o) => o.delivered_at && o.review_token && vivo(o.status) && !resenados.has(o.id));
+  const paso = (o: (typeof orders)[number]) => pasoCampana({ resenado: resenados.has(o.id), foto_estado: o.foto_estado, cupon_resena: o.cupon_resena });
+  // Pedidos entregados a los que les falta algo para el 10% (reseña o foto).
+  const porResenar = orders.filter((o) => o.delivered_at && o.review_token && vivo(o.status) && ["resena", "foto"].includes(paso(o)));
   await connection(); // la vigencia de los cupones depende de la hora actual
   const ahora = Date.now();
   const listaCupones = (cupones ?? []).map((c) => ({
@@ -139,7 +141,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
       </aside>
 
       <main className="mt-6 min-w-0 space-y-10 md:mt-0">
-        {porResenar[0] && <PromoResena order={porResenar[0]} total={porResenar.length} />}
+        {porResenar[0] && <PromoResena order={porResenar[0]} paso={paso(porResenar[0]) as "resena" | "foto"} total={porResenar.length} />}
 
         <section id="pedidos" className="scroll-mt-24 space-y-3">
           <h2 className="text-lg font-semibold">Mis pedidos</h2>
@@ -150,7 +152,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
           ) : (
             <ul className="space-y-3">
               {orders.map((o) => (
-                <PedidoCard key={o.order_number} o={o} resenado={resenados.has(o.id)} />
+                <PedidoCard key={o.order_number} o={o} paso={paso(o)} />
               ))}
             </ul>
           )}
@@ -190,7 +192,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
         <section id="cupones" className="scroll-mt-24 space-y-3">
           <h2 className="text-lg font-semibold">Mis cupones</h2>
           {listaCupones.length === 0 ? (
-            <p className="text-sm text-muted">Aquí aparecerán tus cupones. Reseña un pedido entregado y gana 10% en tu próxima compra.</p>
+            <p className="text-sm text-muted">Aquí aparecerán tus cupones. Reseña un pedido entregado, comparte una foto etiquetándonos y gana {CUPON_RESENA.porcentaje}% en tu próxima compra.</p>
           ) : (
             <ul className="space-y-3">
               {listaCupones.map((c) => (
@@ -232,8 +234,9 @@ type Order = {
   review_token: string | null;
 };
 
-// El cupón hoy llega al publicar la reseña (lib/reviews: CUPON_RESENA).
-function PromoResena({ order, total }: { order: Order; total: number }) {
+// El 10% llega con los dos pasos: reseña y foto etiquetada aprobada.
+function PromoResena({ order, paso, total }: { order: Order; paso: "resena" | "foto"; total: number }) {
+  const foto = paso === "foto";
   return (
     <section className="grid overflow-hidden rounded-3xl border border-border bg-surface sm:grid-cols-[200px_minmax(0,1fr)]">
       <Image
@@ -245,17 +248,26 @@ function PromoResena({ order, total }: { order: Order; total: number }) {
         className="hidden h-full w-full object-cover sm:block"
       />
       <div className="flex flex-col justify-center gap-3 p-5 sm:p-7">
-        <span className="nums text-xs tracking-[0.12em] text-accent">TU 10% DE DESCUENTO</span>
-        <p className="text-xl font-semibold leading-snug sm:text-2xl">Reseña tus {activeBrand.name} y gana 10% en tu próxima compra</p>
+        <span className="nums text-xs tracking-[0.12em] text-accent">TU {CUPON_RESENA.porcentaje}% · PASO {foto ? 2 : 1} DE 2</span>
+        <p className="text-xl font-semibold leading-snug sm:text-2xl">
+          {foto
+            ? `Comparte una foto con tus ${activeBrand.name} y desbloquea tu ${CUPON_RESENA.porcentaje}%`
+            : `Reseña tus ${activeBrand.name}, compártelos en una foto y gana ${CUPON_RESENA.porcentaje}% en tu próxima compra`}
+        </p>
+        <div className="h-2 max-w-md overflow-hidden rounded-full bg-elevated" aria-hidden="true">
+          <div className={`h-full rounded-full bg-accent ${foto ? "w-1/2" : "w-0"}`} />
+        </div>
         <p className="text-sm text-muted">
-          {total > 1 ? `Tienes ${total} pedidos entregados por reseñar.` : "Tu pedido ya llegó: cuéntanos qué tal te quedó."} El cupón llega al
-          publicar tu reseña, sin importar tu calificación.
+          {foto
+            ? "Ya dejaste tu reseña. Publica una foto o video con tus zapatos etiquetándonos en Instagram o Facebook."
+            : total > 1 ? `Tienes ${total} pedidos entregados por reseñar.` : "Tu pedido ya llegó: cuéntanos qué tal te quedó."}{" "}
+          El cupón llega al aprobar tu foto, sin importar tu calificación.
         </p>
         <Link
-          href={`/resena/${order.review_token}`}
+          href={`/resena/${order.review_token}${foto ? "#paso2" : ""}`}
           className="mt-1 inline-flex h-11 w-fit items-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-contrast"
         >
-          Reseñar {order.order_number}
+          {foto ? "Subir mi foto etiquetada" : `Reseñar ${order.order_number}`}
         </Link>
       </div>
     </section>
@@ -285,7 +297,7 @@ function faltaParDeCombo(status: string, parent: string | null, filas: ComboFila
   return [...g.values()].some((e) => e.u % e.min === e.min - 1);
 }
 
-function PedidoCard({ o: raw, resenado }: { o: Record<string, unknown>; resenado: boolean }) {
+function PedidoCard({ o: raw, paso }: { o: Record<string, unknown>; paso: ReturnType<typeof pasoCampana> }) {
   const o = raw as {
     order_number: string; status: string; fulfillment_stage: string | null; delivered_at: string | null;
     carrier: string | null; tracking_number: string | null; tracking_url: string | null; estimated_delivery: string | null;
@@ -326,12 +338,17 @@ function PedidoCard({ o: raw, resenado }: { o: Record<string, unknown>; resenado
 
       {vivo && o.status !== "pending" && (
         <p className="text-xs">
-          {resenado ? (
-            <span className={VERDE}>Reseña ✓</span>
-          ) : o.delivered_at ? (
-            <span className={AMBAR}>Reseña pendiente</span>
-          ) : (
+          {!o.delivered_at ? (
             <span className="text-muted">Podrás reseñarlo al recibirlo</span>
+          ) : paso === "resena" ? (
+            <span className={AMBAR}>Reseña y foto pendientes</span>
+          ) : (
+            <>
+              <span className={VERDE}>Reseña ✓</span> ·{" "}
+              {paso === "foto" ? <span className={AMBAR}>Foto pendiente</span>
+                : paso === "revision" ? <span className={AMBAR}>Foto en revisión</span>
+                : <span className={VERDE}>Foto ✓ · {CUPON_RESENA.porcentaje}% activo</span>}
+            </>
           )}
         </p>
       )}
@@ -348,9 +365,12 @@ function PedidoCard({ o: raw, resenado }: { o: Record<string, unknown>; resenado
                 Completa tu combo
               </Link>
             )}
-            {vivo && o.delivered_at && o.review_token && !resenado && (
-              <Link href={`/resena/${o.review_token}`} className="inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-contrast">
-                Reseñar y ganar 10%
+            {vivo && o.delivered_at && o.review_token && (paso === "resena" || paso === "foto") && (
+              <Link
+                href={`/resena/${o.review_token}${paso === "foto" ? "#paso2" : ""}`}
+                className="inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-contrast"
+              >
+                {paso === "foto" ? "Subir mi foto" : `Reseñar y ganar ${CUPON_RESENA.porcentaje}%`}
               </Link>
             )}
             {vivo && (
