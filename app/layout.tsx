@@ -24,6 +24,10 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrai
 
 const SEO_TITLE = activeBrand.seoSuffix ? `${SITE_NAME} — ${activeBrand.seoSuffix}` : SITE_NAME;
 
+const OG_IMAGE = activeBrand.ogImage
+  ? { url: activeBrand.ogImage, width: 1200, height: 630, alt: `${SITE_NAME} — catálogo` }
+  : null;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SEO_TITLE, template: `%s · ${SITE_NAME}` },
@@ -38,8 +42,9 @@ export const metadata: Metadata = {
     url: SITE_URL,
     title: SEO_TITLE,
     description: SITE_DESCRIPTION,
+    ...(OG_IMAGE ? { images: [OG_IMAGE] } : {}),
   },
-  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
+  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION, ...(OG_IMAGE ? { images: [OG_IMAGE.url] } : {}) },
   // Meta lee la etiqueta en el HTML del servidor (no la ve si la inyecta JS).
   ...(activeBrand.facebookDomainVerification
     ? { other: { "facebook-domain-verification": activeBrand.facebookDomainVerification } }

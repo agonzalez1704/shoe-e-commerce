@@ -11,10 +11,23 @@ import { activeBrand } from "@/lib/brand";
 // Catalogue copy follows the brand: "calzado de piel hecho sobre pedido" was
 // hardcoded here and shipped on a scooter store, in the page title and under
 // the heading. Both now come from BrandConfig.
+// Es la liga que se manda cuando piden "el catálogo": su vista previa en
+// Messenger/WhatsApp necesita título, URL e imagen propios (heredaba los de inicio, sin imagen).
+const CATALOGO = `Catálogo ${activeBrand.name}`;
 export const metadata: Metadata = {
   title: `Tienda — ${activeBrand.seoSuffix ?? activeBrand.tagline}`,
   description: activeBrand.description,
   alternates: { canonical: "/products" },
+  openGraph: {
+    type: "website",
+    locale: "es_MX",
+    siteName: activeBrand.name,
+    url: "/products",
+    title: CATALOGO,
+    description: activeBrand.description,
+    ...(activeBrand.ogImage ? { images: [{ url: activeBrand.ogImage, width: 1200, height: 630, alt: CATALOGO }] } : {}),
+  },
+  twitter: { card: "summary_large_image", title: CATALOGO, description: activeBrand.description, ...(activeBrand.ogImage ? { images: [activeBrand.ogImage] } : {}) },
 };
 
 type SearchParams = Promise<Record<string, string | undefined>>;

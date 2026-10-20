@@ -197,6 +197,9 @@ export type BrandConfig = {
   copy?: CopyConfig;     // phrases repeated across cart, checkout and email
   catalogFeed?: CatalogFeedConfig; // Meta Commerce feed claims
   facebookDomainVerification?: string; // Business Manager → Dominios: verifica el dominio de la marca
+  // Vista previa (1200×630) al compartir el catálogo en Messenger/Facebook/WhatsApp;
+  // también es la de cualquier página sin imagen propia. Ruta en public/.
+  ogImage?: string;
   sat?: SatCodes;        // requerido para timbrar CFDI y para la carta porte
   logo?: { src: string; width: number; height: number; alt?: string; invertOnLight?: boolean }; // optional full image (mark+wordmark); falls back to wordmark
   markSrc?: { src: string; width: number; height: number }; // optional logo-mark IMAGE shown before the wordmark text (keeps its own colors in both themes)
@@ -223,6 +226,7 @@ const BRANDS: Record<string, BrandConfig> = {
     name: "Blade",
     domain: "calzadoblade.com",
     facebookDomainVerification: "0t8qxjwqh299y48x3q6cj9a0iioi3p",
+    ogImage: "/blade-og-catalogo.jpg",
     social: {
       facebook: "https://www.facebook.com/profile.php?id=1261201307069080",
       instagram: "https://www.instagram.com/calzado_blade_oficial/",
