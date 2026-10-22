@@ -50,12 +50,12 @@ export function AvisoResena() {
         <Dialog.Popup className="fixed inset-x-4 bottom-4 z-50 mx-auto max-h-[calc(100svh-2rem)] max-w-md overflow-y-auto rounded-3xl border border-border bg-surface shadow-2xl transition-[opacity,translate] duration-200 data-ending-style:translate-y-4 data-ending-style:opacity-0 data-starting-style:translate-y-4 data-starting-style:opacity-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:data-ending-style:-translate-y-[calc(50%-1rem)] sm:data-starting-style:-translate-y-[calc(50%-1rem)]">
           <div className="relative">
             <Image
-              src="/blade-promo-resenas.webp"
+              src="/blade-promo-resenas-modal.webp"
               alt={`${CUPON_RESENA.porcentaje}% de descuento en tu próxima compra`}
-              width={640}
-              height={800}
+              width={720}
+              height={610}
               sizes="(max-width: 480px) 100vw, 448px"
-              className="block h-64 w-full object-cover object-[50%_18%] sm:h-72"
+              className="block h-auto w-full"
             />
             <Dialog.Close
               aria-label="Cerrar"

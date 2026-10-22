@@ -113,7 +113,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
               <>
                 {order.foto_estado === "rechazada" && (
                   <p className="rounded-2xl border border-accent/40 bg-accent-soft p-3 text-sm">
-                    No pudimos validar tu publicación{order.foto_motivo ? `: ${order.foto_motivo}` : "."} Inténtalo de nuevo.
+                    No pudimos validar tu publicación{order.foto_motivo ? `: ${order.foto_motivo.replace(/\.?$/, ".")}` : "."} Inténtalo de nuevo.
                   </p>
                 )}
                 <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-text/85">
