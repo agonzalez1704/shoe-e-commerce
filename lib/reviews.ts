@@ -25,6 +25,6 @@ export function waPedirResena(o: {
     `Hola${nombre ? ` ${nombre}` : ""} 👋 Te escribimos de ${o.marca}. Ya nos aparece entregado tu pedido ${o.numero}` +
     `${o.productos.length ? ` (${o.productos.join(", ")})` : ""}. ¿Cómo te quedaron?\n\n` +
     `Si nos dejas tu reseña y compartes una foto con tus ${o.marca} etiquetándonos en Instagram o Facebook, te regalamos ` +
-    `un cupón de ${CUPON_RESENA.porcentaje}% para tu siguiente par, que se suma al combo de 2 pares. Buena o mala, la queremos honesta 🙏\n\n${o.url}`;
+    `${CUPON_RESENA.porcentaje}% de descuento o una cartera en tu siguiente compra (tú eliges), y se suma al combo de 2 pares. Buena o mala, la queremos honesta 🙏\n\n${o.url}`;
   return `https://wa.me/${d.length === 10 ? `52${d}` : d}?text=${encodeURIComponent(texto)}`;
 }

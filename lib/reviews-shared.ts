@@ -19,6 +19,14 @@ export type Review = {
 // Cupon por reseñar (honesta, buena o mala): se suma al combo, un uso.
 export const CUPON_RESENA = { porcentaje: 10, dias: 90 } as const;
 
+// Lo que el cliente elige a cambio de reseña + foto. La cartera llega en su
+// siguiente compra: es un código de $0 que marca el pedido para empacarla.
+export type Recompensa = "descuento" | "cartera";
+export const RECOMPENSA: Record<Recompensa, { titulo: string; detalle: string }> = {
+  descuento: { titulo: `${CUPON_RESENA.porcentaje}% de descuento`, detalle: "en tu siguiente compra; se suma al combo de 2 pares" },
+  cartera: { titulo: "Una cartera de regalo", detalle: "va con los zapatos de tu siguiente compra (el color lo elegimos nosotros)" },
+};
+
 export type FitResumen = { chica: number; correcta: number; grande: number; total: number };
 
 export type ReviewSummary = {

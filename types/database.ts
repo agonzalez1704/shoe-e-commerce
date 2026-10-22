@@ -583,6 +583,7 @@ export type Database = {
           min_subtotal_cents: number
           starts_at: string | null
           suma_combo: boolean
+          regalo: string | null
           type: Database["public"]["Enums"]["discount_type"]
           used_count: number
           value: number
@@ -597,6 +598,7 @@ export type Database = {
           min_subtotal_cents?: number
           starts_at?: string | null
           suma_combo?: boolean
+          regalo?: string | null
           type: Database["public"]["Enums"]["discount_type"]
           used_count?: number
           value: number
@@ -611,6 +613,7 @@ export type Database = {
           min_subtotal_cents?: number
           starts_at?: string | null
           suma_combo?: boolean
+          regalo?: string | null
           type?: Database["public"]["Enums"]["discount_type"]
           used_count?: number
           value?: number
@@ -941,6 +944,8 @@ export type Database = {
           foto_estado: string | null
           foto_motivo: string | null
           foto_at: string | null
+          regalo: string | null
+          recompensa_resena: string | null
           currency: string
           customer_id: string | null
           delivered_at: string | null
@@ -988,6 +993,8 @@ export type Database = {
           foto_estado?: string | null
           foto_motivo?: string | null
           foto_at?: string | null
+          regalo?: string | null
+          recompensa_resena?: string | null
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null
@@ -1035,6 +1042,8 @@ export type Database = {
           foto_estado?: string | null
           foto_motivo?: string | null
           foto_at?: string | null
+          regalo?: string | null
+          recompensa_resena?: string | null
           currency?: string
           customer_id?: string | null
           delivered_at?: string | null

@@ -70,14 +70,14 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
       : Promise.resolve({ data: [] }),
     // discount_codes es solo de admin por RLS; los códigos salen de sus propios pedidos.
     codigos.length
-      ? createAdminClient().from("discount_codes").select("code, value, expires_at, used_count, max_uses, active").in("code", codigos)
+      ? createAdminClient().from("discount_codes").select("code, value, expires_at, used_count, max_uses, active, regalo").in("code", codigos)
       : Promise.resolve({ data: [] }),
   ]);
 
   const resenados = new Set((reviews ?? []).map((r) => r.order_id));
   const vivo = (s: string) => s !== "cancelled" && s !== "refunded";
   const paso = (o: (typeof orders)[number]) => pasoCampana({ resenado: resenados.has(o.id), foto_estado: o.foto_estado, cupon_resena: o.cupon_resena });
-  // Pedidos entregados a los que les falta algo para el 10% (reseña o foto).
+  // Pedidos entregados a los que les falta algo para su regalo (reseña o foto).
   const porResenar = orders.filter((o) => o.delivered_at && o.review_token && vivo(o.status) && ["resena", "foto"].includes(paso(o)));
   await connection(); // la vigencia de los cupones depende de la hora actual
   const ahora = Date.now();
@@ -135,7 +135,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
           <a href="#cupones" className="hidden rounded-2xl border-[1.5px] border-dashed border-accent/40 bg-accent-soft/40 p-3.5 md:block">
             <span className="block text-xs text-muted">Tu cupón</span>
             <span className="nums block font-semibold tracking-wide">{cuponVivo.code}</span>
-            <span className="block text-xs text-muted">{cuponVivo.value}% en tu próxima compra</span>
+            <span className="block text-xs text-muted">{cuponVivo.regalo ? "Cartera de regalo" : `${cuponVivo.value}% de descuento`} en tu próxima compra</span>
           </a>
         )}
       </aside>
@@ -192,7 +192,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
         <section id="cupones" className="scroll-mt-24 space-y-3">
           <h2 className="text-lg font-semibold">Mis cupones</h2>
           {listaCupones.length === 0 ? (
-            <p className="text-sm text-muted">Aquí aparecerán tus cupones. Reseña un pedido entregado, comparte una foto etiquetándonos y gana {CUPON_RESENA.porcentaje}% en tu próxima compra.</p>
+            <p className="text-sm text-muted">Aquí aparecerán tus cupones. Reseña un pedido entregado, comparte una foto etiquetándonos y gana {CUPON_RESENA.porcentaje}% o una cartera en tu próxima compra.</p>
           ) : (
             <ul className="space-y-3">
               {listaCupones.map((c) => (
@@ -203,7 +203,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                   <div className="min-w-0">
                     <p className={`nums font-semibold tracking-wide ${c.estado ? "line-through" : ""}`}>{c.code}</p>
                     <p className="text-xs text-muted">
-                      {c.value}% en tu próxima compra · {c.estado ?? (c.expires_at ? `vence ${dia(c.expires_at, true)}` : "sin vencimiento")}
+                      {c.regalo ? "Cartera de regalo" : `${c.value}% de descuento`} en tu próxima compra · {c.estado ?? (c.expires_at ? `vence ${dia(c.expires_at, true)}` : "sin vencimiento")}
                     </p>
                   </div>
                   {!c.estado && <CopiarCodigo code={c.code} />}
@@ -234,7 +234,7 @@ type Order = {
   review_token: string | null;
 };
 
-// El 10% llega con los dos pasos: reseña y foto etiquetada aprobada.
+// El regalo (10% o cartera) llega con los dos pasos: reseña y foto etiquetada aprobada.
 function PromoResena({ order, paso, total }: { order: Order; paso: "resena" | "foto"; total: number }) {
   const foto = paso === "foto";
   return (
@@ -248,11 +248,11 @@ function PromoResena({ order, paso, total }: { order: Order; paso: "resena" | "f
         className="hidden h-full w-full object-cover sm:block"
       />
       <div className="flex flex-col justify-center gap-3 p-5 sm:p-7">
-        <span className="nums text-xs tracking-[0.12em] text-accent">TU {CUPON_RESENA.porcentaje}% · PASO {foto ? 2 : 1} DE 2</span>
+        <span className="nums text-xs tracking-[0.12em] text-accent">TU REGALO · PASO {foto ? 2 : 1} DE 2</span>
         <p className="text-xl font-semibold leading-snug sm:text-2xl">
           {foto
-            ? `Comparte una foto con tus ${activeBrand.name} y desbloquea tu ${CUPON_RESENA.porcentaje}%`
-            : `Reseña tus ${activeBrand.name}, compártelos en una foto y gana ${CUPON_RESENA.porcentaje}% en tu próxima compra`}
+            ? `Comparte una foto con tus ${activeBrand.name} y llévate ${CUPON_RESENA.porcentaje}% o una cartera`
+            : `Reseña tus ${activeBrand.name}, compártelos en una foto y gana ${CUPON_RESENA.porcentaje}% o una cartera en tu próxima compra`}
         </p>
         <div className="h-2 max-w-md overflow-hidden rounded-full bg-elevated" aria-hidden="true">
           <div className={`h-full rounded-full bg-accent ${foto ? "w-1/2" : "w-0"}`} />
@@ -347,7 +347,7 @@ function PedidoCard({ o: raw, paso }: { o: Record<string, unknown>; paso: Return
               <span className={VERDE}>Reseña ✓</span> ·{" "}
               {paso === "foto" ? <span className={AMBAR}>Foto pendiente</span>
                 : paso === "revision" ? <span className={AMBAR}>Foto en revisión</span>
-                : <span className={VERDE}>Foto ✓ · {CUPON_RESENA.porcentaje}% activo</span>}
+                : <span className={VERDE}>Foto ✓ · regalo activo</span>}
             </>
           )}
         </p>
@@ -370,7 +370,7 @@ function PedidoCard({ o: raw, paso }: { o: Record<string, unknown>; paso: Return
                 href={`/resena/${o.review_token}${paso === "foto" ? "#paso2" : ""}`}
                 className="inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-contrast"
               >
-                {paso === "foto" ? "Subir mi foto" : `Reseñar y ganar ${CUPON_RESENA.porcentaje}%`}
+                {paso === "foto" ? "Subir mi foto" : "Reseñar y elegir regalo"}
               </Link>
             )}
             {vivo && (

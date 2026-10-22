@@ -132,12 +132,13 @@ export async function enviarFotoEtiquetada(token: string, form: FormData): Promi
   const r = await pedidoEntregado(admin, token);
   if ("error" in r) return { error: r.error };
   const { order } = r;
-  if (order.cupon_resena || order.foto_estado === "aprobada") return { error: "Tu cupón ya está activo." };
+  if (order.cupon_resena || order.foto_estado === "aprobada") return { error: "Tu código ya está activo." };
   if (order.foto_estado === "pendiente") return { error: "Ya la recibimos; la estamos revisando." };
   const { count } = await admin.from("reviews").select("id", { count: "exact", head: true }).eq("order_id", order.id);
   if (!count) return { error: "Primero publica tu reseña (paso 1)." };
 
   const enlace = String(form.get("enlace") ?? "").trim();
+  const recompensa = form.get("recompensa") === "cartera" ? "cartera" : "descuento";
   const file = form.get("captura");
   const hayCaptura = file instanceof File && file.size > 0;
   if (!enlace && !hayCaptura) return { error: "Pega el enlace de tu publicación o sube una captura." };
@@ -153,12 +154,12 @@ export async function enviarFotoEtiquetada(token: string, form: FormData): Promi
 
   const { error } = await admin
     .from("orders")
-    .update({ foto_enlace: enlace || null, foto_captura: captura, foto_estado: "pendiente", foto_motivo: null, foto_at: new Date().toISOString() })
+    .update({ foto_enlace: enlace || null, foto_captura: captura, foto_estado: "pendiente", foto_motivo: null, foto_at: new Date().toISOString(), recompensa_resena: recompensa })
     .eq("id", order.id);
   if (error) return { error: "No se pudo enviar. Intenta de nuevo." };
   await notifyAdmins({
     title: "Foto etiquetada por revisar",
-    body: `Pedido ${order.order_number}: aprueba su foto para enviarle su 10%.`,
+    body: `Pedido ${order.order_number}: aprueba su foto para enviarle su ${recompensa === "cartera" ? "cartera de regalo" : "10%"}.`,
     url: "/admin/resenas",
     tag: `foto-${order.order_number}`,
   });

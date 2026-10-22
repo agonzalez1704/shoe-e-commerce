@@ -12,11 +12,12 @@ export async function crearCodigoUnico(
   prefijo: string,
   porcentaje: number,
   horas: number,
+  regalo: "cartera" | null = null, // código de $0 que marca el pedido con un regalo
 ): Promise<string | null> {
   for (let intento = 0; intento < 3; intento++) {
     const code = `${prefijo}-` + Array.from({ length: 6 }, () => ALFABETO[randomInt(ALFABETO.length)]).join("");
     const { error } = await admin.from("discount_codes").insert({
-      code, type: "percent", value: porcentaje, max_uses: 1, min_subtotal_cents: 0, active: true, suma_combo: true,
+      code, type: "percent", value: porcentaje, max_uses: 1, min_subtotal_cents: 0, active: true, suma_combo: true, regalo,
       expires_at: new Date(Date.now() + horas * 3600_000).toISOString(),
     });
     if (!error) return code;

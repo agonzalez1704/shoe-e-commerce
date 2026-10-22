@@ -30,7 +30,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(param);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url, combo_parent_order_id")
+    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url, combo_parent_order_id, regalo")
     .eq(esUuid ? "id" : "order_number", decodeURIComponent(param))
     .maybeSingle();
 
@@ -82,6 +82,9 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         <div className="flex items-center gap-3">
           <h1 className="nums text-2xl font-semibold tracking-tight">{order.order_number}</h1>
           <StatusBadge status={order.status} />
+          {order.regalo === "cartera" && (
+            <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-contrast">🎁 Incluir cartera de regalo</span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* La tarjeta de corte que pide la fabrica: un PDF por modelo+color. */}

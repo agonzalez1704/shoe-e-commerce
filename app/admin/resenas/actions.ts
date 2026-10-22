@@ -20,7 +20,7 @@ export async function aprobarFoto(orderId: string): Promise<Res> {
       .update({ foto_estado: "aprobada", foto_motivo: null })
       .eq("id", orderId)
       .eq("foto_estado", "pendiente")
-      .select("id, email, order_number, cupon_resena")
+      .select("id, email, order_number, cupon_resena, recompensa_resena")
       .maybeSingle();
     if (!o) return { ok: false, error: "Esta foto ya se revisó." };
     const code = await emitirCuponDeResena(admin, o);

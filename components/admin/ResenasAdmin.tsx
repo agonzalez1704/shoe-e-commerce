@@ -9,7 +9,7 @@ import { aprobarFoto, rechazarFoto, responderResena, quitarFotoResena } from "@/
 
 const MOTIVOS = ["No encontramos la etiqueta a la marca", "La publicación no es visible (cuenta privada)", "No aparecen los zapatos"];
 
-export function RevisarFoto({ orderId }: { orderId: string }) {
+export function RevisarFoto({ orderId, cartera }: { orderId: string; cartera: boolean }) {
   const [rechazando, setRechazando] = useState(false);
   const [motivo, setMotivo] = useState(MOTIVOS[0]);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function RevisarFoto({ orderId }: { orderId: string }) {
       ) : (
         <div className="flex gap-2">
           <button disabled={isPending} onClick={() => correr(() => aprobarFoto(orderId))} className="h-10 flex-1 rounded-lg bg-[#2f9e5c] px-3 text-sm font-medium text-white disabled:opacity-60">
-            {isPending ? "Aprobando…" : "Aprobar y enviar 10%"}
+            {isPending ? "Aprobando…" : cartera ? "Aprobar y enviar cartera" : "Aprobar y enviar 10%"}
           </button>
           <button onClick={() => setRechazando(true)} className="h-10 rounded-lg border border-border px-3 text-sm text-muted hover:text-text">Rechazar</button>
         </div>

@@ -43,7 +43,7 @@ export default async function AdminOrders({
   let sb = supabase
     .from("orders")
     .select(
-      "id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address, paid_at",
+      "id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address, paid_at, regalo",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -72,7 +72,7 @@ export default async function AdminOrders({
     if (ids.length) {
       const { data: og, count: cg } = await supabase
         .from("orders")
-        .select("id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address, paid_at", { count: "exact" })
+        .select("id, order_number, status, fulfillment_stage, total_cents, payment_method, email, created_at, shipping_address, paid_at, regalo", { count: "exact" })
         .in("id", ids)
         .order("created_at", { ascending: false });
       orders = og; count = cg;
@@ -169,6 +169,7 @@ export default async function AdminOrders({
               <tr key={o.id} className="transition-colors hover:bg-elevated">
                 <td className="px-4 py-3">
                   <Link href={`/admin/orders/${o.order_number}`} className="nums font-medium hover:text-accent">{o.order_number}</Link>
+                  {o.regalo === "cartera" && <span className="ml-1.5" title="Incluir cartera de regalo">🎁</span>}
                 </td>
                 <td className="max-w-[220px] px-4 py-3">
                   <p className="truncate">{(o.shipping_address as { name?: string } | null)?.name ?? "—"}</p>

@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ReviewForm } from "@/components/ReviewForm";
 import { PasoFotoEtiquetada } from "@/components/PasoFotoEtiquetada";
 import { CopiarCodigo } from "@/components/CopiarCodigo";
-import { CUPON_RESENA, arrobaInstagram, pasoCampana } from "@/lib/reviews-shared";
+import { CUPON_RESENA, RECOMPENSA, arrobaInstagram, pasoCampana } from "@/lib/reviews-shared";
 import { activeBrand } from "@/lib/brand";
 
 // Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
@@ -25,7 +25,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, order_number, status, delivered_at, cupon_resena, foto_estado, foto_motivo")
+    .select("id, order_number, status, delivered_at, cupon_resena, foto_estado, foto_motivo, recompensa_resena")
     .eq("review_token", token)
     .maybeSingle();
   if (!order) notFound();
@@ -57,6 +57,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
   const entregado = !!order.delivered_at && (order.status === "paid" || order.status === "fulfilled");
   const paso = pasoCampana({ resenado: publicadas.size > 0, foto_estado: order.foto_estado, cupon_resena: order.cupon_resena });
   const arroba = arrobaInstagram(activeBrand.social?.instagram);
+  const cartera = order.recompensa_resena === "cartera";
   const tarjeta = "rounded-3xl border border-border bg-surface p-5";
 
   return (
@@ -81,7 +82,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
             </div>
             <div className="flex justify-between text-xs text-muted">
               <span className={paso === "resena" ? "font-semibold text-text" : ""}>1. Tu reseña</span>
-              <span className={paso !== "resena" ? "font-semibold text-text" : ""}>2. Tu foto etiquetada · {CUPON_RESENA.porcentaje}%</span>
+              <span className={paso !== "resena" ? "font-semibold text-text" : ""}>2. Tu foto etiquetada · regalo</span>
             </div>
           </div>
 
@@ -97,14 +98,14 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
           <section id="paso2" aria-labelledby="paso2t" className={`${tarjeta} scroll-mt-24 space-y-4`}>
             <div className="flex items-baseline justify-between gap-3">
               <h2 id="paso2t" className="text-lg font-semibold">Comparte una foto con tus {activeBrand.name}</h2>
-              <span className="nums text-sm text-accent">{CUPON_RESENA.porcentaje}%</span>
+              <span className="nums text-sm text-accent">{CUPON_RESENA.porcentaje}% o cartera</span>
             </div>
             {paso === "resena" ? (
-              <p className="text-sm text-muted">Primero publica tu reseña; después comparte tu foto y desbloquea tu {CUPON_RESENA.porcentaje}%.</p>
+              <p className="text-sm text-muted">Primero publica tu reseña; después comparte tu foto y elige tu regalo: {CUPON_RESENA.porcentaje}% de descuento o una cartera.</p>
             ) : paso === "revision" ? (
               <p className="rounded-2xl bg-elevated p-4 text-sm text-muted">
                 <span className="font-medium text-text">Recibimos tu publicación.</span> La revisamos en menos de 24 horas y te
-                mandamos tu cupón por correo.
+                mandamos tu código por correo.
               </p>
             ) : paso === "listo" ? (
               <p className="text-sm text-muted">¡Listo! Ya revisamos tu publicación. Gracias por compartir.</p>
@@ -125,7 +126,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
                 </ol>
                 <PasoFotoEtiquetada token={token} />
                 <p className="text-xs leading-relaxed text-muted">
-                  La revisamos en menos de 24 horas y te mandamos tu cupón por correo. Tu cuenta debe ser pública o la
+                  La revisamos en menos de 24 horas y te mandamos tu código por correo. Tu cuenta debe ser pública o la
                   publicación visible para que podamos verla.
                 </p>
               </>
@@ -133,18 +134,20 @@ export default async function ReviewPage({ params }: { params: Promise<{ token: 
           </section>
 
           <section
-            aria-label="Tu cupón"
+            aria-label="Tu regalo"
             className={`flex items-center justify-between gap-3 rounded-3xl border-[1.5px] border-dashed p-5 ${order.cupon_resena ? "border-accent/50 bg-accent-soft/50" : "border-border"}`}
           >
             <div className="min-w-0 space-y-1">
-              <p className="text-xs text-muted">Tu cupón para la próxima compra</p>
+              <p className="text-xs text-muted">Tu regalo para la próxima compra</p>
               <p className="nums text-lg font-semibold tracking-wide">
-                {CUPON_RESENA.porcentaje}% · {order.cupon_resena ?? "GRACIAS-••••••"}
+                {order.cupon_resena
+                  ? `${cartera ? "Cartera de regalo" : `${CUPON_RESENA.porcentaje}%`} · ${order.cupon_resena}`
+                  : `${CUPON_RESENA.porcentaje}% o una cartera`}
               </p>
               <p className="text-sm text-muted">
                 {order.cupon_resena
-                  ? `Un uso, válido ${CUPON_RESENA.dias} días. Se suma al combo de 2 pares.`
-                  : `Se activa al completar los dos pasos, sin importar tu calificación. Se suma al combo y vale ${CUPON_RESENA.dias} días.`}
+                  ? `${cartera ? "Usa el código al pagar y la cartera va con tus zapatos." : "Un uso; se suma al combo de 2 pares."} Válido ${CUPON_RESENA.dias} días.`
+                  : `Tú eliges al enviar tu foto: ${RECOMPENSA.descuento.titulo.toLowerCase()} o ${RECOMPENSA.cartera.titulo.toLowerCase()}. Se activa al completar los dos pasos, sin importar tu calificación.`}
               </p>
             </div>
             {order.cupon_resena && <CopiarCodigo code={order.cupon_resena} />}

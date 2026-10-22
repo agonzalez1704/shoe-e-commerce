@@ -67,7 +67,7 @@ export type CheckoutResult = {
   pedidoUrl?: string;   // la página del pedido, a donde va el comprador al terminar
 };
 
-export type DiscountPreview = { ok: true; discountCents: number } | { ok: false; error: string };
+export type DiscountPreview = { ok: true; discountCents: number; regalo?: "cartera" } | { ok: false; error: string };
 
 // Show the buyer what a code is worth before they pay. Display only —
 // create_order recomputes it authoritatively — so this must mirror the SQL
@@ -100,6 +100,8 @@ export async function previewDiscount(code: string, subtotalCents: number, combo
     (d.max_uses == null || d.used_count < d.max_uses) &&
     subtotalCents >= d.min_subtotal_cents;
   if (!usable) return { ok: false, error: "El código no es válido o ya venció." };
+  // Código de regalo (la cartera por reseñar): no quita nada, marca el pedido.
+  if (d.regalo === "cartera") return { ok: true, discountCents: 0, regalo: "cartera" };
 
   // Lo que el código quita ADEMÁS del combo, igual que create_order (0069): uno
   // marcado suma_combo se aplica sobre el precio ya con combo; los demás
@@ -228,6 +230,14 @@ async function runCheckout(
 
   const orderId = created.order_id;
   onOrderCreated(orderId); // from here on, a failure must roll the cart back
+
+  // create_order no guarda qué código se usó: si fue uno de regalo (la cartera
+  // por reseñar), se marca el pedido para empacarla con los zapatos.
+  const codigoUsado = input.discountCode?.trim().toUpperCase();
+  if (codigoUsado) {
+    const { data: dc } = await admin.from("discount_codes").select("regalo").eq("code", codigoUsado).maybeSingle();
+    if (dc?.regalo) await admin.from("orders").update({ regalo: dc.regalo }).eq("id", orderId);
+  }
 
   // El pedido queda recordado en este navegador (cookie con su token): la barra
   // de estado, el menú de cuenta y la página del pedido salen de ahí. Sin eso,

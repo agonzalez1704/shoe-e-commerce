@@ -22,7 +22,7 @@ const leer = (s: Storage, k: string) => { try { return s.getItem(k); } catch { r
 const guardar = (s: Storage, k: string, v: string) => { try { s.setItem(k, v); } catch {} };
 
 // Al entrar con sesión: si tiene un pedido entregado al que le falta la reseña
-// o la foto, se le ofrece el 10%. Una consulta por visita y, si lo cierra, no
+// o la foto, se le ofrece su regalo (10% o cartera). Una consulta por visita y, si lo cierra, no
 // vuelve a salir en 3 días.
 export function AvisoResena() {
   const pathname = usePathname();
@@ -71,8 +71,8 @@ export function AvisoResena() {
               </p>
               <Dialog.Title className="text-[22px] font-semibold leading-tight">
                 {foto
-                  ? `Comparte una foto con tus ${activeBrand.name} y desbloquea tu ${CUPON_RESENA.porcentaje}%`
-                  : `Reseña tus ${activeBrand.name}, compártelos en una foto y gana ${CUPON_RESENA.porcentaje}% en tu próxima compra`}
+                  ? `Comparte una foto con tus ${activeBrand.name} y llévate ${CUPON_RESENA.porcentaje}% o una cartera`
+                  : `Reseña tus ${activeBrand.name}, compártelos en una foto y gana ${CUPON_RESENA.porcentaje}% o una cartera en tu próxima compra`}
               </Dialog.Title>
             </div>
             <ol className="grid grid-cols-2 gap-2">

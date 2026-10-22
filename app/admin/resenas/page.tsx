@@ -12,7 +12,7 @@ export const instant = false;
 
 const dia = (iso: string) => new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "America/Mexico_City" });
 
-// Tres trabajos: aprobar las fotos etiquetadas (eso emite el 10%), responder
+// Tres trabajos: aprobar las fotos etiquetadas (eso emite su regalo), responder
 // reseñas, y pedirlas por WhatsApp a quien ya recibió y no ha reseñado.
 export default async function AdminResenas() {
   await requirePagePermiso("pedidos_ver");
@@ -27,7 +27,7 @@ export default async function AdminResenas() {
       .limit(200),
     supabase
       .from("orders")
-      .select("id, order_number, foto_enlace, foto_captura, foto_at, shipping_address, reviews(rating, body)")
+      .select("id, order_number, foto_enlace, foto_captura, foto_at, recompensa_resena, shipping_address, reviews(rating, body)")
       .eq("foto_estado", "pendiente")
       .order("foto_at", { ascending: true }),
     supabase
@@ -57,8 +57,8 @@ export default async function AdminResenas() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Fotos etiquetadas por revisar</h1>
           <p className="mt-1 text-sm text-muted">
-            Revisa que la publicación etiquete a la marca y muestre los zapatos. Al aprobar, el cliente recibe su{" "}
-            {CUPON_RESENA.porcentaje}% por correo.
+            Revisa que la publicación etiquete a la marca y muestre los zapatos. Al aprobar, el cliente recibe por correo
+            el código del regalo que eligió: {CUPON_RESENA.porcentaje}% de descuento o una cartera.
           </p>
         </div>
         {fotos.length === 0 ? (
@@ -89,7 +89,7 @@ export default async function AdminResenas() {
                       <img src={captura} alt="Captura de la publicación" className="max-h-72 rounded-xl border border-border object-contain" />
                     </a>
                   )}
-                  <RevisarFoto orderId={f.id} />
+                  <RevisarFoto orderId={f.id} cartera={f.recompensa_resena === "cartera"} />
                 </li>
               );
             })}
@@ -140,7 +140,7 @@ export default async function AdminResenas() {
           <h2 className="text-xl font-semibold tracking-tight">Pedir reseñas</h2>
           <p className="mt-1 text-sm text-muted">
             {pendientes.length} pedidos entregados sin reseña. Con su reseña y una foto etiquetada, el cliente recibe{" "}
-            {CUPON_RESENA.porcentaje}% para su siguiente compra.
+            {CUPON_RESENA.porcentaje}% o una cartera en su siguiente compra.
           </p>
         </div>
         <ul className="divide-y divide-border rounded-2xl border border-border bg-surface">

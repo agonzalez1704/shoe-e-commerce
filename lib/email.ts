@@ -195,19 +195,24 @@ export async function sendReviewEmail(a: { to: string; orderNumber: string; revi
     shell(`Cuéntanos qué te parecieron`,
       `<p>Esperamos que estés disfrutando tu pedido <strong>${a.orderNumber}</strong>. Tu opinión ayuda a otros compradores y solo toma un minuto.</p>
        <p>Deja tu reseña y comparte una foto con tus ${activeBrand.name} etiquetándonos en Instagram o Facebook: te regalamos
-       <strong>${CUPON_RESENA.porcentaje}% en tu siguiente compra</strong>, sin importar tu calificación.</p>
+       <strong>${CUPON_RESENA.porcentaje}% de descuento o una cartera</strong> en tu siguiente compra, sin importar tu calificación.</p>
        <p style="margin-top:18px">${button(a.reviewUrl, "Dejar una reseña")}</p>`),
   );
 }
 
 // gracias por reseñar y compartir — cupon de un uso para la siguiente compra
-export async function sendReviewCouponEmail(a: { to: string; orderNumber: string; codigo: string }) {
+export async function sendReviewCouponEmail(a: { to: string; orderNumber: string; codigo: string; cartera?: boolean }) {
+  const premio = a.cartera
+    ? `<strong>una cartera de regalo en tu siguiente compra</strong>: úsalo al pagar y te la enviamos junto con tus zapatos (también con el combo de 2 pares)`
+    : `<strong>${CUPON_RESENA.porcentaje}% en tu siguiente compra</strong>, y se suma al combo de 2 pares`;
   await send(
     a.to,
-    `Gracias por tu reseña y tu foto — tu ${CUPON_RESENA.porcentaje}% para el siguiente par`,
+    a.cartera
+      ? "Gracias por tu reseña y tu foto — tu cartera de regalo"
+      : `Gracias por tu reseña y tu foto — tu ${CUPON_RESENA.porcentaje}% para el siguiente par`,
     shell("Gracias por compartir",
       `<p>Recibimos tu reseña y tu publicación del pedido <strong>${a.orderNumber}</strong>. Como agradecimiento, este código te da
-       <strong>${CUPON_RESENA.porcentaje}% en tu siguiente compra</strong>, y se suma al combo de 2 pares:</p>
+       ${premio}:</p>
        <p style="font-size:20px;margin:16px 0"><strong style="letter-spacing:1px">${a.codigo}</strong></p>
        <p style="color:#71717a">Un solo uso, válido ${CUPON_RESENA.dias} días.</p>
        <p style="margin-top:18px">${button(`${SITE_URL}/checkout?codigo=${encodeURIComponent(a.codigo)}`, "Usar mi código")}</p>`),
@@ -222,7 +227,7 @@ export async function sendTaggedPhotoRejectedEmail(a: { to: string; orderNumber:
     shell("No pudimos validar tu publicación",
       `<p>Gracias por compartir tus ${activeBrand.name}. No pudimos validar la publicación del pedido <strong>${a.orderNumber}</strong>${
         a.motivo ? `: ${a.motivo.replace(/[<>&]/g, "")}` : "."}</p>
-       <p>Puedes enviarla de nuevo y desbloquear tu ${CUPON_RESENA.porcentaje}%:</p>
+       <p>Puedes enviarla de nuevo y desbloquear tu recompensa:</p>
        <p style="margin-top:18px">${button(a.url, "Enviar mi publicación")}</p>`),
   );
 }

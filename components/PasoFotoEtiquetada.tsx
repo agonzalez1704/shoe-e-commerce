@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { Image as ImageIcon, X } from "@phosphor-icons/react";
 import { enviarFotoEtiquetada } from "@/app/resena/actions";
 import { reducirImagen } from "@/lib/imagen-cliente";
+import { RECOMPENSA, type Recompensa } from "@/lib/reviews-shared";
 
 // Paso 2: enlace a la publicación (posts, reels) o captura (historias).
 export function PasoFotoEtiquetada({ token }: { token: string }) {
   const router = useRouter();
   const [enlace, setEnlace] = useState("");
   const [captura, setCaptura] = useState<File | null>(null);
+  const [recompensa, setRecompensa] = useState<Recompensa>("descuento");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const input = useRef<HTMLInputElement>(null);
@@ -25,6 +27,7 @@ export function PasoFotoEtiquetada({ token }: { token: string }) {
           try {
             const fd = new FormData();
             fd.set("enlace", enlace);
+            fd.set("recompensa", recompensa);
             if (captura) fd.set("captura", await reducirImagen(captura));
             const res = await enviarFotoEtiquetada(token, fd);
             if ("error" in res) setError(res.error);
@@ -35,6 +38,31 @@ export function PasoFotoEtiquetada({ token }: { token: string }) {
         });
       }}
     >
+      <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm text-muted">¿Qué prefieres?</legend>
+        {(Object.keys(RECOMPENSA) as Recompensa[]).map((k) => (
+          <label
+            key={k}
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+              recompensa === k ? "border-accent bg-accent-soft" : "border-border hover:border-text/40"
+            }`}
+          >
+            <input
+              type="radio"
+              name="recompensa"
+              value={k}
+              checked={recompensa === k}
+              onChange={() => setRecompensa(k)}
+              className="mt-1 accent-accent"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-text">{RECOMPENSA[k].titulo}</span>
+              <span className="block text-xs text-muted">{RECOMPENSA[k].detalle}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
       <label className="block space-y-1.5 text-sm text-muted">
         Enlace de tu publicación
         <input
@@ -73,7 +101,7 @@ export function PasoFotoEtiquetada({ token }: { token: string }) {
         disabled={isPending || (!enlace.trim() && !captura)}
         className="h-12 w-full rounded-full bg-accent text-sm font-semibold text-accent-contrast disabled:bg-border disabled:text-muted"
       >
-        {isPending ? "Enviando…" : "Enviar y desbloquear mi 10%"}
+        {isPending ? "Enviando…" : "Enviar y desbloquear mi regalo"}
       </button>
     </form>
   );

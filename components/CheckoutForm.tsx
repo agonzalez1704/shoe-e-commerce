@@ -366,6 +366,7 @@ export function CheckoutForm({
   // shows the buyer the real total before they commit.
   const [codeDiscount, setCodeDiscount] = useState(0);
   const [codeMsg, setCodeMsg] = useState<string | null>(null);
+  const [regalo, setRegalo] = useState(false);
   const [checkingCode, setCheckingCode] = useState(false);
 
   async function applyCode() {
@@ -377,9 +378,11 @@ export function CheckoutForm({
       const r = await previewDiscount(code, subtotalCents, comboDiscountCents);
       if (r.ok) {
         setCodeDiscount(r.discountCents);
-        setCodeMsg(`Código aplicado: −${mxn(r.discountCents)}`);
+        setRegalo(!!r.regalo);
+        setCodeMsg(r.regalo ? "🎁 Cartera de regalo incluida: va con tus zapatos." : `Código aplicado: −${mxn(r.discountCents)}`);
       } else {
         setCodeDiscount(0);
+        setRegalo(false);
         setCodeMsg(r.error);
       }
     } finally {
@@ -832,7 +835,7 @@ export function CheckoutForm({
                   </button>
                 </div>
                 {codeMsg && (
-                  <p className={`mt-2 text-xs ${codeDiscount > 0 ? "text-accent" : "text-muted"}`}>{codeMsg}</p>
+                  <p className={`mt-2 text-xs ${codeDiscount > 0 || regalo ? "text-accent" : "text-muted"}`}>{codeMsg}</p>
                 )}
               </>
             )}
@@ -853,6 +856,12 @@ export function CheckoutForm({
               <div className="flex justify-between">
                 <span className="text-accent">Código de descuento</span>
                 <span className="nums font-medium text-accent">−{mxn(codeDiscount)}</span>
+              </div>
+            )}
+            {regalo && (
+              <div className="flex justify-between">
+                <span className="text-accent">Cartera de regalo</span>
+                <span className="font-medium text-accent">Gratis</span>
               </div>
             )}
             <div className="flex justify-between">
