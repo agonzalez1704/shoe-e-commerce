@@ -54,6 +54,24 @@ export default function DevolucionesPage() {
         a la entrega y lo resolvemos sin costo para ti.
       </p>
 
+      <h2>3. Después del primer cambio</h2>
+      <ul>
+        <li>
+          <strong>Sin reembolso tras el primer cambio:</strong> una vez realizado y entregado el primer cambio de talla,
+          no aplican devoluciones de dinero ni reembolsos monetarios bajo ninguna circunstancia.
+        </li>
+        <li>
+          <strong>Si necesitas otro cambio de talla:</strong> si tras el primer cambio el calzado aún no te queda y deseas
+          una nueva talla, se gestiona como un cambio adicional y genera un costo extra de envío y logística, que te
+          confirmamos al solicitarlo.
+        </li>
+        <li>
+          <strong>Garantía por defecto de fabricación:</strong> si el par que recibiste en el cambio presenta un defecto de
+          fabricación comprobable, la garantía cubre su sustitución por uno nuevo en óptimas condiciones, sin costo
+          adicional, pero no aplica reembolso monetario.
+        </li>
+      </ul>
+
       <h2>No aplica</h2>
       <ul>
         <li>Devoluciones o reembolsos porque el modelo o el color no te gustó, o porque cambiaste de opinión.</li>
