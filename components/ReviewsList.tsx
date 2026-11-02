@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Stars } from "@/components/Stars";
+import { cdnImage } from "@/lib/cdn-image";
 import { FIT_LABEL, type Review } from "@/lib/reviews-shared";
 
 const PAGINA = 5;
@@ -86,9 +88,8 @@ export function ReviewsList({ items }: { items: Review[] }) {
               {r.fotos?.length > 0 && (
                 <div className="flex gap-2">
                   {r.fotos.map((src) => (
-                    <a key={src} href={src} target="_blank" rel="noopener noreferrer" className="block h-24 w-24 overflow-hidden rounded-xl bg-elevated">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="Foto del cliente" loading="lazy" className="h-full w-full object-cover" />
+                    <a key={src} href={cdnImage(src, 1920)} target="_blank" rel="noopener noreferrer" className="relative block h-24 w-24 overflow-hidden rounded-xl bg-elevated">
+                      <Image src={src} alt="Foto del cliente" fill sizes="96px" className="object-cover" />
                     </a>
                   ))}
                 </div>

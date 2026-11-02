@@ -1,4 +1,6 @@
+import Image from "next/image";
 import { Stars } from "@/components/Stars";
+import { cdnImage } from "@/lib/cdn-image";
 import { ReviewsList } from "@/components/ReviewsList";
 import { FIT_MINIMO, type ReviewSummary } from "@/lib/reviews";
 
@@ -62,9 +64,8 @@ export function ProductReviews({ summary }: { summary: ReviewSummary }) {
                   <p className="text-sm font-medium">Fotos de clientes</p>
                   <div className="grid grid-cols-3 gap-2">
                     {fotos.slice(0, fotos.length > 3 ? 2 : 3).map((src) => (
-                      <a key={src} href={src} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden rounded-xl bg-elevated">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="Foto de cliente" loading="lazy" className="h-full w-full object-cover" />
+                      <a key={src} href={cdnImage(src, 1920)} target="_blank" rel="noopener noreferrer" className="relative block aspect-square overflow-hidden rounded-xl bg-elevated">
+                        <Image src={src} alt="Foto de cliente" fill sizes="100px" className="object-cover" />
                       </a>
                     ))}
                     {fotos.length > 3 && (
