@@ -9,6 +9,7 @@ import { getProductReviews, fitHint } from "@/lib/reviews";
 import { ProductDetail } from "@/components/ProductDetail";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ProductReviews } from "@/components/ProductReviews";
+import { cdnImage } from "@/lib/cdn-image";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { ogCardUrl } from "@/lib/og-card";
 
@@ -81,16 +82,29 @@ export default async function ProductPage({
   }
 
   const url = `${SITE_URL}/products/${slug}`;
+  const merchant = activeBrand.pdp?.merchant;
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description ?? undefined,
-    image: product.images.map((i) => i.url),
+    // via Vercel: Googlebot fetches these on every crawl (see cdnImage)
+    image: [...new Set(product.images.map((i) => i.url))].slice(0, 8).map((u) => cdnImage(u)),
     ...(product.brand ? { brand: { "@type": "Brand", name: product.brand } } : {}),
     // star ratings in Google results
     ...(reviews.count > 0
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average.toFixed(1), reviewCount: reviews.count } }
+      : {}),
+    ...(reviews.items.length > 0
+      ? {
+          review: reviews.items.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+            author: { "@type": "Person", name: r.autor || "Cliente verificado" },
+            datePublished: r.created_at.slice(0, 10),
+            ...(r.body ? { reviewBody: r.body } : {}),
+          })),
+        }
       : {}),
     offers: {
       "@type": "Offer",
@@ -99,6 +113,29 @@ export default async function ProductPage({
       availability: "https://schema.org/InStock", // made-to-order: always orderable
       url,
       itemCondition: "https://schema.org/NewCondition",
+      ...(merchant
+        ? {
+            shippingDetails: {
+              "@type": "OfferShippingDetails",
+              ...(merchant.freeShipping ? { shippingRate: { "@type": "MonetaryAmount", value: 0, currency: "MXN" } } : {}),
+              shippingDestination: { "@type": "DefinedRegion", addressCountry: "MX" },
+              deliveryTime: {
+                "@type": "ShippingDeliveryTime",
+                handlingTime: { "@type": "QuantitativeValue", minValue: merchant.handlingDays[0], maxValue: merchant.handlingDays[1], unitCode: "DAY" },
+                transitTime: { "@type": "QuantitativeValue", minValue: merchant.transitDays[0], maxValue: merchant.transitDays[1], unitCode: "DAY" },
+              },
+            },
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              applicableCountry: "MX",
+              returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+              merchantReturnDays: merchant.returnDays,
+              returnMethod: "https://schema.org/ReturnByMail",
+              returnFees: "https://schema.org/FreeReturn",
+              refundType: `https://schema.org/${merchant.refundType}`,
+            },
+          }
+        : {}),
     },
   };
   // First matching category wins. A product in two categories would otherwise

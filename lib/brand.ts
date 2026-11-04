@@ -120,6 +120,16 @@ export type PdpConfig = {
   // applies to made-to-order items, a size-exchange promise only to sized ones.
   shippingMadeToOrder?: string;
   shippingSized?: string;
+  // Lo mismo, en datos para Google (shippingDetails + hasMerchantReturnPolicy
+  // del JSON-LD): muestra "Envío gratis" y "Cambios en 30 días" bajo el
+  // resultado. Ausente = no se declara nada.
+  merchant?: {
+    freeShipping: boolean;
+    handlingDays: [number, number];          // fabricación sobre pedido
+    transitDays: [number, number];           // paquetería
+    returnDays: number;
+    refundType: "ExchangeRefund" | "FullRefund";
+  };
   care?: { title: string; items: string[] }; // shown when a product has no specs
   // The size chart is footwear-specific (MX / cm / US). It renders only for
   // sized products AND only when the brand supplies one, so a store whose sized
@@ -390,6 +400,8 @@ const BRANDS: Record<string, BrandConfig> = {
       ],
       shippingMadeToOrder: "Entrega en *4 a 7 días hábiles* a todo México.",
       shippingSized: "Primer cambio de talla *sin costo*.",
+      // 3-5 + 1-2 = los "4 a 7 días hábiles" que promete la ficha
+      merchant: { freeShipping: true, handlingDays: [3, 5], transitDays: [1, 2], returnDays: 30, refundType: "ExchangeRefund" },
       sizeHint: "Queda fiel a tu talla — pide tu número habitual.",
       sizeGuide: {
         intro: "Nuestro calzado *queda fiel a tu talla*: pide tu número mexicano habitual.",
