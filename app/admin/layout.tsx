@@ -34,6 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const NAV: [string, string, Permiso | null][] = [
     ["/admin", "Inicio", null],
     ["/admin/orders", "Pedidos", "pedidos_ver"],
+    ["/admin/referencias", "Referencias", "pedidos_gestionar"],
     ["/admin/resenas", "Reseñas", "pedidos_ver"],
     ["/admin/products", "Productos", "productos_gestionar"],
     ["/admin/inventory", "Inventario", "inventario_ver"],
