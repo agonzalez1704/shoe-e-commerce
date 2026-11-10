@@ -196,6 +196,11 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                 Ver código de barras
               </a>
             )}
+            {order.status === "pending" && order.payment_method === "oxxo" && payment?.reference && (
+              <a href={`/admin/referencias/${encodeURIComponent(order.order_number)}/ficha`} download className="mt-1 block text-xs text-accent hover:underline">
+                Descargar ficha con instrucciones
+              </a>
+            )}
             {order.status === "pending" && (order.payment_method === "oxxo" || order.payment_method === "spei") && (
               <ResendVoucher orderId={order.id} />
             )}

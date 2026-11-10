@@ -106,6 +106,7 @@ export function ReferenciaForm({ modelos }: { modelos: ModeloRef[] }) {
           >
             Enviar por WhatsApp
           </a>
+          <a href={`/admin/referencias/${encodeURIComponent(lista.numero)}/ficha`} download className="rounded-full border border-border px-4 py-2 text-sm font-medium">Descargar imagen</a>
           <Link href={`/admin/orders/${lista.orderId}`} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Ver pedido</Link>
           <button type="button" onClick={otra} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Generar otra</button>
         </div>
