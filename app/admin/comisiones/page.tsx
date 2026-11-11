@@ -13,6 +13,14 @@ export const instant = false;
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "America/Mexico_City" });
+const fmtDateTime = (iso: string) =>
+  new Date(iso).toLocaleString("es-MX", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Mexico_City",
+  });
 
 type OrderRow = {
   id: string;
@@ -93,6 +101,66 @@ export default async function ComisionesPage() {
 
   const grandOwed = computed.reduce((n, w) => n + w.owed, 0);
 
+  // same status/actions in the phone card and the desktop table
+  type Row = (typeof computed)[number]["rows"][number];
+  const estado = (r: Row) =>
+    r.confirmed ? (
+      <span className="inline-flex flex-wrap items-center justify-end gap-2">
+        <span className="rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+          ✓ Confirmada
+        </span>
+        {isDev && <CommissionPayButton orderIds={[r.id]} kind="reset" label="Revertir" className="text-muted hover:text-text" />}
+      </span>
+    ) : r.marked ? (
+      <span className="inline-flex flex-wrap items-center justify-end gap-2">
+        <span
+          className="rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+          title={
+            r.dev_commission_marked_by
+              ? `Marcada por ${markerEmail.get(r.dev_commission_marked_by) ?? "otro admin"}`
+              : undefined
+          }
+        >
+          Por confirmar
+        </span>
+        {isDev && <CommissionPayButton orderIds={[r.id]} kind="confirm" label="Confirmar" className="bg-green-600 text-white" />}
+      </span>
+    ) : (
+      <CommissionPayButton
+        orderIds={[r.id]}
+        kind="mark"
+        label={isDev ? "Marcar pagada" : "Ya pagué"}
+        className="border border-border text-muted"
+      />
+    );
+
+  // phones: one control on the right — the action if there is one, else the status pill
+  const accionMovil = (r: Row) =>
+    r.confirmed ? (
+      isDev ? (
+        <CommissionPayButton orderIds={[r.id]} kind="reset" label="Revertir" className="text-muted" />
+      ) : (
+        <span className="whitespace-nowrap rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+          ✓ Confirmada
+        </span>
+      )
+    ) : r.marked ? (
+      isDev ? (
+        <CommissionPayButton orderIds={[r.id]} kind="confirm" label="Confirmar" className="bg-green-600 text-white" />
+      ) : (
+        <span className="whitespace-nowrap rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+          Por confirmar
+        </span>
+      )
+    ) : (
+      <CommissionPayButton
+        orderIds={[r.id]}
+        kind="mark"
+        label={isDev ? "Marcar pagada" : "Ya pagué"}
+        className="whitespace-nowrap border border-border text-muted"
+      />
+    );
+
   return (
     <div className="py-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -129,24 +197,50 @@ export default async function ComisionesPage() {
                   </span>
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <CommissionPayButton
                   orderIds={w.unmarkedIds}
                   kind="mark"
-                  label={isDev ? "Marcar semana pagada" : "Ya pagué esta semana"}
-                  className="bg-accent text-accent-contrast"
+                  label={isDev ? "Marcar semana" : "Ya pagué esta semana"}
+                  className="flex-1 bg-accent text-accent-contrast sm:flex-none"
                 />
                 {isDev && (
                   <CommissionPayButton
                     orderIds={w.toConfirmIds}
                     kind="confirm"
                     label="Confirmar semana"
-                    className="bg-green-600 text-white"
+                    className="flex-1 bg-green-600 text-white sm:flex-none"
                   />
                 )}
               </div>
             </div>
-            <table className="w-full text-sm">
+            {/* phones: one row per order, data left, thumb-sized control right */}
+            <ul className="divide-y divide-border sm:hidden">
+              {w.rows.map((r) => (
+                <li key={r.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="nums text-sm font-medium">
+                      {r.order_number} <span className="font-normal text-muted">·</span> {mxn(r.cents)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {fmtDateTime(r.soldAt)} · {r.pairs} {r.pairs === 1 ? "par" : "pares"}
+                      {isDev && r.confirmed && <span className="text-green-600 dark:text-green-400"> · confirmada</span>}
+                      {isDev && r.marked && !r.confirmed && (
+                        <span className="text-amber-600 dark:text-amber-400">
+                          {" "}
+                          · marcada
+                          {r.dev_commission_marked_by && markerEmail.get(r.dev_commission_marked_by)
+                            ? ` por ${markerEmail.get(r.dev_commission_marked_by)!.split("@")[0]}`
+                            : ""}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="shrink-0">{accionMovil(r)}</div>
+                </li>
+              ))}
+            </ul>
+            <table className="hidden w-full text-sm sm:table">
               <thead className="text-left text-xs uppercase tracking-wide text-muted">
                 <tr>
                   <th className="px-4 py-2">Pedido</th>
@@ -160,42 +254,10 @@ export default async function ComisionesPage() {
                 {w.rows.map((r) => (
                   <tr key={r.id}>
                     <td className="nums px-4 py-2 font-medium">{r.order_number}</td>
-                    <td className="px-4 py-2 text-muted">{fmtDate(r.soldAt)}</td>
+                    <td className="nums whitespace-nowrap px-4 py-2 text-muted">{fmtDateTime(r.soldAt)}</td>
                     <td className="nums px-4 py-2 text-right">{r.pairs}</td>
                     <td className="nums px-4 py-2 text-right">{mxn(r.cents)}</td>
-                    <td className="px-4 py-2 text-right">
-                      {r.confirmed ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span className="rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-                            ✓ Confirmada
-                          </span>
-                          {isDev && <CommissionPayButton orderIds={[r.id]} kind="reset" label="Revertir" className="text-muted hover:text-text" />}
-                        </span>
-                      ) : r.marked ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span
-                            className="rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400"
-                            title={
-                              r.dev_commission_marked_by
-                                ? `Marcada por ${markerEmail.get(r.dev_commission_marked_by) ?? "otro admin"}`
-                                : undefined
-                            }
-                          >
-                            Por confirmar
-                          </span>
-                          {isDev && (
-                            <CommissionPayButton orderIds={[r.id]} kind="confirm" label="Confirmar" className="bg-green-600 text-white" />
-                          )}
-                        </span>
-                      ) : (
-                        <CommissionPayButton
-                          orderIds={[r.id]}
-                          kind="mark"
-                          label={isDev ? "Marcar pagada" : "Ya pagué"}
-                          className="border border-border text-muted"
-                        />
-                      )}
-                    </td>
+                    <td className="px-4 py-2 text-right">{estado(r)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -22,11 +22,12 @@ export function CommissionPayButton({
 }) {
   const [isPending, start] = useTransition();
   if (!orderIds.length) return null;
+  // 44px tall on phones so a thumb hits it; compact on desktop
   return (
     <button
       disabled={isPending}
       onClick={() => start(() => ACTIONS[kind](orderIds))}
-      className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${className}`}
+      className={`min-h-11 rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-50 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs ${className}`}
     >
       {isPending ? "…" : label}
     </button>
