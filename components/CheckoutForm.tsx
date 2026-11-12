@@ -522,7 +522,12 @@ export function CheckoutForm({
 
       const res = await checkout(input);
       if ("error" in res) {
-        setError(res.error);
+        // a meses, lo más común es que ese banco/tarjeta no los acepte: el
+        // reintento ya va en una sola exhibición
+        if (input.msi) {
+          setMsi(0);
+          setError(`${res.error} Si tu tarjeta no acepta meses sin intereses, intenta de nuevo: ya quedó en una sola exhibición.`);
+        } else setError(res.error);
         trackCheckout("error:servidor");
         return;
       }
