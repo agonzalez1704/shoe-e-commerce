@@ -194,7 +194,13 @@ function PromoForm({ productos, promo, onClose }: { productos: ProductoOpcion[];
   function guardar() {
     start(async () => {
       try {
-        const input = { nombre, percent: pct, startsAt, endsAt, items: [...sel].map(([productId, colores]) => ({ productId, colores })) };
+        // A ISO aquí, en la hora local del navegador: el servidor corre en UTC y
+        // leería "2026-11-13T00:00" como 6 horas antes en CDMX.
+        const input = {
+          nombre, percent: pct,
+          startsAt: new Date(startsAt).toISOString(),
+          endsAt: new Date(endsAt).toISOString(),
+          items: [...sel].map(([productId, colores]) => ({ productId, colores })) };
         if (promo) await editarPromocion(promo.id, input);
         else await crearPromocion(input);
         onClose();
