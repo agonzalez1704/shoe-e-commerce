@@ -72,6 +72,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   for (const f of fichas.values()) dibujaFicha(pdf, f, pedidoNum, fecha, font, bold);
 
   const bytes = await pdf.save();
+
+  // Bajar la ficha = el pedido entra a fábrica. Solo desde "pending": nunca
+  // regresa un pedido que ya va en listo/enviado/entregado.
+  await supabase
+    .from("orders")
+    .update({ fulfillment_stage: "in_production" })
+    .eq("id", order.id)
+    .eq("fulfillment_stage", "pending");
+
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
