@@ -29,7 +29,7 @@ async function conekta<T>(path: string, init?: RequestInit): Promise<T> {
     console.error(`[conekta] ${res.status} ${path}:`, JSON.stringify(body).slice(0, 800));
     const d = body?.details?.[0];
     const buyer: string | undefined = d?.message_to_purchaser ?? d?.message;
-    throw Object.assign(new Error(buyer ?? `conekta ${res.status}`), { status: res.status });
+    throw new Error(buyer ?? `conekta ${res.status}`);
   }
   return body as T;
 }
@@ -127,10 +127,8 @@ export async function createConektaOrder(a: CreateArgs): Promise<ConektaOrder> {
 }
 
 // Plazos que Conekta acepta para esta tarjeta (BIN) y monto, de los que ofrece
-// la tienda. Débito, extranjera o banco sin MSI -> []. Si la consulta falla
-// (p. ej. la llave sin el scope settings:read -> 403) se ofrecen todos los
-// plazos: el cargo los valida y, si el banco no los acepta, Conekta lo rechaza
-// con su mensaje y el comprador reintenta en una exhibición.
+// la tienda. Débito, extranjera o banco sin MSI -> []. Nunca truena: sin
+// respuesta, el checkout cobra en una exhibición.
 export async function plazosMsi(bin: string, amountCents: number): Promise<number[]> {
   if (!msiVigente() || !/^\d{6,8}$/.test(bin) || amountCents <= 0) return [];
   try {
@@ -145,10 +143,8 @@ export async function plazosMsi(bin: string, amountCents: number): Promise<numbe
     if (r.bin_info?.country && r.bin_info.country.toLowerCase() !== "mx") return [];
     const ok = new Set((r.available_installments ?? []).map((p) => p.months));
     return MSI_PLAZOS.filter((m) => ok.has(m));
-  } catch (e) {
-    // 400/422 = BIN inválido o no es crédito MX: definitivo, sin meses
-    const status = (e as { status?: number }).status;
-    return status === 400 || status === 422 ? [] : MSI_PLAZOS;
+  } catch {
+    return [];
   }
 }
 
