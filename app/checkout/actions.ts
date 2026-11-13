@@ -4,8 +4,7 @@ import { updateTag } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createConektaOrder, plazosMsi, type ConektaMethod } from "@/lib/conekta";
-import { MSI_PLAZOS, msiVigente } from "@/lib/msi";
+import { createConektaOrder, type ConektaMethod } from "@/lib/conekta";
 import { createMpPreference } from "@/lib/mercadopago";
 import { createPaypalOrder } from "@/lib/paypal";
 import { markOrderPaid } from "@/lib/order-fulfillment";
@@ -52,8 +51,7 @@ export type CheckoutInput = {
   billingAddress?: Record<string, unknown>;
   discountCode?: string;
   cardTokenId?: string;            // card only, from Conekta.js
-  msi?: number;                    // card only: meses sin intereses elegidos
-  fiscal?:FiscalInput;            // present when buyer wants a CFDI
+  fiscal?: FiscalInput;            // present when buyer wants a CFDI
 };
 
 export type CheckoutResult = {
@@ -70,14 +68,6 @@ export type CheckoutResult = {
 };
 
 export type DiscountPreview = { ok: true; discountCents: number; regalo?: "cartera" } | { ok: false; error: string };
-
-// Meses sin intereses que acepta la tarjeta (solo su BIN, los primeros 6
-// dígitos, sale del navegador) para este monto. [] = una sola exhibición.
-export async function consultarMsi(bin: string, amountCents: number): Promise<number[]> {
-  const ip = await clientIp();
-  if (!(await rateLimit("msi", ip, 30, 60))) return [];
-  return plazosMsi(bin, Math.round(amountCents));
-}
 
 // Show the buyer what a code is worth before they pay. Display only —
 // create_order recomputes it authoritatively — so this must mirror the SQL
@@ -398,10 +388,6 @@ async function runCheckout(
     lineItems,
     discountCents: created.discount_cents,
     cardTokenId: input.cardTokenId,
-    // solo plazos que ofrece la tienda y en vigencia; si el banco no lo acepta,
-    // Conekta rechaza con su mensaje para el comprador
-    monthlyInstallments:
-      input.method === "card" && input.msi && MSI_PLAZOS.includes(input.msi) && msiVigente() ? input.msi : undefined,
     orderNumber: created.order_number,
     expiresAt: expiresUnix,
     returnUrl: `${SITE_URL}/checkout/gracias?o=${created.order_number}`,

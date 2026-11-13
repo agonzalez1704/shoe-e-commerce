@@ -9,8 +9,7 @@ import { ArrowRight, CheckCircle, Lock, ShieldCheck, Truck, Tag, WhatsappLogo } 
 import { formatCents } from "@/lib/money";
 import { activeBrand } from "@/lib/brand";
 import { VisaMark, MastercardMark, AmexMark } from "@/components/PaymentBrands";
-import { checkout, consultarMsi, previewDiscount, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
-import { MSI_PLAZOS, msiVigente } from "@/lib/msi";
+import { checkout, previewDiscount, type CheckoutResult, type CheckoutInput } from "@/app/checkout/actions";
 import type { CartLine } from "@/app/cart/actions";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
@@ -406,19 +405,6 @@ export function CheckoutForm({
   // combo discount is already baked into totalCents by the cart
   const effectiveTotal = Math.max(0, totalCents - codeDiscount);
 
-  // Meses sin intereses: con los primeros 6 dígitos Conekta dice qué plazos
-  // acepta esa tarjeta para este monto (débito/extranjera -> ninguno).
-  const [plazos, setPlazos] = useState<number[]>([]);
-  const [msi, setMsi] = useState(0);
-  const msiElegido = plazos.includes(msi) ? msi : 0;
-  const bin = card.number.replace(/\s/g, "").slice(0, 6);
-  useEffect(() => {
-    if (method !== "card" || bin.length < 6 || !msiVigente()) return setPlazos([]);
-    let vivo = true;
-    consultarMsi(bin, effectiveTotal).then((p) => vivo && setPlazos(p), () => vivo && setPlazos([]));
-    return () => { vivo = false; };
-  }, [bin, effectiveTotal, method]);
-
   // Validate locally first: Conekta answers an opaque 422 for any malformed
   // field, so catch the fixable cases and say which one is wrong.
   function cardError(): string | null {
@@ -511,7 +497,6 @@ export function CheckoutForm({
         },
         discountCode: g("discount") || undefined,
         cardTokenId,
-        msi: method === "card" && msiElegido ? msiElegido : undefined,
         fiscal: needsInvoice
           ? {
               rfc: g("rfc"), fiscal_name: g("fiscal_name"), fiscal_regime: g("fiscal_regime"),
@@ -577,7 +562,7 @@ export function CheckoutForm({
   const CI = "h-12 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/10";
 
   const cta =
-    method === "card" ? (msiElegido ? `Pagar ${mxn(effectiveTotal)} a ${msiElegido} MSI` : `Pagar ${mxn(effectiveTotal)}`)
+    method === "card" ? `Pagar ${mxn(effectiveTotal)}`
     : method === "mercadopago" ? "Continuar a Mercado Pago"
     : method === "paypal" ? "Continuar a PayPal"
     : method === "aplazo" ? "Continuar a Aplazo"
@@ -762,34 +747,6 @@ export function CheckoutForm({
                       placeholder="CVC" inputMode="numeric" autoComplete="cc-csc" maxLength={4} required className={CI}
                     />
                   </div>
-                  {plazos.length > 0 ? (
-                    <fieldset>
-                      <legend className="mb-2 text-xs font-medium">¿Cómo quieres pagar?</legend>
-                      <div className="grid gap-2" role="radiogroup">
-                        {[0, ...plazos].map((n) => (
-                          <button
-                            key={n} type="button" role="radio" aria-checked={msiElegido === n}
-                            onClick={() => setMsi(n)}
-                            className={`flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3.5 text-left text-sm transition-colors ${
-                              msiElegido === n ? "border-accent bg-accent-soft" : "border-border"
-                            }`}
-                          >
-                            <span className="font-medium">{n ? `${n} meses sin intereses` : "Una sola exhibición"}</span>
-                            <span className="nums text-muted">
-                              {n ? `${mxn(Math.ceil(effectiveTotal / n))} al mes` : mxn(effectiveTotal)}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </fieldset>
-                  ) : (
-                    bin.length < 6 && msiVigente() && (
-                      <p className="rounded-xl bg-accent-soft px-3.5 py-2.5 text-xs">
-                        <span className="font-semibold">Buen Fin:</span> hasta {Math.max(...MSI_PLAZOS)} meses sin
-                        intereses con tarjeta de crédito.
-                      </p>
-                    )
-                  )}
                   <p className="flex items-center gap-1.5 text-xs text-muted">
                     <ShieldCheck size={14} weight="fill" className="text-accent" />
                     Tus datos van directo a Conekta, nunca a nuestro servidor.

@@ -1,5 +1,4 @@
 import "server-only";
-import { MSI_PLAZOS, msiVigente } from "@/lib/msi";
 
 // Minimal Conekta REST wrapper. Amounts in centavos, currency MXN.
 // Docs: https://developers.conekta.com  — API version pinned via Accept header.
@@ -45,8 +44,7 @@ type CreateArgs = {
   lineItems: LineItem[];
   discountCents?: number;    // coupon/combo discount -> Conekta discount_lines
   cardTokenId?: string;      // required for card (from Conekta.js on the client)
-  monthlyInstallments?: number; // card only: meses sin intereses (3, 6…)
-  orderNumber: string;      // our reference -> Conekta metadata
+  orderNumber: string;       // our reference -> Conekta metadata
   expiresAt?: number;        // unix seconds, for oxxo/spei voucher expiry
   returnUrl?: string;        // 3DS return URL (card) / success URL (aplazo)
   cancelUrl?: string;        // aplazo cancel/failure URL
@@ -82,11 +80,7 @@ function paymentMethodBlock(a: CreateArgs) {
   switch (a.method) {
     case "card":
       if (!a.cardTokenId) throw new Error("cardTokenId required for card payments");
-      return {
-        type: "card",
-        token_id: a.cardTokenId,
-        ...(a.monthlyInstallments ? { monthly_installments: a.monthlyInstallments } : {}),
-      };
+      return { type: "card", token_id: a.cardTokenId };
     case "oxxo":
       return { type: "cash", expires_at: a.expiresAt }; // OXXO = cash
     case "spei":
@@ -124,28 +118,6 @@ export async function createConektaOrder(a: CreateArgs): Promise<ConektaOrder> {
   }
 
   return conekta<ConektaOrder>("/orders", { method: "POST", body: JSON.stringify(body) });
-}
-
-// Plazos que Conekta acepta para esta tarjeta (BIN) y monto, de los que ofrece
-// la tienda. Débito, extranjera o banco sin MSI -> []. Nunca truena: sin
-// respuesta, el checkout cobra en una exhibición.
-export async function plazosMsi(bin: string, amountCents: number): Promise<number[]> {
-  if (!msiVigente() || !/^\d{6,8}$/.test(bin) || amountCents <= 0) return [];
-  try {
-    const r = await conekta<{ available_installments?: { months: number }[]; bin_info?: { country?: string; scheme?: string } }>(
-      "/monthly_installments/validate",
-      {
-        method: "POST",
-        headers: { Accept: "application/vnd.conekta-v2.3.0+json" },
-        body: JSON.stringify({ bin, amount: amountCents }),
-      },
-    );
-    if (r.bin_info?.country && r.bin_info.country.toLowerCase() !== "mx") return [];
-    const ok = new Set((r.available_installments ?? []).map((p) => p.months));
-    return MSI_PLAZOS.filter((m) => ok.has(m));
-  } catch {
-    return [];
-  }
 }
 
 // Re-fetch to confirm real status before committing stock (webhook anti-spoof).
