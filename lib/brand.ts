@@ -288,6 +288,33 @@ const BRANDS: Record<string, BrandConfig> = {
           ctaHref: "/products",
         },
         {
+          // Identidad leonesa: Acrópolis en la Calzada de los Héroes con el Arco
+          // de la Calzada al fondo, logo horneado arriba a la izquierda. Escritorio
+          // libre a la izquierda; móvil (4:5) libre abajo para el copy DOM.
+          // No es de temporada: se queda después del Buen Fin.
+          image: "/blade-hero-orgullo.webp",
+          imageMobile: "/blade-hero-orgullo-movil.webp",
+          eyebrow: "Hecho en León, Gto.",
+          titleTop: "Orgullo",
+          titleBottom: "leonés.",
+          body: "Sneakers de piel hechos a mano en León, la capital del calzado.",
+          ctaLabel: "Ver colección",
+          ctaHref: "/products",
+        },
+        {
+          // Misma serie leonesa: Thunder y New Jersey shedron/hueso en una banca de
+          // la Calzada, Arco al fondo, logo horneado. Thunder va por pedido expreso
+          // del dueño (2026-11-13) aunque sale de colección.
+          image: "/blade-hero-banca.webp",
+          imageMobile: "/blade-hero-banca-movil.webp",
+          eyebrow: "Thunder · New Jersey",
+          titleTop: "De León",
+          titleBottom: "para tu camino.",
+          body: "Piel genuina hecha a mano en la capital del calzado.",
+          ctaLabel: "Ver New Jersey",
+          ctaHref: "/products/new-jersey",
+        },
+        {
           // Poster "Bolton coleccion" con logo y eslogan horneados: sin texto DOM
           // y el boton abajo para no taparlo. En movil va la version vertical
           // (2:3); el hero es 4:5, asi que `focal` la recorta arriba y abajo sin
