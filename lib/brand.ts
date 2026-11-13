@@ -264,6 +264,30 @@ const BRANDS: Record<string, BrandConfig> = {
       // y ya aprobadas, no material inventado para llenar el carrusel.
       slides: [
         {
+          // Buen Fin 2026 (13–17 nov): portada del carrusel de redes extendida a
+          // 16:9; en móvil va el feed 4:5 tal cual. Quitar después del 17.
+          image: "/blade-hero-buenfin.webp",
+          imageMobile: "/blade-hero-buenfin-movil.webp",
+          eyebrow: "",
+          titleTop: "",
+          ctaLabel: "Ver ofertas",
+          ctaHref: "/products",
+          ctaAbajo: true,
+        },
+        {
+          // Garra de feria con Acrópolis, Londres, Manchester, New Jersey y Pisa.
+          // Sin texto horneado: el escritorio deja libre la mitad izquierda y el
+          // móvil (4:5) el piso de abajo, donde va el copy DOM.
+          image: "/blade-hero-garra.webp",
+          imageMobile: "/blade-hero-garra-movil.webp",
+          eyebrow: "Buen Fin · 13 al 17 nov",
+          titleTop: "Atrapa tu",
+          titleBottom: "par perfecto.",
+          body: "Hasta 25% en toda la tienda o 2 pares por $1,999.",
+          ctaLabel: "Elige tu par",
+          ctaHref: "/products",
+        },
+        {
           // Poster "Bolton coleccion" con logo y eslogan horneados: sin texto DOM
           // y el boton abajo para no taparlo. En movil va la version vertical
           // (2:3); el hero es 4:5, asi que `focal` la recorta arriba y abajo sin
@@ -274,19 +298,6 @@ const BRANDS: Record<string, BrandConfig> = {
           eyebrow: "",
           titleTop: "",
           badge: { label: "Nuevo", detail: "Bolton", href: "/products/bolton" },
-          ctaLabel: "Arma tu combo",
-          ctaHref: "/combo",
-          ctaAbajo: true,
-        },
-        {
-          // Poster del combo ("ultimos dias, 2 pares por $1,999") con todo el
-          // mensaje horneado. En movil el recorte 4:5 deja fuera la fila de
-          // iconos de abajo y conserva el logo y los dos pares.
-          image: "/blade-hero-combo.webp",
-          imageMobile: "/blade-hero-combo-movil.webp",
-          focal: "50% 8%",
-          eyebrow: "",
-          titleTop: "",
           ctaLabel: "Arma tu combo",
           ctaHref: "/combo",
           ctaAbajo: true,
