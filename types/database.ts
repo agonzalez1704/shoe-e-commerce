@@ -1260,6 +1260,7 @@ export type Database = {
           made_to_order: boolean
           name: string
           slug: string
+          suela: string | null
           status: Database["public"]["Enums"]["product_status"]
           updated_at: string
         }
@@ -1280,6 +1281,7 @@ export type Database = {
           made_to_order?: boolean
           name: string
           slug: string
+          suela?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           updated_at?: string
         }
@@ -1300,6 +1302,7 @@ export type Database = {
           made_to_order?: boolean
           name?: string
           slug?: string
+          suela?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           updated_at?: string
         }

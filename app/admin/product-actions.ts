@@ -34,6 +34,7 @@ export type ProductInput = {
   status: "draft" | "active" | "archived";
   made_to_order: boolean;
   featured: boolean;
+  suela?: string | null; // suela de fábrica (interno): sale en la ficha de producción
   attributes: Record<string, string>;
   images: ProductImageInput[];
   variants: VariantInput[];
@@ -127,6 +128,7 @@ export async function saveProduct(input: ProductInput): Promise<{ error: string 
     status: input.status,
     made_to_order: input.made_to_order,
     featured: input.featured,
+    suela: input.suela?.trim() || null,
     // Specs were write-only from SQL until now: the form never sent them, so
     // battery sat at 38% coverage with no way to raise it from the admin.
     // Blank keys and blank values are dropped rather than stored as "".

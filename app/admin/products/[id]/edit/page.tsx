@@ -18,7 +18,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     supabase
       .from("products")
       .select(
-        "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, featured, attributes, combo_group, " +
+        "id, name, slug, brand_id, description, gender, base_price_cents, status, made_to_order, featured, suela, attributes, combo_group, " +
           "product_images(url, color, position), " +
           "variants(id, size_value, size_system, width, color, sku, price_cents, status, fuera_de_combo, exotico, inventory(qty_on_hand))",
       )
@@ -34,6 +34,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     gender: string | null; base_price_cents: number; status: "draft" | "active" | "archived";
     made_to_order: boolean;
     featured: boolean;
+    suela: string | null;
     combo_group: string | null;
     attributes: Record<string, string | number | boolean> | null;
     product_images: { url: string; color: string | null; position: number }[];
@@ -67,6 +68,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
     ),
     made_to_order: p.made_to_order,
     featured: p.featured,
+    suela: p.suela,
     images: [...p.product_images].sort((a, b) => a.position - b.position).map((i) => ({ url: i.url, color: i.color })),
     // ordenadas por color y luego por talla: el editor las agrupa por color
     variants: [...p.variants]

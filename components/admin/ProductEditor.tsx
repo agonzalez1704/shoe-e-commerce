@@ -55,6 +55,7 @@ export function ProductEditor({
   const [status, setStatus] = useState<ProductInput["status"]>(initial?.status ?? "draft");
   const [madeToOrder, setMadeToOrder] = useState(initial?.made_to_order ?? true);
   const [featured, setFeatured] = useState(initial?.featured ?? false);
+  const [suela, setSuela] = useState(initial?.suela ?? "");
   const [basePrice, setBasePrice] = useState(pesos(initial?.base_price_cents ?? null));
   const [description, setDescription] = useState(initial?.description ?? "");
   const [images, setImages] = useState<ProductImageInput[]>(initial?.images ?? []);
@@ -178,6 +179,7 @@ export function ProductEditor({
       status,
       made_to_order: madeToOrder,
       featured,
+      suela: suela || null,
       attributes: Object.fromEntries(specs.map((r) => [r.key, r.value])),
       images: images.filter((i) => i.url.trim()).map((i) => ({ url: i.url.trim(), color: i.color })),
       variants: variants
@@ -431,6 +433,9 @@ export function ProductEditor({
                   <option value="draft">Borrador — no visible</option>
                   <option value="archived">Archivado</option>
                 </select>
+              </Campo>
+              <Campo label="Suela (taller)" hint="Solo interno: sale en la ficha de producción.">
+                <input value={suela} onChange={(e) => cambia(setSuela)(e.target.value)} placeholder="Ej. Chichen" className={`${IN} w-full`} />
               </Campo>
               <Switch
                 checked={madeToOrder}
