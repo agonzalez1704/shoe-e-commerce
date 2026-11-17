@@ -6,8 +6,8 @@ import { SITE_NAME } from "@/lib/site";
 // Ficha de producción (tarjeta de corte) para la fábrica: una tarjeta por
 // modelo+color del pedido (un combo de 2 modelos = 2 fichas). Réplica de la
 // tarjeta del XLS que ya usan: PIEL/COLOR, ESTILO, PEDIDO, reja de tallas con
-// cantidades, y las casillas de taller (suela, planta, horma, forros) en
-// blanco para llenarse a mano allá — nosotros no tenemos esos datos.
+// cantidades, y las casillas de taller. SUELA sale de products.suela (0076);
+// planta, horma y forros siguen en blanco para llenarse a mano allá.
 
 export const instant = false;
 
@@ -17,6 +17,7 @@ const TALLAS = ["24", "24.5", "25", "25.5", "26", "26.5", "27", "27.5", "28", "2
 type Ficha = {
   estilo: string;
   color: string;
+  suela: string | null;
   cantidades: Map<string, number>; // talla -> pares
 };
 
@@ -48,7 +49,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("product_name, variant_label, quantity")
+    .select("product_name, variant_label, quantity, variants(products(suela))")
     .eq("order_id", order.id);
   if (!items?.length) return new NextResponse("Pedido sin artículos", { status: 404 });
 
@@ -57,7 +58,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   for (const it of items) {
     const { talla, color } = parseVariant(it.variant_label ?? "");
     const key = `${it.product_name}|${color}`;
-    const f = fichas.get(key) ?? { estilo: it.product_name, color, cantidades: new Map() };
+    const v = it.variants as unknown as { products: { suela: string | null } | null } | null;
+    const f = fichas.get(key) ?? { estilo: it.product_name, color, suela: v?.products?.suela ?? null, cantidades: new Map() };
     f.cantidades.set(talla, (f.cantidades.get(talla) ?? 0) + it.quantity);
     fichas.set(key, f);
   }
@@ -137,6 +139,13 @@ function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, fecha: string, 
     caja(m + i * w2, y2, w2, 40);
     etiqueta(c, m + i * w2 + 5, y2 + 30);
   });
+  if (f.suela) {
+    // se encoge si el nombre no cabe en la casilla
+    const t = f.suela.toUpperCase();
+    let size = 12;
+    while (size > 6 && bold.widthOfTextAtSize(t, size) > w2 - 10) size -= 0.5;
+    texto(t, m + w2 + 5, y2 + 10, size);
+  }
 
   // ---- reja de tallas con cantidades
   const y3 = y2 - 64;
