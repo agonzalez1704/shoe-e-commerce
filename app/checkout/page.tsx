@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { pedidoReciente } from "@/lib/pedido-reciente";
 import { redirect } from "next/navigation";
 import { paypalEnabled } from "@/lib/paypal";
@@ -46,7 +47,8 @@ async function checkoutDefaults(): Promise<CheckoutDefaults> {
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ codigo?: string }> }) {
   // ?codigo= llega del correo de carrito abandonado y se aplica solo.
-  const crudo = ((await searchParams).codigo ?? "").trim().toUpperCase();
+  // Sin ?codigo=, el que dejó "Usar mi crédito" (?credito= en cualquier página, ver proxy.ts).
+  const crudo = ((await searchParams).codigo ?? (await cookies()).get("codigo_pendiente")?.value ?? "").trim().toUpperCase();
   const codigo = /^[A-Z0-9-]{3,30}$/.test(crudo) ? crudo : undefined;
   const cart = await getCart();
   if (!cart.cartId || cart.lines.length === 0) {

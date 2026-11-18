@@ -9,6 +9,7 @@ import { methodLabel } from "@/lib/payment-method";
 import { SITE_URL } from "@/lib/site";
 import { formatCents } from "@/lib/money";
 import { ventanaEntrega } from "@/lib/fulfillment";
+import { emitirCredito } from "@/lib/credito";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 
@@ -61,7 +62,11 @@ export async function markOrderPaid(opts: {
     .select("product_name, variant_label, unit_price_cents, quantity")
     .eq("order_id", opts.orderId);
 
+  // Mismo candado que el correo: un pago, un crédito.
+  const credito = await emitirCredito(admin, opts.orderId);
+
   await sendPaidEmail({
+    credito,
     trackUrl: linkSeguimiento(order.order_number, order.review_token),
     eta: order.paid_at ? ventanaEntrega(order.paid_at).texto : undefined,
     to: order.email,
