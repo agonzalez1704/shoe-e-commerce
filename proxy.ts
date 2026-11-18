@@ -26,6 +26,13 @@ export async function proxy(request: NextRequest) {
   );
 
   await supabase.auth.getUser();
+
+  // "Usar mi crédito" (correo y página del pedido) llega con ?credito=CODIGO a la
+  // tienda: se guarda y el checkout lo aplica solo cuando el carrito ya tenga pares.
+  const credito = request.nextUrl.searchParams.get("credito")?.trim().toUpperCase();
+  if (credito && /^[A-Z0-9-]{3,30}$/.test(credito)) {
+    response.cookies.set("codigo_pendiente", credito, { maxAge: 30 * 86400, httpOnly: true, sameSite: "lax", path: "/" });
+  }
   return response;
 }
 

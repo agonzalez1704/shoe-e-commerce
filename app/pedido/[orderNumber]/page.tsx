@@ -8,6 +8,9 @@ import { leePedidoReciente } from "@/lib/pedido-reciente";
 import { paypalEnabled } from "@/lib/paypal";
 import { PagoComplemento } from "@/components/PagoComplemento";
 import { pagarPedido, cancelarPedido } from "./combo/cobro";
+import { CreditoGanado } from "@/components/CreditoGanado";
+import { creditoVigente } from "@/lib/credito";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const instant = false; // dinámica de punta a punta (pedido por token)
 
@@ -35,6 +38,7 @@ export default async function PedidoPage({
   // Pago fallido o abandonado: aqui mismo puede pagar con otro metodo o cancelar.
   const pendiente = orden.status === "pending";
   const recienComprado = nuevo === "1" && orden.status !== "cancelled";
+  const credito = pagado ? await creditoVigente(createAdminClient(), numero) : null;
 
   return (
     <div className="mx-auto max-w-2xl py-8 sm:py-12">
@@ -83,6 +87,7 @@ export default async function PedidoPage({
           />
         </details>
       )}
+      {credito && <CreditoGanado code={credito.codigo} montoCents={credito.montoCents} venceIso={credito.venceIso} />}
       <Estado orden={orden} />
       <p className="mt-8 text-center">
         <Link href="/products" className="text-sm font-medium text-accent">Seguir viendo la tienda</Link>

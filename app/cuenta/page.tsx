@@ -34,7 +34,7 @@ type Garantia = { razon: string; recibido_at: string | null; cerrada_at: string 
 type ComboFila = { quantity: number; variants: { fuera_de_combo: boolean; products: { combo_group: string | null; combo_min_qty: number | null } | null } | null };
 
 const ORDER_SELECT =
-  "id, order_number, status, fulfillment_stage, delivered_at, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, cupon_resena, foto_estado, combo_parent_order_id, order_items_combo:order_items(quantity, variants(fuera_de_combo, products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity, variants(color, products(product_images(url, position, color))))";
+  "id, order_number, status, fulfillment_stage, delivered_at, carrier, tracking_number, tracking_url, estimated_delivery, total_cents, created_at, payment_method, shipping_address, review_token, cupon_resena, credito_codigo, foto_estado, combo_parent_order_id, order_items_combo:order_items(quantity, variants(fuera_de_combo, products(combo_group, combo_min_qty))), garantias(razon, recibido_at, cerrada_at, retorno_carrier, retorno_tracking, retorno_label_url, repo_carrier, repo_tracking), order_items(product_name, variant_label, quantity, variants(color, products(product_images(url, position, color))))";
 
 export default async function CuentaPage({ searchParams }: { searchParams: Promise<{ error?: string; msg?: string; next?: string }> }) {
   const { error, msg, next } = await searchParams;
@@ -59,7 +59,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
   ]);
   const orders = ordersData ?? [];
 
-  const codigos = orders.map((o) => o.cupon_resena).filter((c): c is string => !!c);
+  const codigos = orders.flatMap((o) => [o.cupon_resena, o.credito_codigo]).filter((c): c is string => !!c);
   const [{ data: reviews }, { data: cupones }] = await Promise.all([
     orders.length
       ? supabase
@@ -70,7 +70,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
       : Promise.resolve({ data: [] }),
     // discount_codes es solo de admin por RLS; los códigos salen de sus propios pedidos.
     codigos.length
-      ? createAdminClient().from("discount_codes").select("code, value, expires_at, used_count, max_uses, active, regalo").in("code", codigos)
+      ? createAdminClient().from("discount_codes").select("code, type, value, expires_at, used_count, max_uses, active, regalo").in("code", codigos)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -203,7 +203,7 @@ export default async function CuentaPage({ searchParams }: { searchParams: Promi
                   <div className="min-w-0">
                     <p className={`nums font-semibold tracking-wide ${c.estado ? "line-through" : ""}`}>{c.code}</p>
                     <p className="text-xs text-muted">
-                      {c.regalo ? "Cartera de regalo" : `${c.value}% de descuento`} en tu próxima compra · {c.estado ?? (c.expires_at ? `vence ${dia(c.expires_at, true)}` : "sin vencimiento")}
+                      {c.regalo ? "Cartera de regalo" : c.type === "fixed" ? `${mxn(c.value).replace(/\.00$/, "")} de crédito` : `${c.value}% de descuento`} en tu próxima compra · {c.estado ?? (c.expires_at ? `vence ${dia(c.expires_at, true)}` : "sin vencimiento")}
                     </p>
                   </div>
                   {!c.estado && <CopiarCodigo code={c.code} />}

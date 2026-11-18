@@ -5,6 +5,7 @@ import { requirePermiso, assertPermiso } from "@/lib/permisos-guard";
 import { stampOrderCfdi } from "@/lib/cfdi";
 import { sendShippedEmail, sendDeliveredEmail, sendVoucherEmail, linkSeguimiento } from "@/lib/email";
 import { notifyAdmins } from "@/lib/push";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stageLabel, trackingUrlFor, ventanaEntrega } from "@/lib/fulfillment";
 
 type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
@@ -23,6 +24,14 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   }
   const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
   if (error) throw new Error(error.message);
+
+  // Sin pedido no hay crédito: se apaga el de este pedido si nadie lo ha usado.
+  if (status === "cancelled" || status === "refunded") {
+    const { data: o } = await supabase.from("orders").select("credito_codigo").eq("id", orderId).maybeSingle();
+    if (o?.credito_codigo) {
+      await createAdminClient().from("discount_codes").update({ active: false }).eq("code", o.credito_codigo).eq("used_count", 0);
+    }
+  }
 
   // notify the customer when the order ships (non-fatal)
   if (status === "fulfilled") {

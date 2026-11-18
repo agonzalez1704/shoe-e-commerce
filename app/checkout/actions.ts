@@ -237,6 +237,7 @@ async function runCheckout(
   if (codigoUsado) {
     const { data: dc } = await admin.from("discount_codes").select("regalo").eq("code", codigoUsado).maybeSingle();
     if (dc?.regalo) await admin.from("orders").update({ regalo: dc.regalo }).eq("id", orderId);
+    (await cookies()).delete("codigo_pendiente"); // ya se usó: que no se vuelva a autollenar
   }
 
   // El pedido queda recordado en este navegador (cookie con su token): la barra

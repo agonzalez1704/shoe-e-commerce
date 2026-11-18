@@ -15,12 +15,12 @@ const ITEM = activeBrand.copy?.itemSingular ?? "pedido";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
 const FROM = process.env.EMAIL_FROM ?? activeBrand.emailFrom;
-const ACCENT = activeBrand.theme.light.accent;
-const ACCENT_CONTRAST = activeBrand.theme.light.accentContrast;
+// Los correos usan la plantilla oscura de la marca (shellMarca): acento del modo oscuro.
+const ACCENT = activeBrand.theme.dark.accent;
 
 // brand-accented CTA button
 function button(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;background:${ACCENT};color:${ACCENT_CONTRAST};text-decoration:none;padding:11px 22px;border-radius:999px;font-weight:500;font-size:14px">${label}</a>`;
+  return botonMarca(href, label);
 }
 
 // Send via Resend REST API (no SDK dep). Email failures must never break checkout.
@@ -43,51 +43,19 @@ async function send(to: string, subject: string, html: string) {
 }
 
 // ---- shared pieces (inline styles for email-client compatibility) ----
+// Todos los correos pasan por la plantilla de marca (shellMarca, abajo).
 function shell(title: string, body: string) {
-  return `<div style="background:#f4f4f5;padding:24px 12px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden">
-    <div style="padding:18px 24px;border-bottom:1px solid #eee">
-      <span style="font-size:18px;font-weight:600;color:#18181b">${activeBrand.name}</span>
-    </div>
-    <div style="padding:24px;color:#27272a;font-size:14px;line-height:1.6">
-      <h2 style="margin:0 0 12px;font-size:18px;color:${ACCENT}">${title}</h2>
-      ${body}
-    </div>
-    <div style="padding:14px 24px;border-top:1px solid #eee;color:#a1a1aa;font-size:12px">
-      ${activeBrand.description}
-    </div>
-  </div>
-</div>`;
+  return shellMarca({
+    preheader: title,
+    cuerpo: `<h1 style="margin:0 0 14px;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-0.4px">${title}</h1>${body}`,
+  });
 }
 
 export type EmailLine = { name: string; quantity: number; lineTotalCents: number };
 export type EmailBreakdown = { subtotalCents: number; discountCents: number; shippingCents: number; taxCents: number };
 
 function summary(lines?: EmailLine[], b?: EmailBreakdown, totalCents?: number) {
-  if (!lines?.length) return "";
-  const rows = lines
-    .map(
-      (l) => `<tr>
-        <td style="padding:6px 0;color:#27272a">${l.name} <span style="color:#a1a1aa">× ${l.quantity}</span></td>
-        <td style="padding:6px 0;text-align:right;color:#27272a;white-space:nowrap">${mxn(l.lineTotalCents)}</td>
-      </tr>`,
-    )
-    .join("");
-  const totalRow = (label: string, val: string, bold = false) =>
-    `<tr><td style="padding:3px 0;color:${bold ? "#18181b" : "#71717a"};${bold ? "font-weight:600" : ""}">${label}</td>
-      <td style="padding:3px 0;text-align:right;color:${bold ? "#18181b" : "#71717a"};${bold ? "font-weight:600" : ""}">${val}</td></tr>`;
-  const breakdown = b
-    ? `${totalRow("Subtotal", mxn(b.subtotalCents))}
-       ${b.discountCents > 0 ? totalRow("Descuento", "- " + mxn(b.discountCents)) : ""}
-       ${totalRow("Envío", b.shippingCents > 0 ? mxn(b.shippingCents) : "Gratis")}
-       ${totalRow("IVA incluido", mxn(b.taxCents))}`
-    : "";
-  return `<table width="100%" style="border-collapse:collapse;margin:16px 0;font-size:14px">
-    ${rows}
-    <tr><td colspan="2" style="border-top:1px solid #eee;padding-top:8px"></td></tr>
-    ${breakdown}
-    ${totalCents != null ? totalRow("Total", mxn(totalCents), true) : ""}
-  </table>`;
+  return resumenMarca(lines, b, totalCents);
 }
 
 type Base = { to: string; orderNumber: string; totalCents: number; lines?: EmailLine[]; breakdown?: EmailBreakdown; trackUrl?: string };
@@ -104,7 +72,7 @@ const botonSeguimiento = (url?: string) =>
   url ? `<p style="margin-top:18px">${button(url, "Ver el estado de mi pedido")}</p>` : "";
 
 const cajaLlegada = (eta: string) =>
-  `<p style="margin:14px 0;padding:12px 14px;background:#fafafa;border:1px solid #eee;border-radius:10px"><strong>Llega ${eta}.</strong>${LEAD_TIME ? `<br><span style="color:#71717a">${LEAD_TIME}</span>` : ""}</p>`;
+  `<p style="margin:14px 0;padding:14px 16px;background:${M.tarjeta};border-radius:12px"><strong>Llega ${eta}.</strong>${LEAD_TIME ? `<br><span style="color:${M.suave}">${LEAD_TIME}</span>` : ""}</p>`;
 
 // async payment created — buyer still needs to pay (OXXO / SPEI)
 export async function sendVoucherEmail(
@@ -114,13 +82,13 @@ export async function sendVoucherEmail(
   const instructions =
     a.method === "oxxo"
       ? `<p style="margin:0 0 8px">Paga en efectivo mostrando este código de barras (o dictando la referencia) en la caja de ${CASH_CHAINS_SHORT} y +20,000 tiendas. <strong>No es válido en OXXO.</strong></p>
-         <div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:16px;text-align:center">
+         <div style="background:#ffffff;border-radius:12px;padding:16px;text-align:center">
            ${a.voucherUrl ? `<img src="${a.voucherUrl}" alt="Código de pago en efectivo" style="max-height:120px"/><br/>` : ""}
            <span style="font-family:monospace;font-size:15px;letter-spacing:1px;color:#18181b">${a.reference ?? ""}</span>
          </div>
          ${a.voucherUrl ? `<p style="margin:10px 0 0"><a href="${a.voucherUrl}" style="color:${ACCENT};font-size:13px">Ver comprobante y lista completa de tiendas →</a></p>` : ""}`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE${a.bank ? ` (${a.bank})` : ""}:</p>
-         <div style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:18px;color:#18181b">${a.clabe ?? ""}</div>`;
+         <div style="background:${M.tarjeta};border-radius:12px;padding:14px 16px;font-family:${MONO};font-size:18px;letter-spacing:1px;color:${M.texto}">${a.clabe ?? ""}</div>`;
 
   await send(
     a.to,
@@ -146,9 +114,9 @@ export async function sendPaymentReminderEmail(
       ? `<p style="margin:0 0 8px">Te faltó terminar tu solicitud en Aplazo. Retómala desde tu pedido y págalo en quincenas.</p>`
       : a.method === "oxxo"
       ? `<p style="margin:0 0 8px">Paga en efectivo con esta referencia en ${CASH_CHAINS_SHORT} y +20,000 tiendas. <strong>No es válido en OXXO.</strong></p>
-         <div class="mono" style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:16px;color:#18181b">${a.reference ?? ""}</div>`
+         <div class="mono" style="background:${M.tarjeta};border-radius:12px;padding:14px 16px;font-family:${MONO};font-size:16px;letter-spacing:1px;color:${M.texto}">${a.reference ?? ""}</div>`
       : `<p style="margin:0 0 8px">Transfiere por SPEI a esta CLABE:</p>
-         <div style="background:#f4f4f5;border-radius:10px;padding:14px;font-family:monospace;font-size:18px;color:#18181b">${a.clabe ?? ""}</div>`;
+         <div style="background:${M.tarjeta};border-radius:12px;padding:14px 16px;font-family:${MONO};font-size:18px;letter-spacing:1px;color:${M.texto}">${a.clabe ?? ""}</div>`;
   await send(
     a.to,
     `Completa tu pago — pedido ${a.orderNumber}`,
@@ -160,16 +128,130 @@ export async function sendPaymentReminderEmail(
   );
 }
 
+// ---- Crédito Blade (docs/CREDITO-BLADE.md) --------------------------------
+// Plantilla de marca: oscura como la tienda, logo real y foto propia. Tablas e
+// estilos en línea para Gmail/Outlook/Apple Mail. Outfit carga donde el cliente
+// lo permite (Apple Mail, iOS); los demás caen a Helvetica/Arial.
+export type Credito = { codigo: string; montoCents: number; venceIso: string };
+
+const M = {
+  fondo: "#0b0b0c", caja: "#141416", tarjeta: "#222226", linea: "#2a2a2e", perfora: "#46464d",
+  texto: "#f4f4f5", suave: "#a1a1aa", tenue: "#71717a",
+  naranja: activeBrand.theme.dark.accent, // #fb7137: con texto oscuro encima pasa AA
+};
+const SANS = "'Outfit','Helvetica Neue',Helvetica,Arial,sans-serif";
+const MONO = "'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace";
+const fechaLarga = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Mexico_City" });
+const fechaCorta = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "America/Mexico_City" }).replace(".", "");
+const pesos = (c: number) => mxn(c).replace(/\.00$/, "");
+const LOGO = activeBrand.logo
+  ? `<img src="${SITE_URL}${activeBrand.logo.src}" width="104" alt="${activeBrand.logo.alt ?? activeBrand.name}" style="display:block;border:0;width:104px;height:auto">`
+  : `<span style="font-family:${SANS};font-size:20px;font-weight:800;color:${M.texto}">${activeBrand.name}</span>`;
+const urlCredito = (codigo: string) => `${SITE_URL}/products?credito=${encodeURIComponent(codigo)}`;
+
+function botonMarca(href: string, label: string, contorno = false) {
+  const estilo = contorno
+    ? `border:1.5px solid ${M.naranja};color:${M.naranja};background:transparent`
+    : `background:${M.naranja};color:${M.fondo}`;
+  return `<a href="${href}" style="display:inline-block;${estilo};text-decoration:none;padding:13px 28px;border-radius:999px;font-family:${SANS};font-weight:600;font-size:15px">${label}</a>`;
+}
+
+function shellMarca(o: { preheader: string; cuerpo: string; foto?: boolean }) {
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"></head>
+<body style="margin:0;padding:0;background:${M.fondo}">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">${o.preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${M.fondo}"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+  <tr><td style="padding:0 4px 22px">${LOGO}</td></tr>
+  ${o.foto ? `<tr><td><img src="${SITE_URL}/email/credito.jpg" width="560" alt="Un par de Blade en la Calzada de los Héroes, León" style="display:block;width:100%;height:auto;border:0;border-radius:18px 18px 0 0"></td></tr>` : ""}
+  <tr><td style="background:${M.caja};border-radius:${o.foto ? "0 0 18px 18px" : "18px"};padding:30px 28px 32px;font-family:${SANS};color:${M.texto};font-size:15px;line-height:1.6">${o.cuerpo}</td></tr>
+  <tr><td style="padding:22px 6px 0;font-family:${SANS};color:${M.tenue};font-size:12px;line-height:1.6">
+    ${activeBrand.description}<br><a href="${SITE_URL}" style="color:${M.suave};text-decoration:underline">${SITE_URL.replace(/^https?:\/\//, "")}</a>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+// La tarjeta de regalo: monto grande, talón perforado con el código y la fecha.
+function tarjetaCredito(c: Credito, o: { boton?: "lleno" | "contorno" | null } = {}) {
+  const boton = o.boton === undefined ? "lleno" : o.boton;
+  const muesca = (lado: "left" | "right") =>
+    `<td width="16" style="width:16px;padding:0"><div style="width:16px;height:32px;background:${M.caja};border-radius:${lado === "left" ? "0 16px 16px 0" : "16px 0 0 16px"}"></div></td>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 6px;background:${M.tarjeta};border-radius:16px">
+  <tr><td colspan="3" style="padding:22px 24px 18px">
+    <p style="margin:0;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${M.naranja};font-weight:600">Crédito Blade</p>
+    <p style="margin:6px 0 0;font-size:56px;line-height:1;font-weight:800;letter-spacing:-2px;color:${M.texto}">${pesos(c.montoCents)}</p>
+    <p style="margin:8px 0 0;color:${M.suave};font-size:14px">Para tu próximo par. También se suma al combo de 2 pares.</p>
+  </td></tr>
+  <tr>${muesca("left")}<td style="padding:0 6px"><div style="border-top:2px dashed ${M.perfora};height:0;font-size:0;line-height:0">&nbsp;</div></td>${muesca("right")}</tr>
+  <tr><td colspan="3" style="padding:16px 24px 22px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="font-family:${MONO};font-size:17px;letter-spacing:3px;color:${M.texto};font-weight:500">${c.codigo}</td>
+      <td align="right" style="font-size:12px;color:${M.suave};white-space:nowrap">Vence<br><strong style="color:${M.texto};font-size:14px">${fechaCorta(c.venceIso)}</strong></td>
+    </tr></table>
+    ${boton ? `<p style="margin:18px 0 0">${botonMarca(urlCredito(c.codigo), "Usar mi crédito", boton === "contorno")}</p>` : ""}
+  </td></tr>
+</table>
+<p style="margin:10px 0 0;font-size:12px;color:${M.tenue}">Un solo uso. Si no lo vas a usar, reenvía este correo: el código sirve a quien lo use primero.</p>`;
+}
+
+function resumenMarca(lines?: EmailLine[], b?: EmailBreakdown, totalCents?: number) {
+  if (!lines?.length) return "";
+  const filas = lines.map((l) => `<tr>
+    <td style="padding:7px 0;color:${M.texto}">${l.name}${l.quantity > 1 ? ` <span style="color:${M.tenue}">× ${l.quantity}</span>` : ""}</td>
+    <td align="right" style="padding:7px 0;color:${M.texto};white-space:nowrap">${mxn(l.lineTotalCents)}</td></tr>`).join("");
+  const fila = (k: string, v: string) =>
+    `<tr><td style="padding:2px 0;color:${M.tenue}">${k}</td><td align="right" style="padding:2px 0;color:${M.tenue}">${v}</td></tr>`;
+  const desglose = b
+    ? `<tr><td colspan="2" style="padding-top:6px;border-top:1px solid ${M.linea}"></td></tr>
+       ${b.discountCents > 0 ? fila("Descuento", "- " + mxn(b.discountCents)) : ""}
+       ${fila("Envío", b.shippingCents > 0 ? mxn(b.shippingCents) : "Gratis")}
+       ${fila("IVA incluido", mxn(b.taxCents))}`
+    : "";
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;font-size:14px;border-top:1px solid ${M.linea}">
+    ${filas}${desglose}
+    ${totalCents != null ? `<tr><td style="padding:10px 0 0;font-weight:600">Total</td>
+      <td align="right" style="padding:10px 0 0;font-weight:600">${mxn(totalCents)}</td></tr>` : ""}
+  </table>`;
+}
+
+export function paidEmailHtml(a: Base & { eta?: string; credito?: Credito | null }) {
+  return shellMarca({
+    preheader: a.credito ? `Pedido ${a.orderNumber} confirmado. Y te dejamos ${pesos(a.credito.montoCents)} para el siguiente.` : `Pedido ${a.orderNumber} confirmado.`,
+    cuerpo: `<p style="margin:0;font-size:13px;color:${M.suave}">Pedido ${a.orderNumber}</p>
+      <h1 style="margin:4px 0 0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-0.5px">Pago confirmado.</h1>
+      <p style="margin:10px 0 0;color:${M.suave}">${LEAD_TIME ? "Ya empezamos a hacer tus pares." : "Ya estamos preparando tu pedido."}${a.eta ? ` Llegan <strong style="color:${M.texto}">${a.eta}</strong>.` : ""}</p>
+      ${LEAD_TIME ? `<p style="margin:6px 0 0;font-size:13px;color:${M.tenue}">${LEAD_TIME}</p>` : ""}
+      ${resumenMarca(a.lines, a.breakdown, a.totalCents)}
+      ${a.trackUrl ? `<p style="margin:22px 0 0">${botonMarca(a.trackUrl, "Ver mi pedido")}</p>` : ""}
+      ${a.credito ? `<p style="margin:34px 0 0;font-size:20px;font-weight:600;letter-spacing:-0.3px">Y un regalo para el siguiente.</p>${tarjetaCredito(a.credito, { boton: "contorno" })}` : ""}`,
+  });
+}
+
+// comboCents: precio vigente del combo (de la base, al mandar); sin él se omite.
+export function creditoPorVencerHtml(c: Credito & { dias: number; comboCents?: number | null }) {
+  const cuando = c.dias <= 1 ? "mañana" : `en ${c.dias} días`;
+  return shellMarca({
+    foto: true,
+    preheader: `Tu código ${c.codigo} vence el ${fechaLarga(c.venceIso)}. Después se pierde.`,
+    cuerpo: `<h1 style="margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-0.5px">Tus ${pesos(c.montoCents)} vencen ${cuando}.</h1>
+      <p style="margin:10px 0 0;color:${M.suave}">Siguen en tu cuenta hasta el ${fechaLarga(c.venceIso)}. Después se pierden.${c.comboCents ? ` Con el combo, <strong style="color:${M.texto}">2 pares te quedan en ${pesos(c.comboCents - c.montoCents)}</strong>.` : ""}</p>
+      ${tarjetaCredito(c)}`,
+  });
+}
+
+export async function sendCreditoPorVencerEmail(a: Credito & { to: string; dias: number; comboCents?: number | null }) {
+  await send(a.to, `Tus ${pesos(a.montoCents)} de crédito vencen ${a.dias <= 1 ? "mañana" : `en ${a.dias} días`}`, creditoPorVencerHtml(a));
+}
 // payment confirmed — card at checkout, or OXXO/SPEI once received
-export async function sendPaidEmail(a: Base & { eta?: string }) {
+export async function sendPaidEmail(a: Base & { eta?: string; credito?: Credito | null }) {
   await send(
     a.to,
     `Pedido ${a.orderNumber} confirmado`,
-    shell(`¡Pago confirmado!`,
-      `<p>Tu pedido <strong>${a.orderNumber}</strong> está confirmado.</p>
-       ${a.eta && LEAD_TIME ? cajaLlegada(a.eta) : LEAD_TIME ? `<p style="color:#71717a">${LEAD_TIME}</p>` : ""}
-       ${summary(a.lines, a.breakdown, a.totalCents)}
-       ${botonSeguimiento(a.trackUrl)}`),
+    paidEmailHtml(a),
   );
 }
 
