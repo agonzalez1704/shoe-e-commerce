@@ -39,7 +39,7 @@ export async function deletePushSubscription(endpoint: string) {
 // Lets you confirm the whole chain works from the phone itself.
 export async function sendTestNotification() {
   await requireAdmin();
-  await notifyAdmins({
+  return notifyAdmins({
     title: "Prueba de notificaciones",
     body: "Si ves esto, las alertas de pedidos están funcionando.",
     url: "/admin/orders",
