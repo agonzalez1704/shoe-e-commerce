@@ -5,7 +5,7 @@ regalar **crédito para la siguiente compra, con vencimiento**, y avisar antes d
 que venza. El crédito se siente como dinero propio ("tienes $150"), el miedo a
 perderlo empuja la recompra, y el margen solo se paga si el cliente regresa.
 
-Estado: **fases 1 y 2 en producción** (2026-11-18): $150 fijos, 30 días, compartible. Pendiente: fase 3 (lote retroactivo Buen Fin).
+Estado: **fases 1 y 2 en producción** (2026-11-18): $150 fijos, 30 días, compartible. Arranca el 18 nov; sin lote retroactivo (decisión del dueño).
 
 ---
 
