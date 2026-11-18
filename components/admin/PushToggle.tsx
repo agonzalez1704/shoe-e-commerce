@@ -113,7 +113,7 @@ export function PushToggle() {
           {subscribed && (
             <button
               disabled={busy}
-              onClick={() => sendTestNotification()}
+              onClick={async () => setMsg((await sendTestNotification()).join(" · "))}
               className="rounded-full border border-border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-elevated disabled:opacity-50"
             >
               Probar
