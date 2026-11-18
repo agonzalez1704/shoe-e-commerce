@@ -92,6 +92,10 @@ export type HeroSlide = {
   // El boton va abajo en vez de a media altura: para posters cuyo texto
   // horneado ocupa el centro izquierdo.
   ctaAbajo?: boolean;
+  // Ventana de vigencia (ISO). Fuera de ella la diapositiva no se pinta: así una
+  // campaña sale sola a su hora, sin deploy a medianoche (ver app/page.tsx).
+  desde?: string;
+  hasta?: string;
 };
 
 export type HomeConfig = {
@@ -265,7 +269,8 @@ const BRANDS: Record<string, BrandConfig> = {
       slides: [
         {
           // Buen Fin 2026 (13–17 nov): portada del carrusel de redes extendida a
-          // 16:9; en móvil va el feed 4:5 tal cual. Quitar después del 17.
+          // 16:9; en móvil va el feed 4:5 tal cual. Sale sola a las 0:00 del 18.
+          hasta: "2026-11-18T06:00:00Z",
           image: "/blade-hero-buenfin.webp",
           imageMobile: "/blade-hero-buenfin-movil.webp",
           eyebrow: "",
@@ -278,12 +283,25 @@ const BRANDS: Record<string, BrandConfig> = {
           // Garra de feria con Acrópolis, Londres, Manchester, New Jersey y Pisa.
           // Sin texto horneado: el escritorio deja libre la mitad izquierda y el
           // móvil (4:5) el piso de abajo, donde va el copy DOM.
+          hasta: "2026-11-18T06:00:00Z",
           image: "/blade-hero-garra.webp",
           imageMobile: "/blade-hero-garra-movil.webp",
           eyebrow: "Buen Fin · 13 al 17 nov",
           titleTop: "Atrapa tu",
           titleBottom: "par perfecto.",
           body: "Hasta 25% en toda la tienda o 2 pares por $1,999.",
+          ctaLabel: "Elige tu par",
+          ctaHref: "/products",
+        },
+        {
+          // La misma garra después del Buen Fin, sin la promo.
+          desde: "2026-11-18T06:00:00Z",
+          image: "/blade-hero-garra.webp",
+          imageMobile: "/blade-hero-garra-movil.webp",
+          eyebrow: "",
+          titleTop: "Atrapa tu",
+          titleBottom: "par perfecto.",
+          body: "Piel genuina hecha a mano en León. Arma tu combo: 2 pares por $1,999.",
           ctaLabel: "Elige tu par",
           ctaHref: "/products",
         },
