@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -53,11 +54,23 @@ const FEATURES: HomeFeature[] = home?.features ?? [];
 // Menos de dos: el hero estático de siempre, sin cromo de carrusel.
 const SLIDES = home?.slides ?? [];
 
+// Diapositivas vigentes (desde/hasta). Date.now() vive dentro de 'use cache' y
+// el perfil 'minutes' revalida cada minuto: una campaña sale sola a su hora.
+// ponytail: mientras ninguna diapositiva tenga fechas, esto podría volver a ser
+// la constante SLIDES y dejar la portada en caché larga.
+async function slidesVigentes() {
+  "use cache";
+  cacheLife("minutes");
+  const ahora = Date.now();
+  return SLIDES.filter((s) => (!s.desde || Date.parse(s.desde) <= ahora) && (!s.hasta || ahora < Date.parse(s.hasta)));
+}
+
 export default async function Home() {
-  const [products, bestSellers, noticias] = await Promise.all([
+  const [products, bestSellers, noticias, slides] = await Promise.all([
     listProducts({ sort: "newest" }),
     listBestSellers(8),
     listNoticias(3),
+    slidesVigentes(),
   ]);
   // sin historial de ventas, una repisa elegida a mano bajo otro título — nunca
   // lo más nuevo disfrazado de lo más vendido
@@ -69,7 +82,7 @@ export default async function Home() {
 
   return (
     <div className="reveal">
-      {SLIDES.length > 1 ? <HeroCarousel slides={SLIDES} /> : <Hero />}
+      {slides.length > 1 ? <HeroCarousel slides={slides} /> : <Hero />}
       <Benefits />
       <BestSellers products={shelf} curated={curated} />
       {combos.length > 0 && <ComboBand picks={combos} />}
