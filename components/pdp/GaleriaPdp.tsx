@@ -58,11 +58,7 @@ export function GaleriaPdp({
             </button>
           ))}
         </div>
-        {badge && (
-          <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-contrast">
-            {badge}
-          </span>
-        )}
+        {badge && <Etiqueta texto={badge} />}
         {images.length > 1 && (
           <>
             <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
@@ -95,14 +91,21 @@ export function GaleriaPdp({
               sizes={i === 0 ? "(max-width: 1280px) 60vw, 760px" : "(max-width: 1280px) 30vw, 380px"}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
-            {i === 0 && badge && (
-              <span className="absolute left-3 top-3 rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-contrast">
-                {badge}
-              </span>
-            )}
+            {i === 0 && badge && <Etiqueta texto={badge} />}
           </button>
         ))}
       </div>
     </>
+  );
+}
+
+// Una sola etiqueta sobre la foto, clara y sin gritar: pastilla blanca con un
+// punto del acento. La foto sigue mandando.
+export function Etiqueta({ texto, className = "left-3 top-3" }: { texto: string; className?: string }) {
+  return (
+    <span className={`pointer-events-none absolute inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-2 pr-2.5 text-[12px] font-semibold text-zinc-900 shadow-[0_1px_4px_rgba(0,0,0,0.14)] ${className}`}>
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+      {texto}
+    </span>
   );
 }

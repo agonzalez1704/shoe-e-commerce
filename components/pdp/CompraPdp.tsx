@@ -6,7 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsString } from "nuqs";
-import { Check, X } from "@phosphor-icons/react";
+import { Check, X, ShieldCheck, Truck } from "@phosphor-icons/react";
+import { rangoEntrega } from "@/lib/entrega";
 import { formatCents } from "@/lib/money";
 import { addToCart } from "@/app/cart/actions";
 import { precioConPromo, precioPar, tarifaUnica, type ComboConfig } from "@/lib/pricing";
@@ -40,7 +41,7 @@ const redondo = (c: number) => formatCents(c, "MXN", "es-MX").replace(/\.00$/, "
 
 export function CompraPdp({
   slug, name, variants, color, colores, onColorChange, madeToOrder, precioCents,
-  combo, esExotico, sugeridos, sizeHint,
+  combo, esExotico, sugeridos, sizeHint, notaCompra, entrega,
 }: {
   slug: string;
   name: string;
@@ -54,6 +55,8 @@ export function CompraPdp({
   esExotico: boolean;
   sugeridos: ProductCard[];    // pares del combo para la invitacion
   sizeHint?: string;
+  notaCompra?: string;         // "Primer cambio sin costo", junto a los botones
+  entrega?: { handlingDays: [number, number]; transitDays: [number, number] }; // para la fecha de llegada
 }) {
   const router = useRouter();
   const [size, setSize] = useQueryState("talla", parseAsString.withOptions({ history: "replace" }));
@@ -62,7 +65,26 @@ export function CompraPdp({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [montado, setMontado] = useState(false);
-  useEffect(() => setMontado(true), []);
+  // La fecha depende de HOY: se calcula ya en el navegador, no en el render
+  // cacheado del servidor (diria la fecha de cuando se genero la pagina).
+  const [llegada, setLlegada] = useState<string | null>(null);
+  useEffect(() => {
+    setMontado(true);
+    if (entrega) setLlegada(rangoEntrega(entrega));
+  }, [entrega]);
+
+  // Lo que antes vivia plegado al final, junto al boton: el cambio sin costo y
+  // cuando llega. Una linea; si no hay nada que decir, no se pinta.
+  const tranquilidad = (notaCompra || llegada) && (
+    <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1 text-[11.5px] text-muted">
+      {notaCompra && (
+        <span className="inline-flex items-center gap-1.5"><ShieldCheck size={13} />{notaCompra}</span>
+      )}
+      {llegada && (
+        <span className="inline-flex items-center gap-1.5"><Truck size={13} />{llegada}</span>
+      )}
+    </div>
+  );
 
   const sized = useMemo(() => variants.some((v) => v.size_value !== null), [variants]);
   const tallas = useMemo(
@@ -210,6 +232,7 @@ export function CompraPdp({
         >
           {agotado ? "Agotado" : isPending ? "Agregando…" : combo ? `Solo este par · ${etiquetaSolo}` : `Agregar al carrito · ${etiquetaSolo}`}
         </button>
+        {tranquilidad && <div className="pt-1">{tranquilidad}</div>}
       </div>
 
       {/* el combo, con este par ya adentro */}
@@ -257,7 +280,9 @@ export function CompraPdp({
 
       {/* barra fija de celular: las dos compras siempre a un toque */}
       {montado && createPortal(
-        <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-border bg-bg/95 px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-2.5 backdrop-blur-md md:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-2 backdrop-blur-md md:hidden">
+          {tranquilidad && <div className="mb-2">{tranquilidad}</div>}
+          <div className="flex gap-2">
           {combo ? (
             <>
               <button
@@ -291,6 +316,7 @@ export function CompraPdp({
               {agotado ? "Agotado" : isPending ? "Agregando…" : `Agregar al carrito · ${etiquetaSolo}`}
             </button>
           )}
+          </div>
         </div>,
         document.body,
       )}

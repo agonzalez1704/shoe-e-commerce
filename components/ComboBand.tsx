@@ -25,7 +25,7 @@ export function comboPicks(products: ProductCard[]): ProductCard[] {
 // Banda del combo: las tres tarifas con fotos y un solo boton al wizard. El
 // precio de un par depende de la piel de los dos (0066), asi que la banda
 // explica eso y nada mas.
-export function ComboBand({ picks }: { picks: ProductCard[] }) {
+export function ComboBand({ picks, franja = false }: { picks: ProductCard[]; franja?: boolean }) {
   const base = picks.find((p) => comboOf(p.comboMinQty, p.comboPriceCents));
   const combo = base ? comboOf(base.comboMinQty, base.comboPriceCents, base.comboMixtoCents, base.comboExoticoCents) : null;
   if (!combo) return null;
@@ -41,6 +41,34 @@ export function ComboBand({ picks }: { picks: ProductCard[] }) {
   ]).map((t) => ({ ...t, fotos: t.fotos.filter((f): f is ProductCard => !!f) }));
   const maxSuelto = Math.max(...picks.map((p) => p.base_price_cents));
   const ahorroMax = Math.max(0, 2 * maxSuelto - precioPar(combo, ex.length > 1 ? 2 : 0));
+
+  // En la tienda los zapatos van primero: la banda completa empujaba la primera
+  // tarjeta casi una pantalla. Aquí basta una línea con precio y un botón; el
+  // detalle de tarifas sigue en la portada y en el armador.
+  if (franja) {
+    const fotos = [cl[0], ex[0] ?? cl[1]].filter((f): f is ProductCard => !!f);
+    return (
+      <Link
+        href="/combo"
+        className="mb-6 flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent-soft/50 px-3 py-2.5 transition-colors hover:border-accent/60"
+      >
+        <div className="flex shrink-0">
+          {fotos.map((f, i) => (
+            <span key={f.key} className={`relative h-10 w-10 overflow-hidden rounded-[10px] border-2 border-surface bg-elevated ${i > 0 ? "-ml-3" : ""}`}>
+              {f.image && <Image src={f.image} alt="" fill sizes="40px" className="object-cover" />}
+            </span>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="nums text-sm font-bold">2 pares {unica ? "por" : "desde"} {mxn(precioPar(combo, 0)).replace(/\.00$/, "")}</p>
+          <p className="truncate text-xs text-muted">
+            Tú eliges la pareja{ahorroMax > 0 && <> · ahorra hasta <span className="nums">{mxn(ahorroMax).replace(/\.00$/, "")}</span></>}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-contrast">Armar →</span>
+      </Link>
+    );
+  }
 
   return (
     <section className="py-10 sm:py-16">

@@ -6,6 +6,9 @@ import { PieCarrito } from "@/components/PieCarrito";
 import { Pagination, paginar } from "@/components/Pagination";
 import { ComboBand, comboPicks } from "@/components/ComboBand";
 import { activeBrand } from "@/lib/brand";
+import { Check } from "@phosphor-icons/react/dist/ssr";
+
+const CHECKLIST = activeBrand.catalogChecklist ?? [];
 
 
 // Catalogue copy follows the brand: "calzado de piel hecho sobre pedido" was
@@ -37,32 +40,52 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   const filters: ProductFilters = {
     brand: sp.brand,
     gender: sp.gender,
-    sort: (sp.sort as ProductFilters["sort"]) ?? "newest",
+    sort: (["newest", "price_asc", "price_desc", "top"] as const).find((s) => s === sp.sort) ?? "newest",
   };
   // ?combo=1: solo los colores que entran al combo (el combo ya no abarca todo el catalogo)
   const todos = await listProducts(filters);
   const soloCombo = sp.combo === "1";
   const products = soloCombo ? todos.filter((p) => p.comboMinQty != null) : todos;
   const { pagina, items } = paginar(products, Number(sp.p));
+  // sin historial de ventas el orden "Más vendidos" seria "lo nuevo" con otro nombre
+  const conVendidos = todos.some((p) => p.masVendido);
 
   return (
     <div className="reveal py-8 sm:py-10">
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{soloCombo ? "Modelos del combo" : "Tienda"}</h1>
-          <p className="mt-1.5 text-sm text-muted">
-            {products.length} {products.length === 1 ? "producto" : "productos"}
-            {activeBrand.catalogNote ? ` · ${activeBrand.catalogNote}` : ""}
-          </p>
+      <div className="mb-5 space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{soloCombo ? "Modelos del combo" : "Tienda"}</h1>
+              <span className="nums text-sm text-muted">
+                {products.length} {products.length === 1 ? "producto" : "productos"}
+              </span>
+            </div>
+            {/* lo que el cliente iba a buscar, dicho antes de la primera tarjeta */}
+            {CHECKLIST.length > 0 ? (
+              <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px]">
+                {CHECKLIST.map((t) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <span aria-hidden className="grid h-4 w-4 place-items-center rounded-full bg-text text-bg">
+                      <Check size={9} weight="bold" />
+                    </span>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            ) : activeBrand.catalogNote ? (
+              <p className="mt-1.5 text-sm text-muted">{activeBrand.catalogNote}</p>
+            ) : null}
+          </div>
+          <SortLinks current={filters.sort} combo={soloCombo} conVendidos={conVendidos} />
         </div>
-        <SortLinks current={filters.sort} combo={soloCombo} />
       </div>
 
       {products.length === 0 ? (
         <p className="text-muted">No se encontraron productos.</p>
       ) : (
         <>
-          <ComboBand picks={comboPicks(products)} />
+          <ComboBand picks={comboPicks(products)} franja />
           <PieCarrito />
       <ProductGrid products={items} />
           <Pagination
@@ -77,9 +100,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   );
 }
 
-function SortLinks({ current, combo }: { current?: string; combo: boolean }) {
+function SortLinks({ current, combo, conVendidos }: { current?: string; combo: boolean; conVendidos: boolean }) {
   const opts = [
     ["newest", "Nuevo"],
+    ...(conVendidos ? [["top", "Más vendidos"] as const] : []),
     ["price_asc", "Precio ↑"],
     ["price_desc", "Precio ↓"],
   ] as const;
