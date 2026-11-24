@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryState, parseAsString } from "nuqs";
-import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Lightning, Sparkle, Tag } from "@phosphor-icons/react";
+import { Truck, ShieldCheck, ArrowsClockwise, Hammer, Lightning, Sparkle, Tag, Check } from "@phosphor-icons/react";
+import { swatchBg } from "@/lib/colors";
 import { activeBrand } from "@/lib/brand";
 import { formatCents } from "@/lib/money";
 import { comboOf, precioConPromo, precioPar, tarifaUnica } from "@/lib/pricing";
@@ -20,6 +21,7 @@ import { metaContentId } from "@/lib/meta-content";
 import type { ProductDetail as Product, ProductCard } from "@/lib/catalog";
 
 const mxn = (c: number) => formatCents(c, "MXN", "es-MX");
+const redondo = (c: number) => mxn(c).replace(/\.00$/, "");
 
 // BNPL anchor under the price. Per brand: naming a provider the store has not
 // enabled is a promise it cannot keep at checkout.
@@ -39,6 +41,8 @@ const ICONS: Record<string, typeof Truck> = {
 const VALUE_PROPS = activeBrand.pdp?.valueProps ?? [];
 const REASSURANCE = activeBrand.pdp?.reassurance;
 const ITEMS = activeBrand.copy?.itemPlural ?? "productos";
+const CHIPS = activeBrand.pdp?.chips ?? [];
+const CHECKLIST = activeBrand.pdp?.checklist ?? [];
 // Layout de la PDP. El showcase es el default: sirve igual a un catálogo de una
 // foto y a uno con galería, y es lo que el cliente pidió para todas las tiendas.
 // "classic" queda como la salida explícita.
@@ -50,8 +54,10 @@ export function ProductDetail({
   initialColor,
   sugeridos = [],
   sizeHint,
+  masVendido = false,
 }: {
   product: Product;
+  masVendido?: boolean; // top de ventas real (top_sellers), para la etiqueta de la foto
   rating?: { average: number; count: number };
   sizeHint?: string; // de las reseñas ("80% dice que queda fiel…"); sin el, el texto de la marca
   initialColor?: string;
@@ -243,36 +249,73 @@ export function ProductDetail({
     }));
     const conClasico = combo ? precioPar(combo, esExotico ? 1 : 0) : null;
     return (
-      <div className="pb-28 md:pb-0">
+      <div className="pb-36 md:pb-0">
         {lightboxEl}
 
         <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_420px] md:gap-12 lg:gap-16">
-          <GaleriaPdp images={gallery} name={product.name} onOpen={setLightbox} />
+          <GaleriaPdp images={gallery} name={product.name} onOpen={setLightbox} badge={masVendido ? "Más vendido" : null} />
 
           <div className="space-y-5 md:sticky md:top-24 md:self-start">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                {product.brand && (
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-accent">{product.brand}</p>
-                )}
-                <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight md:text-4xl">{product.name}</h1>
-                {estrellas && <div className="mt-1.5">{estrellas}</div>}
-              </div>
-              <div className="shrink-0 text-right">
-                {onSale ? (
+            {/* Rediseño 2026-11: una columna en orden de lectura. Prueba social,
+                nombre corto y grande, chips con lo que define al par, precio con
+                el ahorro dicho en pesos y, antes de elegir, lo que antes vivía
+                plegado (cómo se hace, el cambio de talla, el envío). */}
+            <div className="space-y-3">
+              {rating && (
+                <a href="#resenas" className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-text">
+                  <Stars value={rating.average} />
+                  <span className="nums"><strong className="font-semibold text-text">{rating.average.toFixed(1)}</strong> · {rating.count} {rating.count === 1 ? "reseña" : "reseñas"}</span>
+                </a>
+              )}
+              {product.brand && (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-accent">{product.brand}</p>
+              )}
+              <h1 className="text-[32px] font-bold leading-[1.05] tracking-tight md:text-4xl">{product.name}</h1>
+
+              {(CHIPS.length > 0 || color) && (
+                <ul className="flex flex-wrap gap-1.5">
+                  {CHIPS.map((c) => (
+                    <li key={c} className="rounded-full border border-border bg-surface px-3 py-1 text-[12.5px]">{c}</li>
+                  ))}
+                  {color && (
+                    <li className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[12.5px] capitalize">
+                      <span aria-hidden className="h-2.5 w-2.5 rounded-full ring-1 ring-inset ring-border" style={{ background: swatchBg(color) }} />
+                      {color}
+                    </li>
+                  )}
+                </ul>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-1">
+                <span className={`nums text-[30px] font-bold leading-none tracking-tight ${onSale ? "text-accent" : ""}`}>{redondo(precioEfectivo)}</span>
+                {onSale && (
                   <>
-                    <p className="nums text-[22px] font-bold text-accent md:text-[28px]">{mxn(precioEfectivo)}</p>
-                    <p className="nums text-xs text-muted line-through">{mxn(colorPriceCents)}</p>
+                    <span className="nums text-base text-muted line-through">{redondo(colorPriceCents)}</span>
+                    <span className="nums rounded-full bg-accent-soft px-2.5 py-1 text-[12.5px] font-bold text-accent">
+                      Ahorras {redondo(colorPriceCents - precioEfectivo)}
+                    </span>
                   </>
-                ) : (
-                  <p className="nums text-[22px] font-bold md:text-[28px]">{mxn(colorPriceCents)}</p>
-                )}
-                {conClasico != null && (
-                  <p className="text-xs text-muted">o 2 pares <strong className="nums text-text">{mxn(conClasico)}</strong></p>
                 )}
               </div>
+              <p className="text-xs text-muted">
+                IVA incluido
+                {BNPL && <> · o {BNPL.payments} pagos de <span className="nums font-medium text-text">{mxn(Math.round(precioEfectivo / BNPL.payments))}</span> con {BNPL.provider}</>}
+                {conClasico != null && <> · o 2 pares por <strong className="nums text-text">{redondo(conClasico)}</strong></>}
+              </p>
+
+              {CHECKLIST.length > 0 && (
+                <ul className="space-y-2 pt-1">
+                  {CHECKLIST.map((t) => (
+                    <li key={t} className="flex items-start gap-2.5 text-[13.5px] leading-snug">
+                      <span aria-hidden className="mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-text text-bg">
+                        <Check size={10} weight="bold" />
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            {notaPrecio}
 
             <CompraPdp
               slug={product.slug}
@@ -287,9 +330,12 @@ export function ProductDetail({
               esExotico={esExotico}
               sugeridos={sugeridos.filter((s) => s.slug !== product.slug)}
               sizeHint={sizeHint ?? activeBrand.pdp?.sizeHint}
+              notaCompra={activeBrand.pdp?.buyNote}
+              entrega={product.made_to_order ? activeBrand.pdp?.merchant : undefined}
             />
 
-            {valueProps}
+            {/* con palomitas arriba, los recuadros dirían lo mismo otra vez */}
+            {CHECKLIST.length === 0 && valueProps}
           </div>
         </div>
 
@@ -305,7 +351,7 @@ export function ProductDetail({
               <p className="pb-4 text-sm leading-relaxed text-muted">{product.description}</p>
             </details>
           )}
-          {reassuranceBox && <div className="my-4">{reassuranceBox}</div>}
+          {reassuranceBox && CHECKLIST.length === 0 && <div className="my-4">{reassuranceBox}</div>}
           {info}
         </div>
       </div>

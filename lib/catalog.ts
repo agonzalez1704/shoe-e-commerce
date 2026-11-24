@@ -8,7 +8,7 @@ export type ProductFilters = {
   brand?: string;   // brand slug
   gender?: string;
   color?: string;
-  sort?: "newest" | "price_asc" | "price_desc";
+  sort?: "newest" | "price_asc" | "price_desc" | "top";
 };
 
 // One card PER variant colour (limited inventory → each colour sold as its own
@@ -31,7 +31,50 @@ export type ProductCard = {
   // Tallas de ESE color, para poder agregar al carrito desde la reja sin entrar
   // al producto. Vacío cuando el modelo no maneja tallas (un casco, un scooter).
   tallas: { variantId: string; talla: string; disponible: boolean }[];
+  // Solo los llena listProducts (la reja de la tienda): reseñas del modelo y si
+  // esta entre los mas vendidos. Ausentes = no se pinta nada, nunca un 0.
+  rating?: { average: number; count: number } | null;
+  masVendido?: boolean;
 };
+
+// Cuantos modelos llevan la etiqueta "Más vendido". Pocos a proposito: en
+// la mitad de la reja ya no distingue a nadie.
+const MAS_VENDIDOS = 3;
+
+// Ranking de ventas (top_sellers, 0049): solo ids, en orden. Vacio cuando no
+// hay historial suficiente para que "más vendido" sea verdad.
+export async function getTopSellerIds(minimum = 3): Promise<string[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("top_sellers", { p_limit: 24 });
+  if (error || !data) return [];
+  const ids = (data as { product_id: string }[]).map((t) => t.product_id);
+  return ids.length >= minimum ? ids : [];
+}
+
+export async function esMasVendido(productId: string): Promise<boolean> {
+  return (await getTopSellerIds()).slice(0, MAS_VENDIDOS).includes(productId);
+}
+
+// Promedio y numero de reseñas por modelo, en una sola lectura (la lectura de
+// reviews es publica, 0002). La reja no puede pedirlas tarjeta por tarjeta.
+async function getRatingMap(): Promise<Map<string, { average: number; count: number }>> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("productos");
+  const supabase = createPublicClient();
+  const { data } = await supabase.from("reviews").select("product_id, rating");
+  const sum = new Map<string, { total: number; count: number }>();
+  for (const r of (data ?? []) as { product_id: string; rating: number }[]) {
+    const s = sum.get(r.product_id) ?? { total: 0, count: 0 };
+    s.total += r.rating;
+    s.count += 1;
+    sum.set(r.product_id, s);
+  }
+  return new Map([...sum].map(([id, s]) => [id, { average: s.total / s.count, count: s.count }]));
+}
 
 // Existencias por variante, desde la vista pública (no expone on_hand ni
 // reservado). Se consulta una vez por listado en vez de una por tarjeta: son
@@ -159,12 +202,27 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   const { data, error } = await q;
   if (error) throw error;
 
-  const promo = await getPromoMap();
-  const stock = await getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[]));
-  return (data ?? []).flatMap((p) => {
-    const row = p as Parameters<typeof toVariantCards>[0];
-    return toVariantCards(row, promo.get(row.id), stock);
-  });
+  const [promo, stock, ratings, top] = await Promise.all([
+    getPromoMap(),
+    getStockMap(idsDeVariantes((data ?? []) as unknown as FilaConVariantes[])),
+    getRatingMap(),
+    getTopSellerIds(),
+  ]);
+  const destacados = new Set(top.slice(0, MAS_VENDIDOS));
+  let rows = (data ?? []) as unknown as Parameters<typeof toVariantCards>[0][];
+  if (filters.sort === "top") {
+    // lo vendido primero, en el orden del ranking; el resto sigue como llego (lo nuevo)
+    const rank = new Map(top.map((id, i) => [id, i]));
+    const pos = (id: string) => rank.get(id) ?? top.length; // sin ventas: empatan y conservan su orden
+    rows = [...rows].sort((a, b) => pos(a.id) - pos(b.id));
+  }
+  return rows.flatMap((row) =>
+    toVariantCards(row, promo.get(row.id), stock).map((c) => ({
+      ...c,
+      rating: ratings.get(row.id) ?? null,
+      masVendido: destacados.has(row.id),
+    })),
+  );
 }
 
 // Cross-sell: other active models (one card per model, not per colourway).

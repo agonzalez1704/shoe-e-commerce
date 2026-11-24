@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Check } from "@phosphor-icons/react";
-import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "@/components/ui/select";
 import { AnimatePresence, motion } from "motion/react";
 import { addToCart } from "@/app/cart/actions";
 import { notifyCartChanged } from "@/components/CartBadge";
@@ -37,7 +36,15 @@ export function CardTallas({
   const [sacude, setSacude] = useState(false);
   const [error, setError] = useState(false);
   const [listo, setListo] = useState(false);
-  const fila = useRef<HTMLButtonElement>(null);
+  const fila = useRef<HTMLDivElement>(null);
+
+  // La talla guardada puede quedar fuera de la fila visible (29 en una tarjeta
+  // angosta): se desliza la fila, no la página, para que se vea elegida.
+  useEffect(() => {
+    const el = fila.current;
+    const on = el?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (el && on) el.scrollLeft = on.offsetLeft - el.clientWidth / 2 + on.clientWidth / 2;
+  }, []);
 
   if (!disponibles.length) {
     return <p className="mt-3 text-center text-xs text-muted">Agotado por ahora</p>;
@@ -75,31 +82,39 @@ export function CardTallas({
 
   return (
     <div className="mt-3">
-      {/* Select de @coss (Base UI): popup propio con teclado, tipeo-para-saltar
-          y scroll anclado al valor elegido. El estado de error usa su propio
-          aria-invalid (borde y ring destructivos), que aquí ES el acento. */}
-      <div className={sacude ? "animate-sacudida" : ""}>
-        <Select
-          value={sel}
-          onValueChange={(v) => { setSel(v as string | null); if (v) setError(false); }}
-        >
-          <SelectTrigger
-            ref={fila}
-            aria-label="Elige tu talla"
-            aria-invalid={error || undefined}
-            aria-describedby={error ? `err-${slug}-${color ?? ""}` : undefined}
-            className="min-h-10 bg-surface"
-          >
-            <SelectValue>{sel ? `MX ${sel}` : "Elige tu talla"}</SelectValue>
-          </SelectTrigger>
-          <SelectPopup>
-            {disponibles.map((t) => (
-              <SelectItem key={t.variantId} value={t.talla}>
-                MX {t.talla}
-              </SelectItem>
-            ))}
-          </SelectPopup>
-        </Select>
+      {/* Rediseño 2026-11 ("fuera desplegables"): las tallas a la vista, en una
+          fila que se desliza con el dedo. El desplegable escondía cuáles había
+          y costaba dos toques; aquí es uno y se ve qué está agotado. */}
+      <div
+        ref={fila}
+        role="group"
+        tabIndex={-1}
+        aria-label="Talla MX"
+        aria-describedby={error ? `err-${slug}-${color ?? ""}` : undefined}
+        className={`no-scrollbar relative -mr-1 flex gap-1 overflow-x-auto overscroll-x-contain rounded-[10px] pr-1 outline-none ${sacude ? "animate-sacudida" : ""} ${error ? "ring-2 ring-accent/60" : ""}`}
+      >
+        {tallas.map((t) => {
+          const on = t.talla === sel;
+          return (
+            <button
+              key={t.variantId}
+              type="button"
+              disabled={!t.disponible}
+              aria-pressed={on}
+              aria-label={`Talla MX ${t.talla}${t.disponible ? "" : ", agotada"}`}
+              onClick={() => { setSel(t.talla); setError(false); }}
+              className={`nums h-11 min-w-[42px] shrink-0 rounded-[10px] border px-1.5 text-[13.5px] font-semibold transition-colors ${
+                on
+                  ? "border-text bg-text text-bg"
+                  : t.disponible
+                    ? "border-border bg-surface hover:border-text"
+                    : "cursor-not-allowed border-border text-muted/40 line-through"
+              }`}
+            >
+              {t.talla}
+            </button>
+          );
+        })}
       </div>
       {/* Vive en el DOM siempre y cambia de contenido: así aria-live anuncia la
           aparición del error sin que el layout brinque (la línea reserva alto). */}
@@ -160,7 +175,7 @@ export function CardTallas({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
             >
-              <ShoppingBag size={15} weight="fill" /> Agregar al carrito
+              <ShoppingBag size={15} weight="fill" /> {sel ? `Agregar MX ${sel}` : "Agregar al carrito"}
             </motion.span>
           )}
         </AnimatePresence>

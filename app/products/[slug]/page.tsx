@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
-import { getProduct, listProducts, listRelatedProducts, type ProductCard } from "@/lib/catalog";
+import { getProduct, listProducts, listRelatedProducts, esMasVendido, type ProductCard } from "@/lib/catalog";
 import { activeBrand } from "@/lib/brand";
 import { EditorialFeature } from "@/components/EditorialFeature";
 import { getProductReviews, fitHint } from "@/lib/reviews";
@@ -65,10 +65,11 @@ export default async function ProductPage({
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  const [reviews, related, catalogo] = await Promise.all([
+  const [reviews, related, catalogo, masVendido] = await Promise.all([
     getProductReviews(product.id),
     listRelatedProducts(slug, 3),
     listProducts(),
+    esMasVendido(product.id),
   ]);
 
   // Pares del combo para la invitacion al segundo par: dos clasicos y un
@@ -162,7 +163,7 @@ export default async function ProductPage({
         <span className="text-text">{product.name}</span>
       </nav>
 
-      <ProductDetail product={product} initialColor={color} sugeridos={sugeridos} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} sizeHint={fitHint(reviews.fit)} />
+      <ProductDetail product={product} initialColor={color} sugeridos={sugeridos} rating={reviews.count ? { average: reviews.average, count: reviews.count } : undefined} sizeHint={fitHint(reviews.fit)} masVendido={masVendido} />
 
       {/* Editorial bands for whichever category this product belongs to. Nothing
           renders until the brand supplies the art, so a store without it just

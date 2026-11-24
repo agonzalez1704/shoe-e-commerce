@@ -140,6 +140,15 @@ export type PdpConfig = {
   // items are helmets does not publish a shoe conversion table.
   sizeGuide?: { intro: string; note: string; rows: { mx: string; cm: string; us: string }[] };
   sizeHint?: string;   // one line under the size picker
+  // Rediseño 2026-11 ("sacar lo escondido"): lo que el cliente iba a buscar en
+  // los acordeones, dicho arriba. `chips` van bajo el nombre del modelo (el
+  // color se agrega solo); `checklist` son las palomitas entre el precio y el
+  // color, y con ellas los recuadros de valueProps ya no se pintan (dirian lo
+  // mismo dos veces); `buyNote` es la línea junto a los botones de compra, al
+  // lado de la fecha de llegada que se calcula con `merchant`.
+  chips?: string[];
+  checklist?: string[];
+  buyNote?: string;
   // El showcase —bandas a sangre, nombre del modelo en escala editorial y
   // cifras en grande— es el default para todas las tiendas. "classic" es la
   // salida explícita al layout de dos columnas de antes.
@@ -222,6 +231,8 @@ export type BrandConfig = {
   announcementHref?: string; // a donde lleva la barra (default /products)
   seoSuffix?: string;    // appended to <title> default + OG, e.g. "calzado de piel hecho en México"
   catalogNote?: string;  // the line under "Tienda" on the catalogue, e.g. "envío gratis a todo México"
+  // Palomitas bajo "Tienda" en el catálogo; cuando están, reemplazan a catalogNote.
+  catalogChecklist?: string[];
   refineLogoUrl?: string; // brand logo (public path) applied by auto-toon logo correction
   theme: { light: ThemeMode; dark: ThemeMode };
 };
@@ -459,6 +470,13 @@ const BRANDS: Record<string, BrandConfig> = {
       // 3-5 + 1-2 = los "4 a 7 días hábiles" que promete la ficha
       merchant: { freeShipping: true, handlingDays: [3, 5], transitDays: [1, 2], returnDays: 30, refundType: "ExchangeRefund" },
       sizeHint: "Queda fiel a tu talla — pide tu número habitual.",
+      chips: ["Piel genuina", "Hecho a mano en León"],
+      checklist: [
+        "Lo hacemos a mano para ti y llega en 4–7 días hábiles",
+        "¿No te queda? El primer cambio de talla es sin costo",
+        "Envío gratis a todo México y garantía de 90 días",
+      ],
+      buyNote: "Primer cambio sin costo",
       sizeGuide: {
         intro: "Nuestro calzado *queda fiel a tu talla*: pide tu número mexicano habitual.",
         note: "Mide tu pie de talón a punta y elige el cm más cercano. ¿Dudas? Escríbenos.",
@@ -512,6 +530,7 @@ const BRANDS: Record<string, BrandConfig> = {
     announcementHref: "/combo",
     seoSuffix: "calzado de piel hecho en México",
     catalogNote: "piel genuina · envío gratis",
+    catalogChecklist: ["Envío gratis", "Primer cambio sin costo", "Piel genuina, hecho a mano"],
     // silver wordmark (transparent PNG); inverted to dark on light theme
     logo: { src: "/blade-logo.png", width: 565, height: 220, alt: "Blade", invertOnLight: true },
     // angular blade glyph fallback: filled with the accent
