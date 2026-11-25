@@ -32,19 +32,41 @@ export type TrackedOrder = {
 const COLUMNAS =
   "id, order_number, status, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, review_token, payment_method, total_cents, created_at, shipping_address, paid_at, shipped_at, delivered_at";
 
-// Siempre con un segundo factor: correo (formulario) o token del pedido (link
-// de los correos). Solo el numero de pedido permitiria enumerar pedidos ajenos.
-async function buscar(orderNumber: string, filtro: { email: string } | { token: string }) {
+// "1423", "bl001423", "BL 001423" -> "BL-001423". Solo dígitos: se busca por el
+// final del número (el prefijo vive en settings.order_prefix).
+function numeroPedido(crudo: string): { exacto: string } | { termina: string } | null {
+  const t = crudo.toUpperCase().replace(/[\s#]/g, "");
+  const m = t.match(/^([A-Z]+)-?(\d{1,9})$/);
+  if (m) return { exacto: `${m[1]}-${m[2].padStart(6, "0")}` };
+  if (/^\d{1,9}$/.test(t)) return { termina: `-${t.padStart(6, "0")}` };
+  return null;
+}
+
+const soloDigitos = (s: string) => s.replace(/\D/g, "").slice(-10);
+
+// Siempre con un segundo factor: correo o teléfono (formulario) o token del
+// pedido (link de los correos). Solo el número permitiría enumerar pedidos
+// ajenos. El teléfono existe porque la gente no recuerda con qué correo compró
+// (BL-001423 escribió uno distinto y creyó que su pedido no existía).
+async function buscar(orderNumber: string, filtro: { contacto: string } | { token: string }) {
+  const num = numeroPedido(orderNumber);
+  if (!num) return null;
   const admin = createAdminClient();
-  let q = admin.from("orders").select(COLUMNAS).eq("order_number", orderNumber.trim().toUpperCase());
-  // ilike por mayusculas; % y _ escapados o "%" casaria con cualquier correo.
-  if ("email" in filtro) q = q.ilike("email", filtro.email.trim().replace(/[\\%_]/g, "\\$&"));
-  else {
+  let q = admin.from("orders").select(`${COLUMNAS}, email`);
+  q = "exacto" in num ? q.eq("order_number", num.exacto) : q.like("order_number", `%${num.termina}`);
+  if ("token" in filtro) {
     if (!/^[0-9a-f-]{36}$/i.test(filtro.token)) return null;
     q = q.eq("review_token", filtro.token);
   }
-  const { data } = await q.maybeSingle();
-  return data;
+  const { data } = await q.limit(5);
+  const contacto = "contacto" in filtro ? filtro.contacto.trim().toLowerCase() : null;
+  return (data ?? []).find((o) => {
+    if (!contacto) return true;
+    if (contacto.includes("@")) return o.email.trim().toLowerCase() === contacto;
+    const tel = soloDigitos(contacto);
+    const suyo = soloDigitos(((o.shipping_address ?? {}) as { phone?: string }).phone ?? "");
+    return tel.length === 10 && tel === suyo;
+  }) ?? null;
 }
 
 async function armar(order: NonNullable<Awaited<ReturnType<typeof buscar>>>): Promise<TrackedOrder> {
@@ -102,17 +124,17 @@ async function armar(order: NonNullable<Awaited<ReturnType<typeof buscar>>>): Pr
   };
 }
 
-// Formulario: numero + correo. Con limite por IP contra adivinanzas.
+// Formulario: número + correo o teléfono. Con limite por IP contra adivinanzas.
 export async function lookupOrder(
   orderNumber: string,
-  email: string,
+  contacto: string,
 ): Promise<{ order: TrackedOrder } | { error: string }> {
   const ip = await clientIp();
   if (!(await rateLimit("track", ip, 20, 60))) {
     return { error: "Demasiados intentos. Espera un momento." };
   }
-  const order = await buscar(orderNumber, { email });
-  if (!order) return { error: "No encontramos ese pedido. Verifica el número y el correo." };
+  const order = await buscar(orderNumber, { contacto });
+  if (!order) return { error: "No encontramos un pedido con esos datos. Prueba con el correo o el teléfono (10 dígitos) que usaste al comprar." };
   return { order: await armar(order) };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle, Circle, WhatsappLogo, ArrowSquareOut, WarningCircle } from "@phosphor-icons/react";
+import { WhatsappLogo, ArrowSquareOut, WarningCircle, CreditCard, Hammer, Package, Truck, HouseLine, Check, XCircle } from "@phosphor-icons/react";
 import { formatCents } from "@/lib/money";
 import { lookupOrder, type TrackedOrder } from "@/app/rastrear/actions";
 import { activeBrand } from "@/lib/brand";
@@ -30,10 +30,10 @@ export function TrackOrder({ defaultOrder = "", inicial = null }: { defaultOrder
     e.preventDefault();
     const f = e.currentTarget;
     const orderNumber = (f.elements.namedItem("o") as HTMLInputElement).value;
-    const email = (f.elements.namedItem("e") as HTMLInputElement).value;
+    const contacto = (f.elements.namedItem("e") as HTMLInputElement).value;
     startTransition(async () => {
       setError(null);
-      const res = await lookupOrder(orderNumber, email);
+      const res = await lookupOrder(orderNumber, contacto);
       if ("error" in res) {
         setError(res.error);
         setResult(null);
@@ -52,8 +52,18 @@ export function TrackOrder({ defaultOrder = "", inicial = null }: { defaultOrder
               (settings.order_prefix) y repetirlo aquí sería una segunda fuente
               de verdad que se desincroniza. */}
           <input name="o" defaultValue={defaultOrder} placeholder="Número de pedido" required className={INPUT} />
-          <input name="e" type="email" placeholder="Correo del pedido" required className={INPUT} />
-          {error && <p className="text-sm text-accent">{error}</p>}
+          <input name="e" type="text" inputMode="email" autoComplete="email" placeholder="Correo o teléfono con el que compraste" required className={INPUT} />
+          {error && (
+            <div className="rounded-xl bg-accent-soft px-3.5 py-3 text-sm">
+              <p className="text-accent">{error}</p>
+              {activeBrand.legal.whatsapp && (
+                <a href={`https://wa.me/${activeBrand.legal.whatsapp}?text=${encodeURIComponent("Hola, no encuentro mi pedido en la página de rastreo.")}`}
+                  target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1.5 font-medium text-text underline-offset-2 hover:underline">
+                  <WhatsappLogo size={16} weight="fill" className="text-[#25D366]" /> Te lo buscamos por WhatsApp
+                </a>
+              )}
+            </div>
+          )}
           <button
             disabled={isPending}
             className="w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-accent-contrast disabled:bg-border disabled:text-muted"
@@ -96,22 +106,27 @@ export function Estado({ orden: r }: { orden: TrackedOrder }) {
     : "Tu pedido fue entregado";
 
   const pasos = [
-    { label: "Pago confirmado", fecha: fechaCorta(r.paidAt), detalle: null as string | null },
+    { label: "Pagado", icon: CreditCard, fecha: fechaCorta(r.paidAt), detalle: null as string | null },
     {
-      label: SOBRE_PEDIDO ? "En fabricación" : "Preparando",
+      label: SOBRE_PEDIDO ? "Fabricación" : "Preparando",
+      icon: SOBRE_PEDIDO ? Hammer : Package,
       fecha: null,
       detalle: SOBRE_PEDIDO
-        ? `Día ${Math.max(1, diaFabrica)} de ~${FABRICA_DIAS.tipico} · hecho a mano en León`
+        ? `Día ${diaFabrica + 1} de ~${FABRICA_DIAS.tipico} · hecho a mano en León`
         : "Estamos preparando tu pedido",
     },
-    { label: "Guía lista", fecha: null, detalle: "La paquetería lo recoge en 24 a 48 horas" },
+    { label: "Guía lista", icon: Package, fecha: null, detalle: "La paquetería lo recoge en 24 a 48 horas" },
     {
       label: "En camino",
+      icon: Truck,
       fecha: fechaCorta(r.shippedAt),
       detalle: r.carrier ? `Va con ${carrierName(r.carrier)}` : "Va con la paquetería",
     },
-    { label: "Entregado", fecha: fechaCorta(r.deliveredAt), detalle: null },
+    { label: "Entregado", icon: HouseLine, fecha: fechaCorta(r.deliveredAt), detalle: null },
   ];
+  const IconoActual = terminal ? XCircle : paso === 0 ? CreditCard : pasos[paso].icon;
+  // Avance de la barra: completo hasta el paso actual, medio tramo hacia el siguiente.
+  const avance = paso >= 4 ? 100 : Math.min(100, (paso / 4) * 100 + (paso > 0 ? 12.5 : 0));
 
   return (
     <div className="mt-6 space-y-4">
@@ -121,7 +136,15 @@ export function Estado({ orden: r }: { orden: TrackedOrder }) {
           <span className="nums">{r.orderNumber}</span>
           <span className="nums">{mxn(r.totalCents)}</span>
         </div>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight">{titular}</h2>
+        <div className="mt-3 flex items-center gap-3.5">
+          <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${terminal ? "bg-border text-muted" : paso >= 4 ? "bg-[#1f3a2a] text-[#5fd08a]" : "bg-accent text-accent-contrast"}`}>
+            <IconoActual size={28} weight="fill" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold leading-tight tracking-tight">{titular}</h2>
+            {!terminal && paso > 0 && paso < 4 && pasos[paso].detalle && <p className="mt-0.5 text-sm text-muted">{pasos[paso].detalle}</p>}
+          </div>
+        </div>
 
         {ventana && !atrasado && (
           <p className="mt-3 rounded-xl bg-accent-soft px-3.5 py-2.5 text-sm">
@@ -141,40 +164,35 @@ export function Estado({ orden: r }: { orden: TrackedOrder }) {
           <p className="mt-3 text-sm text-muted">Entrega estimada: <span className="text-text">{fechaEntrega(r.estimatedDelivery)}</span></p>
         )}
 
-        {/* línea de tiempo con fechas y qué pasa ahora */}
+        {/* línea de tiempo: barra de avance + una parada por etapa */}
         {!terminal && paso > 0 && (
-          <ol className="mt-5">
-            {pasos.map((p, i) => {
-              const hecho = i < paso || (i === paso && paso === 4);
-              const actual = i === paso && paso < 4;
-              const ultimo = i === pasos.length - 1;
-              return (
-                <li key={p.label} className="relative flex gap-3 pb-4 last:pb-0">
-                  {!ultimo && (
-                    <span className={`absolute left-[9px] top-5 h-[calc(100%-12px)] w-0.5 ${i < paso ? "bg-accent" : "bg-border"}`} aria-hidden />
-                  )}
-                  <span className="relative z-10 mt-0.5 shrink-0 bg-surface">
-                    {hecho ? (
-                      <CheckCircle size={20} weight="fill" className="text-accent" />
-                    ) : actual ? (
-                      <span className="grid h-5 w-5 place-items-center rounded-full ring-2 ring-accent">
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-                      </span>
-                    ) : (
-                      <Circle size={20} className="text-border" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className={`text-sm ${hecho || actual ? "font-medium text-text" : "text-muted"}`}>{p.label}</p>
-                      {p.fecha && (hecho || actual) && <span className="nums shrink-0 text-xs text-muted">{p.fecha}</span>}
-                    </div>
-                    {actual && p.detalle && <p className="mt-0.5 text-xs text-muted">{p.detalle}</p>}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          <div className="mt-6">
+            <div className="relative mx-[10%]">
+              <div className="h-1.5 rounded-full bg-border" />
+              <div className="absolute inset-y-0 left-0 rounded-full bg-accent transition-[width] duration-700" style={{ width: `${avance}%` }} />
+            </div>
+            <ol className="-mt-[22px] grid grid-cols-5">
+              {pasos.map((p, i) => {
+                const hecho = i < paso || paso === 4;
+                const actual = i === paso && paso < 4;
+                const Icono = p.icon;
+                return (
+                  <li key={p.label} className="flex flex-col items-center text-center">
+                    <span
+                      className={`relative grid h-10 w-10 place-items-center rounded-full border-2 ${
+                        hecho ? "border-accent bg-accent text-accent-contrast" : actual ? "border-accent bg-surface text-accent" : "border-border bg-surface text-muted"
+                      }`}
+                    >
+                      {actual && <span className="absolute inset-0 animate-ping rounded-full border-2 border-accent opacity-40" aria-hidden />}
+                      {hecho ? <Check size={18} weight="bold" /> : <Icono size={18} weight={actual ? "fill" : "regular"} />}
+                    </span>
+                    <span className={`mt-1.5 text-[11px] leading-tight sm:text-xs ${hecho || actual ? "font-medium text-text" : "text-muted"}`}>{p.label}</span>
+                    {p.fecha && (hecho || actual) && <span className="nums text-[10px] text-muted sm:text-[11px]">{p.fecha}</span>}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         )}
       </div>
 
