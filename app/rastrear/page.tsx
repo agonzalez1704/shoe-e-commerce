@@ -6,7 +6,7 @@ export const instant = false; // dinámica de punta a punta (sesión/pedido)
 
 export const metadata: Metadata = {
   title: "Rastrear pedido",
-  description: "Consulta el estado de tu pedido con tu número y correo.",
+  description: "Consulta el estado de tu pedido con tu número y tu correo o teléfono.",
   alternates: { canonical: "/rastrear" },
 };
 
@@ -23,7 +23,7 @@ export default async function RastrearPage({ searchParams }: { searchParams: Pro
       ) : (
         <>
           <h1 className="mb-2 text-2xl font-semibold tracking-tight">Rastrear pedido</h1>
-          <p className="mb-8 text-sm text-muted">Ingresa tu número de pedido y el correo con el que compraste.</p>
+          <p className="mb-8 text-sm text-muted">Ingresa tu número de pedido y el correo o el teléfono con el que compraste.</p>
         </>
       )}
       <TrackOrder defaultOrder={o ?? ""} inicial={inicial} />

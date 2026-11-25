@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { methodLabel } from "@/lib/payment-method";
 import { SITE_NAME } from "@/lib/site";
+import { linkSeguimiento } from "@/lib/email";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderStatusActions } from "@/components/OrderStatusActions";
 import { CfdiActions } from "@/components/CfdiActions";
@@ -12,6 +13,7 @@ import { FulfillmentPanel } from "@/components/admin/FulfillmentPanel";
 import { GarantiaPanel, type Garantia } from "@/components/admin/GarantiaPanel";
 import { ResendVoucher } from "@/components/admin/ResendVoucher";
 import { FichaButton } from "@/components/admin/FichaButton";
+import { EditShippingAddress } from "@/components/admin/EditShippingAddress";
 
 // Ruta bloqueante a proposito: dinamica de punta a punta (sesion/pago); un
 // shell prerenderizado no aporta aqui.
@@ -31,7 +33,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(param);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url, combo_parent_order_id, regalo")
+    .select("id, order_number, status, email, subtotal_cents, discount_cents, tax_cents, shipping_cents, total_cents, payment_method, needs_invoice, created_at, shipping_address, fulfillment_stage, carrier, tracking_number, tracking_url, estimated_delivery, shipped_at, delivered_at, shipping_label_url, combo_parent_order_id, regalo, review_token")
     .eq(esUuid ? "id" : "order_number", decodeURIComponent(param))
     .maybeSingle();
 
@@ -204,14 +206,8 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
             <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Cliente</h2>
-            {ship.name && <p className="font-medium">{ship.name}</p>}
             <p className="text-muted">{order.email}</p>
-            {ship.phone && <p className="nums text-muted">{ship.phone}</p>}
-            {(ship.line1 || ship.city) && (
-              <p className="mt-1 text-xs leading-relaxed text-muted">
-                {[ship.line1, ship.neighborhood, ship.city, ship.region, ship.postal].filter(Boolean).join(", ")}
-              </p>
-            )}
+            <EditShippingAddress orderId={order.id} ship={ship} conGuia={!!order.tracking_number} />
             <div className="mt-3 flex gap-2">
               <a
                 href={`mailto:${order.email}?subject=${encodeURIComponent(`Pedido ${order.order_number} — ${SITE_NAME}`)}&body=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de ${SITE_NAME} sobre tu pedido ${order.order_number}. `)}`}
@@ -221,7 +217,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
               </a>
               {waNumber && (
                 <a
-                  href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de ${SITE_NAME} sobre tu pedido ${order.order_number}. `)}`}
+                  href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`Hola${ship.name ? ` ${ship.name}` : ""}, te escribimos de ${SITE_NAME} sobre tu pedido ${order.order_number}. Aquí ves cómo va: ${linkSeguimiento(order.order_number, order.review_token)} `)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2 text-xs font-medium text-[#128C4B] transition-colors hover:bg-[#25D366]/20 dark:text-[#25D366]"

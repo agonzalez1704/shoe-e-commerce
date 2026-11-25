@@ -329,6 +329,33 @@ export async function createSkydropxLabel(orderId: string, quotationId: string, 
   }
 }
 
+const CAMPOS_DIR = ["name", "phone", "line1", "neighborhood", "city", "region", "postal"] as const;
+export type DireccionEnvio = Record<(typeof CAMPOS_DIR)[number], string>;
+
+// Corrige la dirección capturada en el checkout (el cliente se equivocó o se
+// mudó). Sólo toca los campos del domicilio; entrega/sucursal/country quedan.
+// Una guía ya generada NO cambia: lleva la dirección vieja impresa.
+export async function updateShippingAddress(orderId: string, input: DireccionEnvio) {
+  try {
+    const supabase = await requirePermiso("pedidos_gestionar");
+    const limpio = Object.fromEntries(CAMPOS_DIR.map((k) => [k, String(input[k] ?? "").trim().slice(0, 200)])) as DireccionEnvio;
+    if (!limpio.line1 || !limpio.city || !limpio.region) return { ok: false as const, error: "Calle, ciudad y estado son obligatorios." };
+    if (!/^\d{5}$/.test(limpio.postal)) return { ok: false as const, error: "El código postal debe tener 5 dígitos." };
+    if (limpio.phone && limpio.phone.replace(/\D/g, "").length < 10) return { ok: false as const, error: "El teléfono debe tener 10 dígitos." };
+
+    const { data: o } = await supabase.from("orders").select("shipping_address").eq("id", orderId).maybeSingle();
+    if (!o) return { ok: false as const, error: "No se encontró el pedido." };
+    const dir = { country: "MX", ...((o.shipping_address ?? {}) as Record<string, string>), ...limpio };
+
+    const { error } = await supabase.from("orders").update({ shipping_address: dir }).eq("id", orderId);
+    if (error) return { ok: false as const, error: error.message };
+    revalidatePath("/admin/orders/[id]", "page");
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "No se pudo guardar la dirección" };
+  }
+}
+
 // Marca o desmarca el pedido como entrega a sucursal. Hace falta porque el
 // cliente puede pedirlo por WhatsApp después de comprar, y porque los pedidos
 // anteriores a la casilla del checkout no la traen.
