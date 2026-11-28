@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { requirePermiso } from "@/lib/permisos-guard";
 import { SITE_NAME } from "@/lib/site";
+import { ventanaEntrega } from "@/lib/fulfillment";
 
 // Ficha de producción (tarjeta de corte) para la fábrica: una tarjeta por
 // modelo+color del pedido (un combo de 2 modelos = 2 fichas). Réplica de la
@@ -42,7 +43,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(param);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, created_at")
+    .select("id, order_number, created_at, paid_at, shipped_at, estimated_delivery")
     .eq(esUuid ? "id" : "order_number", decodeURIComponent(param))
     .maybeSingle();
   if (!order) return new NextResponse("Pedido no encontrado", { status: 404 });
@@ -68,10 +69,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const fecha = new Date(order.created_at).toLocaleDateString("es-MX", {
     day: "2-digit", month: "short", year: "numeric", timeZone: "America/Mexico_City",
   });
+  const entrega = entregaCliente(order);
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  for (const f of fichas.values()) dibujaFicha(pdf, f, pedidoNum, fecha, font, bold);
+  for (const f of fichas.values()) dibujaFicha(pdf, f, pedidoNum, fecha, entrega, font, bold);
 
   const bytes = await pdf.save();
 
@@ -91,11 +93,29 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   });
 }
 
+// Lo mismo que el cliente ve en /rastrear y en su cuenta: la fecha que el
+// admin capturó a mano, o si no la ventana calculada desde el pago. Así la
+// fábrica trabaja contra la fecha que ya se le prometió al comprador.
+function entregaCliente(o: {
+  created_at: string; paid_at: string | null; shipped_at: string | null; estimated_delivery: string | null;
+}): string {
+  const corta = (d: Date) =>
+    d.toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "America/Mexico_City" })
+      .replace(".", "").toUpperCase();
+  if (o.estimated_delivery) {
+    // columna `date`: armarla en local para no perder un día por UTC
+    const [y, m, d] = o.estimated_delivery.slice(0, 10).split("-").map(Number);
+    if (y && m && d) return corta(new Date(Date.UTC(y, m - 1, d, 12)));
+  }
+  const { desde, hasta } = ventanaEntrega(o.paid_at ?? o.created_at, o.shipped_at);
+  return `${corta(desde)} – ${corta(hasta)}`;
+}
+
 // Media carta horizontal: la proporción de la tarjeta física.
 const W = 612;
 const H = 396;
 
-function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, fecha: string, font: PDFFont, bold: PDFFont) {
+function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, fecha: string, entrega: string, font: PDFFont, bold: PDFFont) {
   const page = pdf.addPage([W, H]);
   const m = 24; // margen
   const negro = rgb(0.1, 0.1, 0.1);
@@ -113,6 +133,11 @@ function dibujaFicha(pdf: PDFDocument, f: Ficha, pedido: string, fecha: string, 
   // ---- fecha en que llego el pedido, arriba de la tarjeta
   page.drawText("FECHA", { x: m, y: H - m + 2, size: 7, font, color: gris });
   page.drawText(fecha, { x: m + 32, y: H - m + 1, size: 10, font: bold, color: negro });
+  // ---- entrega prometida al cliente, arriba a la derecha
+  const wEntrega = bold.widthOfTextAtSize(entrega, 10);
+  page.drawText(entrega, { x: W - m - wEntrega, y: H - m + 1, size: 10, font: bold, color: negro });
+  const lbl = "ENTREGA AL CLIENTE";
+  page.drawText(lbl, { x: W - m - wEntrega - 6 - font.widthOfTextAtSize(lbl, 7), y: H - m + 2, size: 7, font, color: gris });
 
   // ---- fila 1: PIEL/COLOR · ESTILO · PEDIDO
   const y1 = H - m - 78;
